@@ -396,6 +396,7 @@ enum FairPlayDecryptor {
     struct IpaResult {
         let destination: URL
         let binaries: [BinaryReport]
+        var stripped: Bool = false
         var pages: Int { binaries.reduce(0) { $0 + $1.pages } }
     }
 
@@ -447,6 +448,40 @@ enum FairPlayDecryptor {
         }
         guard !reports.isEmpty else { throw DecryptError.notEncrypted }
         return IpaResult(destination: destination, binaries: reports)
+    }
+
+    static func clearIPA(at url: URL, destination: URL) throws -> IpaResult {
+        guard !FileManager.default.fileExists(atPath: destination.path) else {
+            throw ToolError.message(AppText.text("The output file already exists"))
+        }
+        let archive = try Archive(url: url, accessMode: .read)
+        var sawBinary = false
+        var strippedAny = false
+        try? FileManager.default.removeItem(at: destination)
+        let output = try Archive(url: destination, accessMode: .create)
+        for entry in archive {
+            guard entry.type == .file else { continue }
+            let path = entry.path.lowercased()
+            let parts = path.split(separator: "/").map { String($0) }
+            let lastName = parts.last ?? ""
+            let isLicense = parts.contains("sc_info")
+                && (lastName.hasSuffix(".sinf") || lastName.hasSuffix(".supf")
+                    || lastName.hasSuffix(".supp") || lastName.hasSuffix(".v4.sinf")
+                    || lastName.hasSuffix(".v5.supf") || lastName.hasSuffix(".v4.supp"))
+            if isLicense {
+                strippedAny = true
+                continue
+            }
+            let isBinary = parts.count == 3, parts[0] == "payload", parts[1].hasSuffix(".app")
+            let data = try readEntry(entry, archive: archive)
+            if isBinary {
+                sawBinary = true
+                guard (try encryptedSlice(in: Array(data))) == nil else { throw DecryptError.notEncrypted }
+            }
+            try writeEntry(data, to: output, path: entry.path)
+        }
+        guard sawBinary else { throw DecryptError.notMachO }
+        return IpaResult(destination: destination, binaries: [], stripped: strippedAny)
     }
 
 

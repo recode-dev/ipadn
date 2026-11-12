@@ -86,14 +86,6 @@ struct AccountsView: View {
             if apple.active != nil {
                 Section { Button("Sign out", role: .destructive) { signingOut = true }.frame(maxWidth: .infinity) }
             }
-            if DecryptorView.isSupported {
-                Section {
-                    NavigationLink { DecryptorView() } label: { Label("Decryptor", systemImage: "checkmark.shield") }
-                        .accessibilityIdentifier("accounts.decryptor")
-                } footer: {
-                    Text("One-tap FairPlay removal (cryptid=1) for installed apps — builds a DRM-free package right on the phone.")
-                }
-            }
         }
         .animation(UX.motion(reduceMotion), value: apple.accounts.map(\.id))
         .overlay { if store.accountRemoving != nil { ProgressView("Removing the account…").padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }

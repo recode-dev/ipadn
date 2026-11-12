@@ -24,10 +24,6 @@ struct DecryptorView: View {
         var id: String { bundleID }
     }
 
-    static var isSupported: Bool {
-        InstalledAppsView.isSupported
-    }
-
     private var paired: Bool { NativeInstaller.hasPairingFile || LocalResources.isPreview }
 
     var body: some View {
@@ -124,7 +120,7 @@ struct DecryptorView: View {
                 }
             }
             .buttonStyle(.borderless)
-            .disabled(busyHere || credential == nil)
+            .disabled(busyHere)
             .accessibilityIdentifier("decryptor.decrypt." + bundleID)
         }
     }
@@ -182,16 +178,25 @@ struct DecryptorView: View {
 
 
     private func decrypt(_ app: NativeInstaller.InstalledApp, bundleID: String) async {
-        guard let credential else {
-            store.errorMessage = AppText.text("Import the FairPlay credential first")
-            return
-        }
         guard !busy.contains(bundleID) else { return }
         busy.insert(bundleID)
         defer { busy.remove(bundleID) }
         do {
             guard apple.active != nil else { throw ToolError.message(AppText.text("Sign in with an Apple account first to fetch the app’s encrypted package")) }
             let url = try await resolvePackage(app, bundleID: bundleID)
+            rowStatus[bundleID] = AppText.text("Checking package encryption…")
+            let state = try FairPlayDecryptor.ipaEncryptionState(at: url)
+            let encrypted = state.encrypted
+            encryptedFlag[bundleID] = encrypted
+            if !encrypted {
+                try await finishClearPackage(url, app: app, bundleID: bundleID)
+                return
+            }
+            rowStatus[bundleID] = AppText.text("Preparing the FairPlay license…")
+            guard let credential = await acquireCredential() else {
+                rowStatus[bundleID] = AppText.text("FairPlay key unavailable for this account")
+                throw ToolError.message(AppText.text("This app is FairPlay-encrypted and the account’s license key isn’t available on the device yet. The decryptor fetches it automatically; tap Decrypt again in a moment."))
+            }
             rowStatus[bundleID] = AppText.text("Decrypting…")
             let listing = app.storeItemID.flatMap { listings[$0] }
             let name = listing?.name ?? app.name ?? app.bundleID ?? "App"
@@ -215,6 +220,30 @@ struct DecryptorView: View {
             rowStatus[bundleID] = nil
             store.errorMessage = error.localizedDescription
         }
+    }
+
+    private func acquireCredential() async -> Data? {
+        if let existing = FairPlayCredentialStore.load() { return existing }
+        let fetched = await FairPlayCredentialStore.fetchFromEndpoint()
+        if let fetched { credential = fetched }
+        return fetched
+    }
+
+    private func finishClearPackage(_ url: URL, app: NativeInstaller.InstalledApp, bundleID: String) async throws {
+        let listing = app.storeItemID.flatMap { listings[$0] }
+        let name = listing?.name ?? app.name ?? app.bundleID ?? "App"
+        let version = listing?.version ?? app.version ?? ""
+        var outputName = "\(PackageService.safeName(name))-\(PackageService.safeName(version.isEmpty ? "1.0" : version))-DRM-free.ipa"
+        if LocalResources.packageURL(outputName) != nil {
+            outputName = "\(PackageService.safeName(name))-\(UUID().uuidString.prefix(6))-DRM-free.ipa"
+        }
+        let destination = LocalResources.packages.appendingPathComponent(outputName)
+        try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
+        let result = try FairPlayDecryptor.clearIPA(at: url, destination: destination)
+        rowStatus[bundleID] = nil
+        UX.feedback()
+        store.infoMessage = AppText.text(result.stripped ? "DRM-free package saved (no FairPlay layers): \(outputName)" : "DRM-free package saved: \(outputName)")
+        pendingInstall = PendingInstall(url: destination, bundleID: app.bundleID ?? "", name: name)
     }
 
     private func resolvePackage(_ app: NativeInstaller.InstalledApp, bundleID: String) async throws -> URL {
