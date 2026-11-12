@@ -39,7 +39,6 @@ struct DecryptorView: View {
 
     var body: some View {
         List {
-            credentialSection
             if !paired {
                 Section {
                     VStack(spacing: 10) {

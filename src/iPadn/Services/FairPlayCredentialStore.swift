@@ -53,6 +53,25 @@ enum FairPlayCredentialStore {
         SecItemDelete(query() as CFDictionary)
     }
 
+    /// Where the app downloads the credential from. Point this at any URL
+    /// serving the 16 raw bytes or the 32 hex characters.
+    static var credentialEndpoint = URL(string: "https://raw.githubusercontent.com/recode-dev/ipadn/main/credential.bin")
+
+    /// Silent setup: downloads the credential from the endpoint and caches it.
+    /// Returns the credential when it is available afterwards.
+    static func fetchFromEndpoint() async -> Data? {
+        if let cached = load() { return cached }
+        guard let endpoint = credentialEndpoint else { return nil }
+        var request = URLRequest(url: endpoint)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.timeoutInterval = 30
+        guard let data = try? await URLSession.shared.data(for: request).0 else { return nil }
+        let parsed = data.count == 16 ? data : parse(String(data: data, encoding: .utf8) ?? "")
+        guard let parsed else { return nil }
+        try? save(parsed)
+        return parsed
+    }
+
     /// Parses user input into a credential: 32 hex characters, base64, or a
     /// 16-byte file (credential.bin). Whitespace is ignored.
     static func parse(_ raw: String) -> Data? {
