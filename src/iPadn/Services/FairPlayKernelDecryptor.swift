@@ -84,6 +84,8 @@ enum FairPlayKernelDecryptor {
                 reports.append(FairPlayDecryptor.BinaryReport(path: plan.binary.path, pages: pages))
             } catch FairPlayDecryptor.DecryptError.notEncrypted {
                 continue
+            } catch FairPlayDecryptor.DecryptError.notMachO {
+                continue
             } catch {
                 lastError = error
             }

@@ -66,18 +66,25 @@ enum FairPlayDecryptor {
 
     static func entryMagic(_ entry: Entry, archive: Archive) -> [UInt8]? {
         guard entry.uncompressedSize >= 4 else { return nil }
+        // The zlib stream of a binary entry usually starts with a dynamic
+        // Huffman table that spans several compressed feeds, so the first
+        // decompressed chunk can be empty (ZIPFoundation calls the consumer
+        // once per feed with whatever output is available). Accumulate until
+        // four bytes are collected instead of trusting the first chunk only.
         var bytes: [UInt8] = []
         do {
             _ = try archive.extract(entry, bufferSize: 64, consumer: { chunk in
-                bytes = Array(chunk.prefix(4))
-                throw MagicProbe(bytes: bytes)
+                if bytes.count < 4 {
+                    bytes.append(contentsOf: chunk.prefix(4 - bytes.count))
+                }
+                if bytes.count >= 4 { throw MagicProbe(bytes: bytes) }
             })
         } catch let probe as MagicProbe {
             return probe.bytes
         } catch {
-            return nil
+            return bytes.count >= 4 ? bytes : nil
         }
-        return bytes.isEmpty ? nil : bytes
+        return bytes.count >= 4 ? bytes : nil
     }
 
     static func bundleRootCandidate(_ path: String) -> Bool {
@@ -445,7 +452,13 @@ enum FairPlayDecryptor {
         for plan in try archivePlan(archive) {
             let data = try readEntry(plan.binary, archive: archive)
             checked += 1
-            if (try encryptedSlice(in: Array(data))) != nil { encrypted = true }
+            do {
+                if (try encryptedSlice(in: Array(data))) != nil { encrypted = true }
+            } catch DecryptError.notMachO {
+                // One unparseable entry must not flip the whole package into
+                // the clear path; skip it and keep judging the others.
+                continue
+            }
         }
         return (encrypted, checked)
     }
