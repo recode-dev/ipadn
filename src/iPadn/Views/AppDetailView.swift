@@ -145,7 +145,7 @@ struct AppDetailView: View {
                     if !app.displayCategory.isEmpty { LabeledContent("Category", value: app.displayCategory) }
                     if app.size > 0 { LabeledContent("Size", value: app.size.byteLabel) }
                     if !app.minimumOS.isEmpty {
-                        LabeledContent("Compatibility", value: AppText.text("store.settings.store.platform.title app.minimumOS or later"))
+                        LabeledContent("Compatibility", value: AppText.text("\(store.settings.store.platform.title) \(app.minimumOS) or later"))
                     }
                     LabeledContent("Price", value: app.priceLabel)
                     LabeledContent("Storefront", value: store.settings.store.country)
@@ -163,7 +163,7 @@ struct AppDetailView: View {
                     CardSection {
                         DeveloperAppsStrip(apps: developerApps)
                             .cardRowInsets(EdgeInsets())
-                    } header: { sectionTitle(extras?.developer.isEmpty == false ? "More by extras!.developer" : "More apps by this developer") }
+                    } header: { sectionTitle(extras?.developer.isEmpty == false ? "More by \(extras!.developer)" : "More apps by this developer") }
                 }
             }
             .padding(.top, 8).padding(.bottom, 24)
@@ -317,19 +317,19 @@ struct AppDetailView: View {
                     Text(app.displayCategory).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(app.version.isEmpty ? "Version not loaded" : "vapp.version")
+                    Text(app.version.isEmpty ? "Version not loaded" : "v\(app.version)")
                         .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
                         .layoutPriority(1)
                         .accessibilityIdentifier("app.version")
                     Spacer(minLength: 4)
                     Button { copy(app.id) } label: {
                         HStack(spacing: 4) {
-                            Text("ID app.id").monospacedDigit().lineLimit(1)
+                            Text("ID \(app.id)").monospacedDigit().lineLimit(1)
                             Image(systemName: "doc.on.doc")
                         }.font(.caption).foregroundStyle(.secondary).contentShape(Rectangle())
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("App ID app.id, tap to copy")
+                    .accessibilityLabel("App ID \(app.id), tap to copy")
                     .accessibilityIdentifier("app.copy-id")
                 }
                 Spacer(minLength: 10)
@@ -340,7 +340,7 @@ struct AppDetailView: View {
                         .buttonStyle(.borderless).accessibilityLabel("Share store link")
                 }
                 if let account = apple.active, store.settings.store.platform.supportsIPA || store.settings.store.platform == .macOS {
-                    Text("Use account.id").font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                    Text("Use \(account.id)").font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
@@ -442,7 +442,7 @@ struct AppDetailView: View {
                     withAnimation(.compatibleSnappy) { showAllVersions.toggle() }
                 } label: {
                     HStack {
-                        Text(showAllVersions ? "Show less" : "Show all matches.count versions")
+                        Text(showAllVersions ? "Show less" : "Show all \(matches.count) versions")
                         Spacer()
                         Image(systemName: "chevron.down").rotationEffect(.degrees(showAllVersions ? 180 : 0))
                     }
@@ -480,17 +480,17 @@ struct AppDetailView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(known ? "Version name" : reading ? "Version 0.0.0" : "Unknown version")
+                    Text(known ? "Version \(name)" : reading ? "Version 0.0.0" : "Unknown version")
                         .font(.body.weight(.medium))
                         .redacted(reason: reading ? .placeholder : [])
-                    Text([date, AppText.text("Version ID version.id")].compactMap { $0 }.joined(separator: " · "))
+                    Text([date, AppText.text("Version ID \(version.id)")].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
                 .animation(.easeOut(duration: 0.2), value: name)
                 Spacer(minLength: 8)
                 RowCapsule(title: "Download", enabled: !downloadLoading && !macOfficialLoading) { download(versionID: version.id) }
-                    .accessibilityLabel(known ? AppText.text("Download version name") : AppText.text("Download version ID version.id"))
+                    .accessibilityLabel(known ? AppText.text("Download version \(name)") : AppText.text("Download version ID \(version.id)"))
             }
             if let note, !note.text.isEmpty {
                 Button {
@@ -552,7 +552,7 @@ struct AppDetailView: View {
                     Image(systemName: "shippingbox").foregroundStyle(.secondary).frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(installer.title).font(.subheadline.weight(.medium)).lineLimit(2)
-                        Text("From the developer's website · installer.format.uppercased()").font(.caption).foregroundStyle(.secondary)
+                        Text("From the developer's website · \(installer.format.uppercased())").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 8)
                     RowCapsule(title: "Download") { enqueueMacInstaller(installer) }

@@ -56,7 +56,7 @@ enum MacPackageDecryptor {
         if code == 1 { throw CancellationError() }
         guard code == 0 else {
             let text = String(cString: message)
-            throw ToolError.message(text.isEmpty ? AppText.text("Couldn't process the Mac package (code)") : text)
+            throw ToolError.message(text.isEmpty ? AppText.text("Couldn't process the Mac package (\(code))") : text)
         }
     }
 
@@ -167,7 +167,7 @@ enum MacPackageSecrets {
         item[kSecValueData as String] = try JSONEncoder().encode(entry)
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         let status = SecItemAdd(item as CFDictionary, nil)
-        guard status == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the Mac download license (status)")) }
+        guard status == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the Mac download license (\(status))")) }
     }
 
     static func load(_ id: UUID) throws -> Entry {

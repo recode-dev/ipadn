@@ -34,7 +34,7 @@ struct StorageView: View {
         let older = olderVersions
         List {
             Section {
-                LabeledContent("Packages", value: measuring ? AppText.text("Calculating…") : AppText.text("completed.count items · total(completed).byteLabel"))
+                LabeledContent("Packages", value: measuring ? AppText.text("Calculating…") : AppText.text("\(completed.count) items · \(total(completed).byteLabel)"))
                 if let available { LabeledContent("Free space", value: available.byteLabel) }
             } footer: {
                 Text("Packages are kept in iPadn. You can also find them in the Files app under On My iPhone › iPadn › Packages.")
@@ -42,7 +42,7 @@ struct StorageView: View {
             if !older.isEmpty {
                 Section {
                     Button(role: .destructive) { confirmingCleanup = true } label: {
-                        LabeledContent("Delete old versions", value: AppText.text("older.count items · total(older).byteLabel"))
+                        LabeledContent("Delete old versions", value: AppText.text("\(older.count) items · \(total(older).byteLabel)"))
                     }
                     .accessibilityIdentifier("storage.remove-older")
                 } footer: {
@@ -56,7 +56,7 @@ struct StorageView: View {
                             AppIcon(url: job.displayApp(packageIcon: manager.packageIconURL(job)).iconURL, size: 40)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(job.app.name.isEmpty ? job.app.bundleID : job.app.name).font(.subheadline.weight(.medium)).lineLimit(1)
-                                Text([job.platformLabel, job.app.version.isEmpty ? "" : "vjob.app.version"]
+                                Text([job.platformLabel, job.app.version.isEmpty ? "" : "v\(job.app.version)"]
                                     .filter { !$0.isEmpty }.joined(separator: " · "))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
@@ -76,8 +76,8 @@ struct StorageView: View {
         .toolPage().navigationTitle("Storage").navigationBarTitleDisplayMode(.inline)
         .task(id: completed.map(\.id)) { await measure(completed) }
         .refreshable { await measure(self.completed) }
-        .actionConfirmation(isPresented: $confirmingCleanup, title: "Delete older.count old versions?",
-                            message: "Frees total(older).byteLabel. The newest download of each app is kept.", confirmTitle: "Delete old versions") {
+        .actionConfirmation(isPresented: $confirmingCleanup, title: "Delete \(older.count) old versions?",
+                            message: "Frees \(total(older).byteLabel). The newest download of each app is kept.", confirmTitle: "Delete old versions") {
             remove(older)
         }
         .actionConfirmation(isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -110,7 +110,7 @@ struct StorageView: View {
             defer { deleting = false }
             do {
                 _ = try await manager.removeBatch(Set(jobs.map(\.id)))
-                store.infoMessage = AppText.text("Freed freed.byteLabel")
+                store.infoMessage = AppText.text("Freed \(freed.byteLabel)")
             } catch { store.errorMessage = error.localizedDescription }
         }
     }

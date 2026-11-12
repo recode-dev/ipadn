@@ -44,7 +44,7 @@ struct DownloadIPAURLIntent: AppIntent {
     static var description = IntentDescription("Adds an HTTPS package link to the background download queue.")
     static var openAppWhenRun = true
     @Parameter(title: "HTTPS download link") var url: URL
-    static var parameterSummary: some ParameterSummary { Summary("Download \.$url") }
+    static var parameterSummary: some ParameterSummary { Summary("Download \(\.$url)") }
     @MainActor func perform() async throws -> some IntentResult {
         try AppContainer.shared.downloads.enqueueURL(url)
         AppContainer.shared.tab = 1
@@ -71,7 +71,7 @@ struct DownloadAppIntent: AppIntent {
     static var description = IntentDescription("Downloads the app for an App ID or App Store link (optionally with a version ID) with the current account, and opens Downloads.")
     static var openAppWhenRun = true
     @Parameter(title: "App ID or Store Link") var app: String
-    static var parameterSummary: some ParameterSummary { Summary("Download \.$app") }
+    static var parameterSummary: some ParameterSummary { Summary("Download \(\.$app)") }
     @MainActor func perform() async throws -> some IntentResult {
         let store = AppContainer.shared
         guard store.apple.active != nil else { throw ToolError.message(AppText.text("Sign in to your Apple Account on the Account page first")) }
@@ -94,7 +94,7 @@ struct CheckUpdatesIntent: AppIntent {
             return "\(job.app.name) \(job.app.version) → \(latest.version)"
         }
         let text = lines.isEmpty ? AppText.text("All downloaded apps are up to date.") : lines.joined(separator: "\n")
-        return .result(value: lines, dialog: "text")
+        return .result(value: lines, dialog: "\(text)")
     }
 }
 
@@ -107,10 +107,10 @@ struct DownloadAllUpdatesIntent: AppIntent {
         await store.downloads.loaded()
         await store.checkForUpdates(force: true)
         let jobs = store.updatableJobs
-        guard !jobs.isEmpty else { return .result(dialog: "AppText.text("All downloaded apps are up to date.")") }
+        guard !jobs.isEmpty else { return .result(dialog: "\(AppText.text("All downloaded apps are up to date."))") }
         store.tab = 1
         try await store.downloadAllUpdates(of: jobs)
-        return .result(dialog: "\(AppText.text("Added jobs.count downloads"))")
+        return .result(dialog: "\(AppText.text("Added \(jobs.count) downloads"))")
     }
 }
 
@@ -126,14 +126,14 @@ struct DownloadStatusIntent: AppIntent {
             let percent = (expected > 0 ? Double(written) / Double(expected) : 0).formatted(.percent.precision(.fractionLength(0)))
             switch job.status {
             case .running, .pausing: return AppText.text("\(job.app.name): downloading \(percent)%")
-            case .queued: return AppText.text("job.app.name: waiting")
+            case .queued: return AppText.text("\(job.app.name): waiting")
             case .paused: return AppText.text("\(job.app.name): paused \(percent)%")
-            case .processing: return AppText.text("job.app.name: preparing")
+            case .processing: return AppText.text("\(job.app.name): preparing")
             default: return nil
             }
         }
         let text = lines.isEmpty ? AppText.text("No downloads in progress.") : lines.joined(separator: "\n")
-        return .result(value: lines, dialog: "text")
+        return .result(value: lines, dialog: "\(text)")
     }
 }
 
@@ -145,7 +145,7 @@ struct PauseAllDownloadsIntent: AppIntent {
         await manager.loaded()
         let count = manager.jobs.filter { $0.status == .running || $0.status == .queued }.count
         manager.pauseAll()
-        return .result(dialog: "\(AppText.text("Paused count downloads"))")
+        return .result(dialog: "\(AppText.text("Paused \(count) downloads"))")
     }
 }
 
@@ -157,7 +157,7 @@ struct ResumeAllDownloadsIntent: AppIntent {
         await manager.loaded()
         let count = manager.jobs.filter { $0.status == .paused }.count
         manager.resumeAll()
-        return .result(dialog: "\(AppText.text("Resumed count downloads"))")
+        return .result(dialog: "\(AppText.text("Resumed \(count) downloads"))")
     }
 }
 
@@ -169,9 +169,9 @@ struct FollowAppIntent: AppIntent {
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
         let store = AppContainer.shared
         let found = try await storeApp(app).app
-        if store.isFavorite(found) { return .result(dialog: "\(AppText.text("Already following found.name"))") }
+        if store.isFavorite(found) { return .result(dialog: "\(AppText.text("Already following \(found.name)"))") }
         store.toggleFavorite(found)
-        return .result(dialog: "\(AppText.text("Following found.name"))")
+        return .result(dialog: "\(AppText.text("Following \(found.name)"))")
     }
 }
 

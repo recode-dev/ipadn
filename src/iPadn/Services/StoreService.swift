@@ -717,11 +717,11 @@ actor VersionService {
 
     static func fetch(_ id: String, source: VersionSource) async throws -> [AppVersion] {
         guard let url = source.url(for: id) else {
-            throw ToolError.message(AppText.text("source.name: invalid endpoint URL"))
+            throw ToolError.message(AppText.text("\(source.name): invalid endpoint URL"))
         }
         let object = try await HTTPClient.shared.json(url)
         let value: Any? = source.containerKey.isEmpty ? object : (object as? [String: Any])?[source.containerKey]
-        guard let records = value as? [[String: Any]] else { throw ToolError.message(AppText.text("source.name: the version list is unavailable")) }
+        guard let records = value as? [[String: Any]] else { throw ToolError.message(AppText.text("\(source.name): the version list is unavailable")) }
         var seen = Set<String>()
         let ordered = source.reverse ? Array(records.suffix(2000).reversed()) : Array(records.prefix(2000))
         return ordered.compactMap { record in

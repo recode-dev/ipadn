@@ -94,7 +94,7 @@ struct DownloadsView: View {
                     } label: {
                         Image(systemName: filter.symbol)
                             .frame(minWidth: 44, minHeight: 44)
-                    }.accessibilityLabel(AppText.text("Filter downloads, currently filter.title")).accessibilityIdentifier("download.filter.menu")
+                    }.accessibilityLabel(AppText.text("Filter downloads, currently \(filter.title)")).accessibilityIdentifier("download.filter.menu")
                 }
             }
             ToolbarItem(placement: .compatibleTopBarTrailing) {
@@ -113,7 +113,7 @@ struct DownloadsView: View {
                     }
                     .disabled(ids.isEmpty)
                     .accessibilityIdentifier("downloads.select-all")
-                    Text("selection.count selected").font(.subheadline).foregroundStyle(.secondary)
+                    Text("\(selection.count) selected").font(.subheadline).foregroundStyle(.secondary)
                     Spacer()
                     Button("Delete selected", systemImage: "trash", role: .destructive) { askDelete(selection) }
                         .disabled(selection.isEmpty)
@@ -215,7 +215,7 @@ struct DownloadsView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Enter a download link for an IPA package.") }
-        .actionConfirmation(isPresented: $confirmingDelete, title: "Delete pendingDelete.count tasks?", message: "Downloaded packages are deleted too.", confirmTitle: "Delete tasks and files") {
+        .actionConfirmation(isPresented: $confirmingDelete, title: "Delete \(pendingDelete.count) tasks?", message: "Downloaded packages are deleted too.", confirmTitle: "Delete tasks and files") {
             // Recheck task states before the durable batch commit.
             let ids = pendingDelete
             pendingDelete.removeAll()
@@ -223,7 +223,7 @@ struct DownloadsView: View {
                 let count = try await manager.removeBatch(ids)
                 selection.subtract(ids)
                 if manager.jobs.isEmpty { editMode = .inactive }
-                store.infoMessage = AppText.text("Deleted count tasks and their files")
+                store.infoMessage = AppText.text("Deleted \(count) tasks and their files")
             }
         }
         .sheet(item: $installing) { job in
@@ -233,8 +233,8 @@ struct DownloadsView: View {
     }
     /// Row-header count: the active filter, then how many have updates.
     private func headerSummary(visible: [DownloadJob], updates: [UUID: StoreApp]) -> String {
-        var text = filter == .all ? AppText.text("visible.count items") : AppText.text("filter.title · visible.count")
-        if !updates.isEmpty { text += AppText.text(" · updates.count updates") }
+        var text = filter == .all ? AppText.text("\(visible.count) items") : AppText.text("\(filter.title) · \(visible.count)")
+        if !updates.isEmpty { text += AppText.text(" · \(updates.count) updates") }
         return text
     }
     private func taskContent(_ job: DownloadJob, update: StoreApp?, editing: Bool = false) -> some View {
@@ -316,7 +316,7 @@ struct DownloadsView: View {
                                 if edit {
                                     Button { toggleSelection(job.id) } label: { Color.clear.contentShape(Rectangle()) }
                                         .buttonStyle(.plain)
-                                        .accessibilityLabel(selection.contains(job.id) ? AppText.text("Deselect job.app.name") : AppText.text("Select job.app.name"))
+                                        .accessibilityLabel(selection.contains(job.id) ? AppText.text("Deselect \(job.app.name)") : AppText.text("Select \(job.app.name)"))
                                         .accessibilityIdentifier("download.select." + job.id.uuidString)
                                 }
                             }
@@ -327,7 +327,7 @@ struct DownloadsView: View {
                             .contextMenu {
                                 if !edit {
                                     if let latest = updates[job.id] {
-                                        Button("Download new version latest.version", systemImage: "arrow.down.circle") { downloadUpdate(job) }
+                                        Button("Download new version \(latest.version)", systemImage: "arrow.down.circle") { downloadUpdate(job) }
                                     }
                                     if job.status == .completed && job.updateKey != nil {
                                         if store.keepsVersion(job) {
@@ -421,7 +421,7 @@ struct DownloadsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(selected ? AppText.text("Deselect app.name") : AppText.text("Select app.name"))
+        .accessibilityLabel(selected ? AppText.text("Deselect \(app.name)") : AppText.text("Select \(app.name)"))
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("download.select." + job.id.uuidString)
     }
@@ -437,11 +437,11 @@ struct DownloadsView: View {
             let temporary = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path
             for url in files {
                 do { try await manager.importFile(url); imported += 1 }
-                catch { failures.append(AppText.text("url.lastPathComponent: error.localizedDescription")) }
+                catch { failures.append(AppText.text("\(url.lastPathComponent): \(error.localizedDescription)")) }
                 // The picker hands over a private copy; don't leave a second copy of a large IPA behind.
                 if url.resolvingSymlinksInPath().path.hasPrefix(temporary) { try? FileManager.default.removeItem(at: url) }
             }
-            if imported > 0 { filter = .all; term = ""; store.infoMessage = AppText.text("Imported imported packages") }
+            if imported > 0 { filter = .all; term = ""; store.infoMessage = AppText.text("Imported \(imported) packages") }
             if !failures.isEmpty { store.errorMessage = failures.joined(separator: "\n") }
         }
     }
@@ -525,7 +525,7 @@ struct DownloadTaskRow: View {
                 HStack(spacing: 6) {
                     platformIcon
                     // Version and size scroll once in place when the row is too narrow.
-                    MarqueeText(text: [displayedApp.version.isEmpty ? "" : "vdisplayedApp.version",
+                    MarqueeText(text: [displayedApp.version.isEmpty ? "" : "v\(displayedApp.version)",
                                        displayedApp.size > 0 ? displayedApp.size.byteLabel : ""]
                                     .filter { !$0.isEmpty }.joined(separator: " · "))
                         .foregroundStyle(.secondary)
@@ -639,13 +639,13 @@ struct DownloadTaskRow: View {
             } else if job.status == .completed, let update {
                 // Its own button: the heading above is already one.
                 Button(action: updating) {
-                    Label("Version update.version is available. Tap to download.", systemImage: "arrow.down.circle.fill")
+                    Label("Version \(update.version) is available. Tap to download.", systemImage: "arrow.down.circle.fill")
                         .font(.caption.weight(.semibold)).foregroundStyle(UX.tint).lineLimit(1)
                         .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
                 }
                 .buttonStyle(RevealRowButtonStyle())
                 .transition(.opacity)
-                .accessibilityLabel("Download new version update.version")
+                .accessibilityLabel("Download new version \(update.version)")
                 .accessibilityIdentifier("download.update." + job.app.id)
             }
             if let error = job.error {

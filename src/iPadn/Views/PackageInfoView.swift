@@ -27,7 +27,7 @@ struct PackageInfoView: View {
                             }
                             .toolPage().navigationTitle("Languages").navigationBarTitleDisplayMode(.inline)
                         } label: {
-                            LabeledContent("Languages", value: "info.languages.count")
+                            LabeledContent("Languages", value: "\(info.languages.count)")
                         }
                     }
                 }
@@ -63,7 +63,7 @@ struct PackageInfoView: View {
                 Section("Other") {
                     LabeledContent("Apple Watch App", value: info.hasWatchApp ? AppText.text("Included") : AppText.text("Not included"))
                     LabeledContent("App Clip", value: info.hasAppClip ? AppText.text("Included") : AppText.text("Not included"))
-                    LabeledContent("Frameworks", value: "info.frameworks")
+                    LabeledContent("Frameworks", value: "\(info.frameworks)")
                     if !info.backgroundModes.isEmpty {
                         LabeledContent("Runs in Background", value: info.backgroundModes
                             .map { PackageInfoService.backgroundModeName($0) ?? $0 }
@@ -83,7 +83,7 @@ struct PackageInfoView: View {
                     Section {
                         ForEach(otherVersions(of: job)) { other in
                             NavigationLink { compare(job, other) } label: {
-                                LabeledContent(AppText.text("Compare with other.app.version.isEmpty ? "–" : other.app.version"),
+                                LabeledContent(AppText.text("Compare with \(other.app.version.isEmpty ? "–" : other.app.version)"),
                                                value: other.createdAt.formatted(date: .abbreviated, time: .omitted))
                             }
                             .accessibilityIdentifier("package-info.compare." + other.id.uuidString)

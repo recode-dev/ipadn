@@ -1,10 +1,12 @@
 import Foundation
 
-/// Text the app composes outside SwiftUI's literal-key lookup.
+/// Text the app composes outside SwiftUI's literal-key lookup: messages in
+/// models and services, notifications, exported files, and strings handed to
+/// views as `String` values.
 ///
-/// The app is English-only; with no string catalogs bundled every lookup
-/// simply returns the literal itself, so this stays a thin, safe passthrough
-/// for messages in models, services, notifications and exported files.
+/// SwiftUI localizes its own `Text("…")` keys through the bundle. Everything
+/// here resolves the same language explicitly, so the two never disagree, and
+/// tests can pin a language instead of following the machine.
 enum AppText {
     /// The language the interface is shown in: the localization Xcode bundled
     /// and the device picked.

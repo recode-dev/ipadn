@@ -35,7 +35,7 @@ struct PackageInstallationView: View {
                         AppIcon(url: job.displayApp(packageIcon: manager.packageIconURL(job)).iconURL, size: 96)
                         VStack(spacing: 4) {
                             Text(job.app.name).font(.title3.weight(.semibold)).multilineTextAlignment(.center)
-                            Text([job.app.version.isEmpty ? "" : AppText.text("Version job.app.version"), job.app.size > 0 ? job.app.size.byteLabel : ""]
+                            Text([job.app.version.isEmpty ? "" : AppText.text("Version \(job.app.version)"), job.app.size > 0 ? job.app.size.byteLabel : ""]
                                 .filter { !$0.isEmpty }.joined(separator: " · "))
                                 .font(.subheadline).foregroundStyle(.secondary)
                         }
@@ -131,7 +131,7 @@ struct PackageInstallationView: View {
         let host = store.settings.automaticInstallation ? "api.palera.in"
             : store.settings.localInstallation ? "ipadn.localtest.me" : nil
         guard let host else { return "" }
-        return "\n" + AppText.text("Proxy detected: if installation fails, add a DIRECT rule for host.")
+        return "\n" + AppText.text("Proxy detected: if installation fails, add a DIRECT rule for \(host).")
     }
     /// Hands the package to the system installer and waits for it to finish.
     private func requestNativeInstallation() {

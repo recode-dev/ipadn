@@ -60,14 +60,14 @@ struct WiFiTransferView: View {
                         .accessibilityIdentifier("transfer.start")
                 }
             } footer: {
-                Text("Open this address in a browser on a computer on the same Wi‑Fi to download the finished packages (items.count).")
+                Text("Open this address in a browser on a computer on the same Wi‑Fi to download the finished packages (\(items.count)).")
             }
             if !accesses.isEmpty {
                 Section("Downloads by Other Devices") {
                     ForEach(accesses.reversed()) { access in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: access.filename).lineLimit(1)
-                            Text(verbatim: "access.client · access.date.formatted(date: .omitted, time: .standard)")
+                            Text(verbatim: "\(access.client) · \(access.date.formatted(date: .omitted, time: .standard))")
                                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         }
                     }

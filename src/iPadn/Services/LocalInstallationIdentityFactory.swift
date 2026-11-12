@@ -86,7 +86,7 @@ enum LocalInstallationIdentityFactory {
         var error: Unmanaged<CFError>?
         guard let key = SecKeyCreateRandomKey([kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
             kSecAttrKeySizeInBits as String: 2048] as CFDictionary, &error) else {
-            throw ToolError.message(AppText.text("Can't create the local installation key: error?.takeRetainedValue().localizedDescription ?? AppText.text("System error")"))
+            throw ToolError.message(AppText.text("Can't create the local installation key: \(error?.takeRetainedValue().localizedDescription ?? AppText.text("System error"))"))
         }
         return key
     }

@@ -25,7 +25,7 @@ struct AccountsView: View {
                             Text(account.name.isEmpty ? account.id : account.name).font(.title3.weight(.semibold)).lineLimit(1)
                             Text(account.id).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                             if let country = StoreService.country(forStorefront: account.storeFront) {
-                                Text("Storefront: country").font(.caption).foregroundStyle(.tertiary)
+                                Text("Storefront: \(country)").font(.caption).foregroundStyle(.tertiary)
                             }
                         }
                     }.padding(.vertical, 6)
@@ -140,8 +140,8 @@ struct VerificationStep: View {
             Image(systemName: "lock.shield.fill").font(.system(size: 56)).foregroundStyle(.tint)
                 .padding(.top, 12).accessibilityHidden(true)
             Text("Two-factor authentication").font(.title.weight(.bold))
-            Text(sent ? "Apple sent a sign-in request to the trusted devices of “account”. Tap Allow on the device to see a 6-digit code, then enter it to continue."
-                 : "Asking Apple to send a code to the trusted devices of “account”…")
+            Text(sent ? "Apple sent a sign-in request to the trusted devices of “\(account)”. Tap Allow on the device to see a 6-digit code, then enter it to continue."
+                 : "Asking Apple to send a code to the trusted devices of “\(account)”…")
                 .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             VerificationCodeField(code: $code, disabled: busy) { _ in submit() }
@@ -159,7 +159,7 @@ struct VerificationStep: View {
             if let resend {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     let wait = Int(resendAvailableAt.timeIntervalSince(context.date).rounded(.up))
-                    Button(wait > 0 ? "Resend Code (wait s)" : "Resend Code") {
+                    Button(wait > 0 ? "Resend Code (\(wait) s)" : "Resend Code") {
                         resendAvailableAt = Date().addingTimeInterval(30)
                         resend()
                     }

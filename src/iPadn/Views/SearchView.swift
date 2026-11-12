@@ -43,7 +43,7 @@ struct SearchView: View {
             if !store.results.isEmpty {
                 Section {
                     ForEach(store.results) { app in resultRow(app, note: app.tvOSCandidate == true ? AppText.text("May support Apple TV") : nil) }
-                } header: { Text("store.results.count results") }
+                } header: { Text("\(store.results.count) results") }
             }
             if !store.localResults.isEmpty {
                 Section {
@@ -52,7 +52,7 @@ struct SearchView: View {
             }
             if store.results.isEmpty && store.localResults.isEmpty && store.hasSearched && !store.searching && store.searchError == nil {
                 Section {
-                    EmptyState(title: "No results", message: "No apps match “store.lastSearchTerm”. Try an App ID, an App Store link, or another region.",
+                    EmptyState(title: "No results", message: "No apps match “\(store.lastSearchTerm)”. Try an App ID, an App Store link, or another region.",
                                symbol: "magnifyingglass", actionTitle: "Clear search", action: { store.clearSearch() })
                 }.listRowBackground(Color.clear)
             }
@@ -76,7 +76,7 @@ struct SearchView: View {
         NavigationLink { AppDetailView(app: app) } label: {
             AppRow(app: app, subtitle: note.map { [app.displayCategory, $0].filter { !$0.isEmpty }.joined(separator: " · ") }) {
                 RowCapsule(title: "Get") { getting = app; UX.feedback() }
-                    .accessibilityLabel("Get app.name")
+                    .accessibilityLabel("Get \(app.name)")
             }
         }
         .contextMenu {
@@ -161,7 +161,7 @@ struct SearchView: View {
                 ForEach(AppPlatform.allCases) { platform in Label(platform.title, systemImage: platform.symbol).tag(platform) }
             }
         } label: { chip(store.settings.store.platform.title, symbol: store.settings.store.platform.symbol) }
-        .accessibilityLabel("Platform: store.settings.store.platform.title")
+        .accessibilityLabel("Platform: \(store.settings.store.platform.title)")
     }
 }
 

@@ -60,7 +60,7 @@ enum DMAP {
             throw ToolError.message(AppText.text("Can't sync purchases right now. Try again later."))
         }
         if status != 200 {
-            throw ToolError.message(AppText.text("Couldn't sync purchases (status). Try again later."))
+            throw ToolError.message(AppText.text("Couldn't sync purchases (\(status)). Try again later."))
         }
     }
     static func ownedApps(_ data: Data) throws -> [OwnedApp] {

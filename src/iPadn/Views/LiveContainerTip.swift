@@ -11,7 +11,7 @@ struct LiveContainerTip: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Using iPadn in LiveContainer").font(.subheadline.weight(.semibold))
                 // The option keeps LiveContainer's own name in each language.
-                Text("In LiveContainer, long-press iPadn and turn on “AppText.text("Fix File Picker")” in its settings. Then importing and exporting packages and diagnostics works, and one-tap install can show the system install prompt.")
+                Text("In LiveContainer, long-press iPadn and turn on “\(AppText.text("Fix File Picker"))” in its settings. Then importing and exporting packages and diagnostics works, and one-tap install can show the system install prompt.")
                     .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Button("OK", action: dismiss).buttonStyle(CapsuleButtonStyle())
                     .accessibilityIdentifier("downloads.livecontainer-tip.dismiss")

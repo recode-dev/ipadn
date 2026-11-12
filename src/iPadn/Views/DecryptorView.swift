@@ -1,13 +1,12 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// One-tap FairPlay removal: lists the apps installed on this device and
-/// strips cryptid=1 from their store packages, fully on-device - no computer,
-/// no pairing dance, no manual setup. The FairPlay credential is provisioned
-/// silently by the app itself; afterwards every decryption is a single tap:
-/// the package is downloaded with the signed-in account when it is not on the
-/// device yet, decrypted with the SINF/SUPF license the store ships, and can
-/// be reinstalled DRM-free through the native installation connection.
+/// One-click FairPlay removal: lists the apps installed on this device and
+/// strips cryptid=1 from their store packages, fully on-device. Needs the
+/// account's 16-byte FairPlay credential once (imported in the first card);
+/// afterwards every decryption is a single tap — the package is downloaded
+/// with the signed-in account if it is not on the device yet, decrypted with
+/// the SINF/SUPF license the store ships, and can be reinstalled DRM-free
+/// through the native installation connection.
 struct DecryptorView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -40,13 +39,14 @@ struct DecryptorView: View {
 
     var body: some View {
         List {
+            credentialSection
             if !paired {
                 Section {
                     VStack(spacing: 10) {
                         Image(systemName: "iphone.radiowaves.left.and.right")
                             .font(.system(size: 40, weight: .regular)).foregroundStyle(.secondary)
-                        Text("Complete the native-install pairing once to use the Decryptor").font(.headline)
-                        Text("The decryptor reads the apps installed on this device and reinstalls DRM-free copies through the native installation connection.")
+                        Text("Pair for Native Install First").font(.headline)
+                        Text("The decryptor reads the apps installed on this device and reinstalls the DRM-free version through the native installation. Complete the one-time pairing to use it.")
                             .font(.subheadline).foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }.frame(maxWidth: .infinity).padding(.vertical, 14)
@@ -56,22 +56,14 @@ struct DecryptorView: View {
                 Section { InlineIssue(message: issue) }
             } else if loading && apps.isEmpty {
                 Section {
-                    HStack(spacing: 10) { ProgressView(); Text("Reading installed apps…").foregroundStyle(.secondary) }
+                    HStack(spacing: 10) { ProgressView(); Text("Reading apps on this device…").foregroundStyle(.secondary) }
                 }
             } else {
-                if credential == nil {
-                    Section {
-                        HStack(spacing: 10) {
-                            ProgressView().controlSize(.small)
-                            Text("Preparing the decryptor…").foregroundStyle(.secondary)
-                        }
-                    }
-                }
                 appsSection
             }
         }
         .toolPage().navigationTitle(Text("Decryptor")).navigationBarTitleDisplayMode(.inline)
-        .refreshable { await load(forceCredential: true) }
+        .refreshable { await load() }
         .task { if !loaded { await load() } }
         .compatibleOnChange(of: scenePhase) { phase in
             if phase == .active, issue != nil, apps.isEmpty { Task { await load() } }
@@ -105,12 +97,12 @@ struct DecryptorView: View {
                 row(app)
             }
             if loaded && shown.isEmpty {
-                Text(apps.isEmpty ? "Nothing to show" : "No matching apps").foregroundStyle(.secondary)
+                Text(apps.isEmpty ? "No apps to show" : "No matching apps").foregroundStyle(.secondary)
             }
         } header: {
             Text("Installed apps") + Text(verbatim: " · \(shown.count)")
         } footer: {
-            Text("Tap Decrypt and iPadn fetches the app's encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone and saves the DRM-free package. Only for apps you are licensed to use.")
+            Text("Tap Decrypt and iPadn fetches the app’s encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone and saves the DRM-free package. Only for apps you are licensed to use.")
         }
     }
 
@@ -155,12 +147,12 @@ struct DecryptorView: View {
 
     // MARK: - Data loading
 
-    private func load(forceCredential: Bool = false) async {
+    private func load() async {
         guard paired, !loading else { return }
         loading = true
         defer { loading = false; loaded = true }
         credential = FairPlayCredentialStore.load()
-        if credential == nil || forceCredential {
+        if credential == nil {
             credential = await FairPlayCredentialStore.fetchFromEndpoint()
         }
         #if DEBUG
@@ -201,17 +193,17 @@ struct DecryptorView: View {
 
     // MARK: - Decrypt pipeline
 
+
     private func decrypt(_ app: NativeInstaller.InstalledApp, bundleID: String) async {
         guard let credential else {
-            store.errorMessage = AppText.text("The decryptor is still preparing; try again in a moment")
-            Task { self.credential = await FairPlayCredentialStore.fetchFromEndpoint() }
+            store.errorMessage = AppText.text("Import the FairPlay credential first")
             return
         }
         guard !busy.contains(bundleID) else { return }
         busy.insert(bundleID)
         defer { busy.remove(bundleID) }
         do {
-            guard apple.active != nil else { throw ToolError.message(AppText.text("Sign in with an Apple account first to fetch the app's encrypted package")) }
+            guard apple.active != nil else { throw ToolError.message(AppText.text("Sign in with an Apple account first to fetch the app’s encrypted package")) }
             let url = try await resolvePackage(app, bundleID: bundleID)
             rowStatus[bundleID] = AppText.text("Decrypting…")
             let listing = app.storeItemID.flatMap { listings[$0] }

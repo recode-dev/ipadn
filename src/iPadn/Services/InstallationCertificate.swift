@@ -73,7 +73,7 @@ enum InstallationCertificate {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(request as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw ToolError.message(AppText.text("Couldn't read the installation certificate (status). Unlock the device and try again.")) }
+        guard status == errSecSuccess, let data = result as? Data else { throw ToolError.message(AppText.text("Couldn't read the installation certificate (\(status)). Unlock the device and try again.")) }
         return try JSONDecoder().decode(Stored.self, from: data)
     }
     static func load() throws -> Identity? {
@@ -96,7 +96,7 @@ enum InstallationCertificate {
         if status == errSecItemNotFound {
             var item = query; attributes.forEach { item[$0.key] = $0.value }
             let added = SecItemAdd(item as CFDictionary, nil)
-            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the installation certificate (added)")) }
-        } else if status != errSecSuccess { throw ToolError.message(AppText.text("Couldn't update the installation certificate (status)")) }
+            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the installation certificate (\(added))")) }
+        } else if status != errSecSuccess { throw ToolError.message(AppText.text("Couldn't update the installation certificate (\(status))")) }
     }
 }

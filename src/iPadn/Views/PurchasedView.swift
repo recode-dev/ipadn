@@ -34,9 +34,9 @@ struct PurchasedView: View {
         // a shared App ID is a different package.
         for job in manager.jobs where job.status == .completed && [AppPlatform.iOS, .iPadOS].contains(job.updatePlatform) {
             if let key = job.updateKey, let latest = store.availableUpdates[key] {
-                badges[job.app.id] = ("Version latest.version is available", UX.tint)
+                badges[job.app.id] = ("Version \(latest.version) is available", UX.tint)
             } else if badges[job.app.id] == nil {
-                badges[job.app.id] = (job.app.version.isEmpty ? "Downloaded" : "Downloaded job.app.version", .green)
+                badges[job.app.id] = (job.app.version.isEmpty ? "Downloaded" : "Downloaded \(job.app.version)", .green)
             }
         }
         return badges
@@ -62,7 +62,7 @@ struct PurchasedView: View {
     }
     private func export() {
         do { share = SharedFile(url: try store.exportOwned()) }
-        catch { store.errorMessage = AppText.text("Export failed: error.localizedDescription") }
+        catch { store.errorMessage = AppText.text("Export failed: \(error.localizedDescription)") }
     }
     /// Adds the selected apps one after another; the list order is kept.
     private func downloadSelected() {
@@ -78,7 +78,7 @@ struct PurchasedView: View {
             batchProgress = nil
             if result.added > 0 {
                 selection.removeAll(); selecting = false
-                store.infoMessage = AppText.text("Added result.added downloads")
+                store.infoMessage = AppText.text("Added \(result.added) downloads")
             }
             if !result.failures.isEmpty { store.errorMessage = result.failures.joined(separator: "\n") }
         }
@@ -114,7 +114,7 @@ struct PurchasedView: View {
                         Text("All").tag(0); Text("1 month").tag(1); Text("6 months").tag(6); Text("1 year").tag(12)
                     }.pickerStyle(.segmented)
                 } footer: {
-                    Text("Account: account.id")
+                    Text("Account: \(account.id)")
                 }
                 .listRowBackground(Color.clear).listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
@@ -137,8 +137,8 @@ struct PurchasedView: View {
                             Button {
                                 download(backups.map(\.storeApp))
                             } label: {
-                                Label(batchProgress.map { AppText.text("Adding $0.done of $0.total") }
-                                        ?? AppText.text("Back up all (backups.count)"),
+                                Label(batchProgress.map { AppText.text("Adding \($0.done) of \($0.total)") }
+                                        ?? AppText.text("Back up all (\(backups.count))"),
                                       systemImage: "square.and.arrow.down.on.square")
                                     .fontWeight(.semibold)
                             }
@@ -173,7 +173,7 @@ struct PurchasedView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(selection.contains(app.id) ? AppText.text("Deselect app.name") : AppText.text("Select app.name"))
+                                .accessibilityLabel(selection.contains(app.id) ? AppText.text("Deselect \(app.name)") : AppText.text("Select \(app.name)"))
                             } else {
                                 NavigationLink { AppDetailView(app: storeApp(app)) } label: {
                                     AppRow(app: storeApp(app), subtitle: subtitle, badge: badges[app.id]) {
@@ -185,7 +185,7 @@ struct PurchasedView: View {
                                             .highPriorityGesture(TapGesture().onEnded { getting = app.storeApp; UX.feedback() })
                                             .accessibilityElement(children: .ignore)
                                             .accessibilityAddTraits(.isButton)
-                                            .accessibilityLabel("Download app.name")
+                                            .accessibilityLabel("Download \(app.name)")
                                             .accessibilityAction { getting = app.storeApp; UX.feedback() }
                                     }
                                 }
@@ -193,7 +193,7 @@ struct PurchasedView: View {
                         }
                     } header: {
                         HStack(alignment: .firstTextBaseline) {
-                            Text("visible.count items")
+                            Text("\(visible.count) items")
                             Spacer()
                             Button(selecting ? "Done" : "Select") {
                                 withAnimation(.compatibleSnappy) { selecting.toggle(); selection.removeAll() }
@@ -247,10 +247,10 @@ struct PurchasedView: View {
                     Spacer()
                     if let batchProgress {
                         ProgressView()
-                        Text("Adding batchProgress.done of batchProgress.total").font(.subheadline.monospacedDigit())
+                        Text("Adding \(batchProgress.done) of \(batchProgress.total)").font(.subheadline.monospacedDigit())
                     } else {
                         Button { downloadSelected() } label: {
-                            Text(selection.isEmpty ? "Download selected" : "Download selected (selection.count)").fontWeight(.semibold)
+                            Text(selection.isEmpty ? "Download selected" : "Download selected (\(selection.count))").fontWeight(.semibold)
                         }
                         .disabled(selection.isEmpty)
                         .accessibilityIdentifier("purchased.download-selected")

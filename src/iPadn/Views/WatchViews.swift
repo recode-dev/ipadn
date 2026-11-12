@@ -82,7 +82,7 @@ struct PriceHistorySection: View {
                 PriceHistoryChart(record: record)
                     .cardRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 20))
             } else {
-                Text("Recorded since record.started.formatted(date: .abbreviated, time: .omitted). Price changes appear here.")
+                Text("Recorded since \(record.started.formatted(date: .abbreviated, time: .omitted)). Price changes appear here.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         } else if store.watchChecking {
@@ -116,7 +116,7 @@ private struct TargetPriceRow: View {
                 }
             }
             Text(record.target == nil ? "You’re notified about every price drop. Enter a price to be notified only when it drops to that price or lower."
-                 : "You’re notified when the price drops to WatchService.format(record.target ?? 0, currency: record.currency) or lower, and whenever the app becomes free.")
+                 : "You’re notified when the price drops to \(WatchService.format(record.target ?? 0, currency: record.currency)) or lower, and whenever the app becomes free.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
         .onAppear { text = Self.string(record.target) }

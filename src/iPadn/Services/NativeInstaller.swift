@@ -409,7 +409,7 @@ enum NativeInstaller {
             return detail.isEmpty ? AppText.text("The system couldn't install it: unknown error")
                 : AppText.text("System installation failed: \(String(detail.prefix(160)))")
         default:
-            return detail.isEmpty ? AppText.text("Native install failed (stage)")
+            return detail.isEmpty ? AppText.text("Native install failed (\(stage))")
                 : AppText.text("Native installation failed (\(stage)): \(String(detail.prefix(160)))")
         }
     }

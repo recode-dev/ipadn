@@ -136,9 +136,9 @@ enum WatchService {
     /// Written in the interface language; `locale` formats the amounts.
     static func message(_ change: WatchChange, currency: String, locale: Locale = AppText.formattingLocale) -> String? {
         switch change {
-        case .newVersion(let version): return AppText.text("Version version is available")
-        case .priceDrop(let from, let to): return AppText.text("Price drop: format(from, currency: currency, locale: locale) → format(to, currency: currency, locale: locale)")
-        case .free(let from): return AppText.text("Now free (was format(from, currency: currency, locale: locale))")
+        case .newVersion(let version): return AppText.text("Version \(version) is available")
+        case .priceDrop(let from, let to): return AppText.text("Price drop: \(format(from, currency: currency, locale: locale)) → \(format(to, currency: currency, locale: locale))")
+        case .free(let from): return AppText.text("Now free (was \(format(from, currency: currency, locale: locale)))")
         case .delisted: return AppText.text("Removed from the App Store. Accounts that acquired it can still download it; back it up soon.")
         case .relisted: return AppText.text("Relisted")
         case .priceRise: return nil

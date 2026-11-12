@@ -43,9 +43,9 @@ enum FairPlayCredentialStore {
         if status == errSecItemNotFound {
             var item = query(); attributes.forEach { item[$0.key] = $0.value }
             let added = SecItemAdd(item as CFDictionary, nil)
-            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Could not save the credential (added)")) }
+            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Could not save the credential (\(added))")) }
         } else if status != errSecSuccess {
-            throw ToolError.message(AppText.text("Could not update the credential (status)"))
+            throw ToolError.message(AppText.text("Could not update the credential (\(status))"))
         }
     }
 

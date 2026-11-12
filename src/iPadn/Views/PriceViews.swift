@@ -128,9 +128,9 @@ struct RegionPriceView: View {
     }
 
     private var footnote: String {
-        var lines = [AppText.text("Converted to currencyName(base), lowest first.")]
+        var lines = [AppText.text("Converted to \(currencyName(base)), lowest first.")]
         if let rates {
-            lines.append(AppText.text("Mid-market reference rate as of rates.updated.formatted(date: .abbreviated, time: .omitted); your card issuer sets the amount charged."))
+            lines.append(AppText.text("Mid-market reference rate as of \(rates.updated.formatted(date: .abbreviated, time: .omitted)); your card issuer sets the amount charged."))
         } else if !loading {
             lines.append(AppText.text("Exchange rates aren't available, so only local prices are shown."))
         }
@@ -141,7 +141,7 @@ struct RegionPriceView: View {
     }
 
     private func currencyName(_ code: String) -> String {
-        (AppText.locale.localizedString(forCurrencyCode: code) ?? code) + AppText.text(" (code)")
+        (AppText.locale.localizedString(forCurrencyCode: code) ?? code) + AppText.text(" (\(code))")
     }
 
     private func load() async {
@@ -228,7 +228,7 @@ struct InAppGroupRow: View {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).foregroundStyle(.primary).lineLimit(2)
-                    Text(group.tiers > 1 ? "Tier group.tier + 1 · group.entries.count regions" : "group.entries.count regions")
+                    Text(group.tiers > 1 ? "Tier \(group.tier + 1) · \(group.entries.count) regions" : "\(group.entries.count) regions")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
@@ -278,7 +278,7 @@ struct RegionSelectionView: View {
                 Section {
                     ForEach(selection, id: \.self) { code in row(code, selected: true) }
                         .onMove { selection.move(fromOffsets: $0, toOffset: $1) }
-                } header: { Text("selection.count selected") } footer: {
+                } header: { Text("\(selection.count) selected") } footer: {
                     Text("Followed apps also record price changes in these regions.")
                 }
             }

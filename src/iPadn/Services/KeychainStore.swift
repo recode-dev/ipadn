@@ -18,7 +18,7 @@ enum KeychainStore {
         let status = SecItemCopyMatching(request as CFDictionary, &result)
         if status == errSecItemNotFound { return [] }
         guard status == errSecSuccess, let data = result as? Data else {
-            throw ToolError.message(AppText.text("Couldn't read the account keychain item (status). Unlock the device and try again."))
+            throw ToolError.message(AppText.text("Couldn't read the account keychain item (\(status)). Unlock the device and try again."))
         }
         return try JSONDecoder().decode([AppleAccount].self, from: data)
     }
@@ -32,9 +32,9 @@ enum KeychainStore {
         if status == errSecItemNotFound {
             var item = query(); attributes.forEach { item[$0.key] = $0.value }
             let added = SecItemAdd(item as CFDictionary, nil)
-            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the account keychain item (added)")) }
+            guard added == errSecSuccess else { throw ToolError.message(AppText.text("Couldn't save the account keychain item (\(added))")) }
         } else if status != errSecSuccess {
-            throw ToolError.message(AppText.text("Couldn't update the account keychain item (status)"))
+            throw ToolError.message(AppText.text("Couldn't update the account keychain item (\(status))"))
         }
     }
 }

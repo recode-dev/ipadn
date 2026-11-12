@@ -33,11 +33,11 @@ enum FairPlayDecryptor {
             switch self {
             case .notMachO: return AppText.text("Not a valid Mach-O binary")
             case .notEncrypted: return AppText.text("This binary is not encrypted (cryptid=0)")
-            case .badHeader(let why): return AppText.text("Mach-O structure problem: why")
-            case .badSinf(let why): return AppText.text("Invalid SINF license record: why")
-            case .badLicense(let why): return AppText.text("Invalid license key table: why")
+            case .badHeader(let why): return AppText.text("Mach-O structure problem: \(why)")
+            case .badSinf(let why): return AppText.text("Invalid SINF license record: \(why)")
+            case .badLicense(let why): return AppText.text("Invalid license key table: \(why)")
             case .credentialMismatch: return AppText.text("The FairPlay credential does not match this app’s account license")
-            case .verifyFailed(let why): return AppText.text("Decryption verification failed: why")
+            case .verifyFailed(let why): return AppText.text("Decryption verification failed: \(why)")
             }
         }
     }

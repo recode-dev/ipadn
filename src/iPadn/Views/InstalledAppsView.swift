@@ -168,9 +168,9 @@ struct InstalledAppsView: View {
         let latest = listing(app)
         let installed = app.version ?? ""
         let subtitle = kind == .update
-            ? AppText.text("Installed installed, store has latest?.version ?? """)
-            : app.updatesBlocked ? AppText.text("Installed installed · Updates blocked")
-            : (installed.isEmpty ? (app.bundleID ?? "") : AppText.text("Installed installed"))
+            ? AppText.text("Installed \(installed), store has \(latest?.version ?? "")")
+            : app.updatesBlocked ? AppText.text("Installed \(installed) · Updates blocked")
+            : (installed.isEmpty ? (app.bundleID ?? "") : AppText.text("Installed \(installed)"))
         let shown = StoreApp(id: app.storeItemID ?? app.bundleID ?? "", name: latest?.name ?? app.name ?? app.bundleID ?? "",
                              bundleID: app.bundleID ?? "", version: installed, iconURL: latest?.iconURL)
         if let latest {
@@ -207,7 +207,7 @@ struct InstalledAppsView: View {
         Task {
             defer { updating = false }
             let result = await store.startDownloads(targets) { _ in }
-            if result.added > 0 { store.infoMessage = AppText.text("Added result.added downloads") }
+            if result.added > 0 { store.infoMessage = AppText.text("Added \(result.added) downloads") }
             if !result.failures.isEmpty { store.errorMessage = result.failures.joined(separator: "\n") }
         }
     }

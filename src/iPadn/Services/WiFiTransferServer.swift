@@ -203,8 +203,8 @@ final class WiFiTransferServer: @unchecked Sendable {
     static func clientAddress(_ endpoint: NWEndpoint) -> String? {
         guard case .hostPort(let host, _) = endpoint else { return nil }
         switch host {
-        case .ipv4(let address): return "address".split(separator: "%").first.map(String.init)
-        case .ipv6(let address): return "address".split(separator: "%").first.map(String.init)
+        case .ipv4(let address): return "\(address)".split(separator: "%").first.map(String.init)
+        case .ipv6(let address): return "\(address)".split(separator: "%").first.map(String.init)
         default: return nil
         }
     }

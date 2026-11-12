@@ -20,7 +20,7 @@ struct PackageCompareView: View {
                 }
                 .padding(.vertical, 4)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(AppText.text("From older.version to newer.version"))
+                .accessibilityLabel(AppText.text("From \(older.version) to \(newer.version)"))
             }
             if let comparison {
                 if comparison.unchanged {
@@ -67,6 +67,6 @@ struct PackageCompareView: View {
         } icon: {
             Image(systemName: added ? "plus.circle.fill" : "minus.circle.fill").foregroundStyle(added ? .green : .red)
         }
-        .accessibilityLabel(added ? AppText.text("Added: item") : AppText.text("Removed: item"))
+        .accessibilityLabel(added ? AppText.text("Added: \(item)") : AppText.text("Removed: \(item)"))
     }
 }

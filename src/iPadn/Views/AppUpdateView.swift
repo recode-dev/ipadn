@@ -14,10 +14,10 @@ struct AppUpdateView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("iPadn release.version").font(.title2.weight(.bold))
+                    Text("iPadn \(release.version)").font(.title2.weight(.bold))
                     Text([release.published?.formatted(date: .abbreviated, time: .omitted),
                           release.packageSize > 0 ? release.packageSize.byteLabel : nil,
-                          AppText.text("Current: AppUpdateService.currentVersion")].compactMap { $0 }.joined(separator: " · "))
+                          AppText.text("Current: \(AppUpdateService.currentVersion)")].compactMap { $0 }.joined(separator: " · "))
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)

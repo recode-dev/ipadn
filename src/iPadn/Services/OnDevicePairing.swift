@@ -82,7 +82,7 @@ final class OnDevicePairing: ObservableObject {
             phase = .code(code)
             update(step: 3, code: code)
             // Also as a notification, for devices without Live Activities.
-            notify(AppText.text("iPadn pairing code: code"), body: AppText.text("Enter this code in Settings."))
+            notify(AppText.text("iPadn pairing code: \(code)"), body: AppText.text("Enter this code in Settings."))
         }
     }
 
@@ -125,7 +125,7 @@ final class OnDevicePairing: ObservableObject {
         guard #available(iOS 16.2, *), let activity = activity as? Activity<PairingActivityAttributes> else { return }
         let state = PairingActivityAttributes.ContentState(step: step, code: code)
         // An alert expands the Dynamic Island when the code arrives.
-        let alert = code.map { AlertConfiguration(title: "iPadn Pairing Code", body: "$0", sound: .default) }
+        let alert = code.map { AlertConfiguration(title: "iPadn Pairing Code", body: "\($0)", sound: .default) }
         Task { await activity.update(ActivityContent(state: state, staleDate: nil), alertConfiguration: alert) }
     }
 

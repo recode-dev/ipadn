@@ -397,7 +397,7 @@ struct VerificationCodeField: View {
             .contentShape(Rectangle())
             .onTapGesture { focused = true }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Verification code, code.count of 6 digits entered")
+            .accessibilityLabel("Verification code, \(code.count) of 6 digits entered")
         }
         .onAppear { if !disabled { focused = true } }
         .compatibleOnChange(of: disabled) { value in if !value { focused = true } }

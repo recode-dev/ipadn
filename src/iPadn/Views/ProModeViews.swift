@@ -164,7 +164,7 @@ struct PackageContentsView: View {
                         }
                     }
                 } header: {
-                    Text(query.isEmpty ? "shown.count items" : "Found shown.count files")
+                    Text(query.isEmpty ? "\(shown.count) items" : "Found \(shown.count) files")
                 }
             } else {
                 Section { HStack { ProgressView(); Text("Reading…").foregroundStyle(.secondary) } }

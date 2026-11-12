@@ -901,7 +901,7 @@ final class DownloadManager: NSObject, ObservableObject {
         jobs[index].status = .failed; jobs[index].error = error.localizedDescription
         jobs[index].foregroundFallback = Self.cannotCreateFile(error)
         persist(); schedule()
-        notify(title: AppText.text("Download failed"), body: AppText.text("jobs[index].app.name: error.localizedDescription"))
+        notify(title: AppText.text("Download failed"), body: AppText.text("\(jobs[index].app.name): \(error.localizedDescription)"))
     }
     /// Saves a snapshot of the task list. Encoding and writing happen on a
     /// serial background queue, so writes stay in order and the main thread
@@ -1005,7 +1005,7 @@ enum MacPackageStorage {
             try file.seek(toOffset: UInt64(length - 512))
             valid = (try file.read(upToCount: 4) ?? Data()) == Data("koly".utf8)
         }
-        guard valid else { throw ToolError.message(AppText.text("The file isn't a valid format.uppercased() package")) }
+        guard valid else { throw ToolError.message(AppText.text("The file isn't a valid \(format.uppercased()) package")) }
         let filename = "\(job.id.uuidString)-\(PackageService.safeName(job.app.name).prefix(40)).\(format)"
         let destination = LocalResources.packages.appendingPathComponent(filename)
         guard !FileManager.default.fileExists(atPath: destination.path) else {
@@ -1062,7 +1062,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let received = LocalResources.support.appendingPathComponent("\(id.uuidString)-\(UUID().uuidString).received")
         do {
             guard let response = downloadTask.response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-                throw ToolError.message(AppText.text("Download failed ((downloadTask.response as? HTTPURLResponse)?.statusCode ?? 0). Try again."))
+                throw ToolError.message(AppText.text("Download failed (\((downloadTask.response as? HTTPURLResponse)?.statusCode ?? 0)). Try again."))
             }
             if FileManager.default.fileExists(atPath: received.path) {
                 try? FileManager.default.removeItem(at: received)

@@ -91,7 +91,7 @@ enum XARValidator {
         return Report(files: toc.files.count, heapBytes: heapBytes)
     }
 
-    private static func failure(_ text: String) -> ToolError { .message(AppText.text("PKG verification failed: text")) }
+    private static func failure(_ text: String) -> ToolError { .message(AppText.text("PKG verification failed: \(text)")) }
 
     private static func number(_ data: Data, _ offset: Int, _ length: Int) -> UInt64 {
         data[data.startIndex + offset ..< data.startIndex + offset + length].reduce(0) { ($0 << 8) | UInt64($1) }

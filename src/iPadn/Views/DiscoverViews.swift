@@ -65,9 +65,9 @@ struct ChartView: View {
                 Section {
                     NavigationLink { AppDetailView(app: app) } label: {
                         // The rank leads the category line, so the name keeps the full width.
-                        AppRow(app: app, subtitle: ["index + 1", app.displayCategory].filter { !$0.isEmpty }.joined(separator: " · ")) {
+                        AppRow(app: app, subtitle: ["\(index + 1)", app.displayCategory].filter { !$0.isEmpty }.joined(separator: " · ")) {
                             RowCapsule(title: app.isFree ? "Get" : LocalizedStringKey(app.priceLabel)) { getting = app; UX.feedback() }
-                                .accessibilityLabel(AppText.text("Get app.name"))
+                                .accessibilityLabel(AppText.text("Get \(app.name)"))
                         }
                     }
                     .contextMenu {
@@ -104,7 +104,7 @@ struct ChartView: View {
                         Image(systemName: genre == .all ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                             .frame(minWidth: 44, minHeight: 44)
                     }
-                    .accessibilityLabel(AppText.text("Category: genre.title"))
+                    .accessibilityLabel(AppText.text("Category: \(genre.title)"))
                 }
             }
         }

@@ -374,7 +374,7 @@ private struct PairingGuideView: View {
             ZStack {
                 Circle().fill(done || current ? Color.accentColor : Color.secondary.opacity(0.25)).frame(width: 26, height: 26)
                 if done { Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(.white) }
-                else { Text("number").font(.caption.weight(.bold)).foregroundStyle(current ? .white : .secondary) }
+                else { Text("\(number)").font(.caption.weight(.bold)).foregroundStyle(current ? .white : .secondary) }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body.weight(current ? .semibold : .regular))

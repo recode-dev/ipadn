@@ -265,15 +265,15 @@ enum ManifestBuilder {
         let link = escape(installURL.absoluteString), title = escape(name)
         let language = AppText.locale.language.languageCode?.identifier ?? "en"
         return """
-        <!doctype html><html lang="language"><head><meta charset="utf-8">
+        <!doctype html><html lang="\(language)"><head><meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
-        <meta http-equiv="refresh" content="0;url=\(link)"><title>\(escape(AppText.text("Install title")))</title>
+        <meta http-equiv="refresh" content="0;url=\(link)"><title>\(escape(AppText.text("Install \(title)")))</title>
         <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,system-ui;background:#f2f2f7;color:#000}
         main{text-align:center;padding:24px;max-width:420px}p{color:#6e6e73;line-height:1.5}
         a{display:inline-block;margin-top:12px;padding:12px 40px;border-radius:999px;background:#007aff;color:#fff;font-weight:600;text-decoration:none}
         @media(prefers-color-scheme:dark){body{background:#000;color:#fff}p{color:#98989d}}</style></head>
         <body><main><h2>\(title)</h2><p>\(escape(AppText.text("If no install prompt appears, tap the button below. After confirming, return to iPadn and wait for the install to finish.")))</p>
-        <a href="link">\(escape(AppText.text("Install")))</a></main></body></html>
+        <a href="\(link)">\(escape(AppText.text("Install")))</a></main></body></html>
         """
     }
 

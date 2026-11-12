@@ -105,7 +105,7 @@ struct AppRow<Accessory: View>: View {
                 HStack(spacing: 6) {
                     if app.isDelisted { TagBadge(text: "Removed", tint: .orange) }
                     if let badge { TagBadge(text: badge.text, tint: badge.tint) }
-                    let facts = [subtitle == nil && !app.version.isEmpty ? "vapp.version" : "", app.size > 0 ? app.size.byteLabel : ""]
+                    let facts = [subtitle == nil && !app.version.isEmpty ? "v\(app.version)" : "", app.size > 0 ? app.size.byteLabel : ""]
                         .filter { !$0.isEmpty }.joined(separator: " · ")
                     if !facts.isEmpty { Text(facts).font(.caption).foregroundStyle(.tertiary).lineLimit(1) }
                 }
@@ -246,7 +246,7 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: store.undoNotice?.id)
         .task(id: store.undoNotice?.id) {
             guard let notice = store.undoNotice else { return }
-            UIAccessibility.post(notification: .announcement, argument: AppText.text("notice.message. Undo is available."))
+            UIAccessibility.post(notification: .announcement, argument: AppText.text("\(notice.message). Undo is available."))
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             if store.undoNotice?.id == notice.id { store.undoNotice = nil }
         }

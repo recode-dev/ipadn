@@ -17,12 +17,12 @@ struct ReviewRow: View {
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(AppText.text("review.rating stars"))
+            .accessibilityLabel(AppText.text("\(review.rating) stars"))
             if !review.title.isEmpty { Text(verbatim: review.title).font(.subheadline.weight(.semibold)) }
             Text(verbatim: review.body).font(.subheadline).foregroundStyle(.primary)
                 .lineLimit(lineLimit).fixedSize(horizontal: false, vertical: true)
             if !review.version.isEmpty {
-                Text("Version review.version").font(.caption).foregroundStyle(.secondary)
+                Text("Version \(review.version)").font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)

@@ -65,7 +65,7 @@ final class ToolStore: ObservableObject {
     @Published var settings: ToolSettings {
         didSet {
             do { LocalResources.defaults.set(try JSONEncoder().encode(settings), forKey: LocalResources.settings) }
-            catch { errorMessage = AppText.text("Couldn't save settings: error.localizedDescription") }
+            catch { errorMessage = AppText.text("Couldn't save settings: \(error.localizedDescription)") }
             downloads.configure(settings)
             // Region or platform changed: refresh the results here, so it also
             // happens when the search page is not on screen (iPad sidebar).
@@ -372,7 +372,7 @@ final class ToolStore: ObservableObject {
             if let previous, apple.accounts.contains(where: { $0.id == previous }) { infoMessage = AppText.text("Signed out") }
             return
         }
-        infoMessage = AppText.text("Switched to account.name.isEmpty ? account.id : account.name")
+        infoMessage = AppText.text("Switched to \(account.name.isEmpty ? account.id : account.name)")
         if let country = StoreService.country(forStorefront: account.storeFront), settings.store.country != country {
             // Changing the region re-runs the search (see settings).
             settings.store.country = country
@@ -413,7 +413,7 @@ final class ToolStore: ObservableObject {
         let previousIndex = next.firstIndex { $0.id == app.id } ?? 0
         if following { next.insert(app, at: 0) } else { next.removeAll { $0.id == app.id } }
         do { try await saveCache(next, filename: "favorites.json"); favorites = next; updateLocalResults() }
-        catch { errorMessage = AppText.text("Couldn't save followed apps: error.localizedDescription"); return }
+        catch { errorMessage = AppText.text("Couldn't save followed apps: \(error.localizedDescription)"); return }
         if following {
             // Start the record now, so price changes count from this moment.
             Task { await checkWatched(force: true) }
@@ -424,7 +424,7 @@ final class ToolStore: ObservableObject {
             let previousRecords = watch.filter { $0.value.id == app.id }
             watch = watch.filter { $0.value.id != app.id }
             persistWatch()
-            undoNotice = UndoNotice(message: AppText.text("Unfollowed app.name")) { [weak self] in
+            undoNotice = UndoNotice(message: AppText.text("Unfollowed \(app.name)")) { [weak self] in
                 guard let self, !self.isFavorite(app) else { return }
                 let previous = self.favoriteTask
                 self.favoriteTask = Task {
@@ -542,7 +542,7 @@ final class ToolStore: ObservableObject {
                 await previous?.value
                 let next = self.favorites.map { metadata[$0.id] ?? $0 }
                 do { try await self.saveCache(next, filename: "favorites.json"); self.favorites = next }
-                catch { self.errorMessage = AppText.text("Couldn't save followed apps: error.localizedDescription") }
+                catch { self.errorMessage = AppText.text("Couldn't save followed apps: \(error.localizedDescription)") }
             }
         }
         if watchRecheck {
@@ -571,13 +571,13 @@ final class ToolStore: ObservableObject {
         let lines = events.compactMap { event in
             WatchService.message(event.change, currency: event.currency).map { message in
                 event.country == primary
-                    ? AppText.text("event.app.name: message")
-                    : AppText.text("event.app.name (StoreRegions.name(event.country)): message")
+                    ? AppText.text("\(event.app.name): \(message)")
+                    : AppText.text("\(event.app.name) (\(StoreRegions.name(event.country))): \(message)")
             }
         }
         guard !lines.isEmpty else { return }
         let content = UNMutableNotificationContent()
-        content.title = lines.count == 1 ? AppText.text("Followed apps changed") : AppText.text("lines.count followed apps changed")
+        content.title = lines.count == 1 ? AppText.text("Followed apps changed") : AppText.text("\(lines.count) followed apps changed")
         let shown = lines.prefix(4).joined(separator: "\n")
         content.body = lines.count > 4 ? shown + "\n" + AppText.text("and more") : shown
         content.sound = .default
@@ -809,7 +809,7 @@ final class ToolStore: ObservableObject {
         guard LocalResources.defaults.string(forKey: key) != release.version else { return }
         LocalResources.defaults.set(release.version, forKey: key)
         let content = UNMutableNotificationContent()
-        content.title = AppText.text("iPadn release.version is available")
+        content.title = AppText.text("iPadn \(release.version) is available")
         content.body = AppText.text("Open iPadn, then check Settings for what's new and download the update.")
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "app-update-" + release.version, content: content, trigger: nil))
@@ -846,7 +846,7 @@ final class ToolStore: ObservableObject {
         let downloaded = Set(downloads.jobs.filter { $0.status == .completed }.map(\.app.id))
         let text = PurchaseExport.csv(owned, listed: ownedListed, downloaded: downloaded)
         let stamp = Date().formatted(.iso8601.year().month().day())
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent(AppText.text("iPadn-Purchased-stamp") + ".csv")
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(AppText.text("iPadn-Purchased-\(stamp)") + ".csv")
         // A byte-order mark lets spreadsheet apps read the Chinese text.
         try Data(("\u{FEFF}" + text).utf8).write(to: file, options: .atomic)
         return file
@@ -877,9 +877,9 @@ final class ToolStore: ObservableObject {
         LocalResources.defaults.set(notified, forKey: key)
         let names = fresh.values.sorted { $0.name < $1.name }.prefix(3).map { "\($0.name) \($0.version)" }
         let content = UNMutableNotificationContent()
-        content.title = fresh.count == 1 ? AppText.text("fresh.values.first!.name has an update") : AppText.text("fresh.count apps have updates")
+        content.title = fresh.count == 1 ? AppText.text("\(fresh.values.first!.name) has an update") : AppText.text("\(fresh.count) apps have updates")
         let list = names.joined(separator: AppText.text(", ")) + (fresh.count > 3 ? AppText.text(" and more") : "")
-        content.body = AppText.text("list. Open iPadn to download the new version.")
+        content.body = AppText.text("\(list). Open iPadn to download the new version.")
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "update-" + UUID().uuidString, content: content, trigger: nil))
     }
@@ -910,12 +910,12 @@ final class ToolStore: ObservableObject {
     /// are skipped then. Other problems are reported per app.
     func downloadAllUpdates(of jobs: [DownloadJob]) async throws {
         #if DEBUG
-        if visualPreview { infoMessage = AppText.text("Added jobs.count downloads"); return }
+        if visualPreview { infoMessage = AppText.text("Added \(jobs.count) downloads"); return }
         #endif
         var added = 0
         var failures: [String] = []
         defer {
-            if added > 0 { infoMessage = AppText.text("Added added downloads") }
+            if added > 0 { infoMessage = AppText.text("Added \(added) downloads") }
             if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
         }
         for job in jobs {
@@ -925,7 +925,7 @@ final class ToolStore: ObservableObject {
             } catch let error where error is AppleLoginError || error is AppleAuthError || error is CancellationError {
                 throw error
             } catch {
-                failures.append(AppText.text("job.app.name.isEmpty ? job.app.id : job.app.name: error.localizedDescription"))
+                failures.append(AppText.text("\(job.app.name.isEmpty ? job.app.id : job.app.name): \(error.localizedDescription)"))
                 if error is DownloadQueueLimitError { break }
             }
         }
@@ -975,7 +975,7 @@ final class ToolStore: ObservableObject {
                     Task { @MainActor in
                         guard let self else { return }
                         let result = await self.startDownloads(remaining) { _ in }
-                        if result.added > 0 { self.infoMessage = AppText.text("Added result.added downloads") }
+                        if result.added > 0 { self.infoMessage = AppText.text("Added \(result.added) downloads") }
                         if !result.failures.isEmpty { self.errorMessage = result.failures.joined(separator: "\n") }
                     }
                 }
@@ -985,7 +985,7 @@ final class ToolStore: ObservableObject {
                 break
             } catch {
                 let message = error.localizedDescription
-                failures.append(AppText.text("app.name.isEmpty ? app.id : app.name: message"))
+                failures.append(AppText.text("\(app.name.isEmpty ? app.id : app.name): \(message)"))
                 if error is DownloadQueueLimitError { break }
             }
             progress(index + 1)
@@ -995,7 +995,7 @@ final class ToolStore: ObservableObject {
 
     func refreshDownload(_ job: DownloadJob) async throws {
         guard job.status == .failed, job.asset != nil else { throw ToolError.message(AppText.text("This task can't be retried")) }
-        guard apple.activeID == job.account else { throw ToolError.message(AppText.text("Switch back to the original download account first: job.account ?? """)) }
+        guard apple.activeID == job.account else { throw ToolError.message(AppText.text("Switch back to the original download account first: \(job.account ?? "")")) }
         let platform: AppPlatform
         switch job.asset?.platform.lowercased() {
         case "appletvos", "tvos", "atv9": platform = .tvOS

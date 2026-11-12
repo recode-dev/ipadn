@@ -22,8 +22,8 @@ struct HTTPStatusError: LocalizedError {
         switch code {
         case 404: return AppText.text("Nothing found")
         // Apple refuses requests whose sign-in it no longer accepts.
-        case 401: return AppText.text("Apple refused the request (code). The sign-in may have expired; sign in again under Account and try again.")
-        default: return AppText.text("Network request failed (code). Try again.")
+        case 401: return AppText.text("Apple refused the request (\(code)). The sign-in may have expired; sign in again under Account and try again.")
+        default: return AppText.text("Network request failed (\(code)). Try again.")
         }
     }
 }
@@ -43,7 +43,7 @@ enum AppErrorMessage {
             return AppText.text("The Apple Account needs to sign in again. Update the password on the Account page.")
         }
         if let status = error as? HTTPStatusError {
-            return AppText.text("The store couldn't return results (status.code). Try again later or change region.")
+            return AppText.text("The store couldn't return results (\(status.code)). Try again later or change region.")
         }
         if message.contains("HTTP") || message.contains("JSON") || message.contains("itunes.apple.com") {
             return AppText.text("The store couldn't return results. Try again later or change region.")

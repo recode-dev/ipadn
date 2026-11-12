@@ -64,8 +64,8 @@ struct SettingsView: View {
             }
             if page == .downloads {
             Section {
-                Stepper("Simultaneous downloads: store.settings.maxConcurrentDownloads", value: $store.settings.maxConcurrentDownloads, in: 1...6)
-                Stepper("Queue limit: store.settings.maxQueuedDownloads", value: $store.settings.maxQueuedDownloads, in: 1...100)
+                Stepper("Simultaneous downloads: \(store.settings.maxConcurrentDownloads)", value: $store.settings.maxConcurrentDownloads, in: 1...6)
+                Stepper("Queue limit: \(store.settings.maxQueuedDownloads)", value: $store.settings.maxQueuedDownloads, in: 1...100)
                 Toggle("Notify when downloads finish", isOn: $store.settings.notifications)
                 Toggle("New version alerts", isOn: $store.settings.updateNotifications)
                     .compatibleOnChange(of: store.settings.updateNotifications) { on in
@@ -143,7 +143,7 @@ struct SettingsView: View {
             if page == .appearance {
             Section("Search & appearance") {
                 Picker("Number of results", selection: $store.settings.searchLimit) {
-                    ForEach([10, 30, 50, 100, 200], id: \.self) { Text("$0").tag($0) }
+                    ForEach([10, 30, 50, 100, 200], id: \.self) { Text("\($0)").tag($0) }
                 }
                 Picker("Appearance", selection: $store.settings.appearance) {
                     Text("Follow system").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark")
@@ -302,7 +302,7 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 if let update = store.appUpdate {
                     NavigationLink { AppUpdateView(release: update) } label: {
-                        Label("iPadn update.version is available", systemImage: "arrow.down.app.fill")
+                        Label("iPadn \(update.version) is available", systemImage: "arrow.down.app.fill")
                             .foregroundStyle(.tint).fontWeight(.semibold)
                     }
                     .accessibilityIdentifier("settings.app-update")
@@ -403,10 +403,10 @@ struct SourceCheckLabel: View {
             case .checking:
                 Label("Checking…", systemImage: "clock").foregroundStyle(.secondary)
             case .available(let versions, let seconds):
-                Label("Available · versions versions · String(format: "%.1f", seconds) s", systemImage: "checkmark.circle.fill")
+                Label("Available · \(versions) versions · \(String(format: "%.1f", seconds)) s", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
             case .unavailable(let reason):
-                Label("Unavailable: reason", systemImage: "exclamationmark.triangle.fill")
+                Label("Unavailable: \(reason)", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange).lineLimit(2)
             }
         }
