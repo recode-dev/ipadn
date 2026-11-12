@@ -3,6 +3,10 @@ import Darwin
 import MachO
 import ZIPFoundation
 
+@_silgen_name("ipadn_mremap_encrypted_svc")
+private func ipadnRawMremapEncrypted(_ addr: UnsafeMutableRawPointer?, _ length: Int, _ prot: Int32,
+                                     _ cpuType: UInt32, _ cpuSubtype: UInt32) -> Int32
+
 enum FairPlayKernelDecryptor {
 
     enum KernelError: LocalizedError {
@@ -39,7 +43,6 @@ enum FairPlayKernelDecryptor {
         let cryptidFileOffset: Int
     }
 
-    private static let mremapSyscallNumber: Int32 = 489
     private static var symbol: UnsafeMutableRawPointer? = {
         dlsym(UnsafeMutableRawPointer(bitPattern: UInt(bitPattern: -2)), "mremap_encrypted")
     }()
@@ -237,7 +240,7 @@ enum FairPlayKernelDecryptor {
                 var outLen: vm_size_t = 0
                 let readKr = buffer.withUnsafeMutableBufferPointer { window -> kern_return_t in
                     vm_read_overwrite(mach_task_self_,
-                                      vm_address_t(UInt(bitPattern: target) &+ UInt64(offset)),
+                                      vm_address_t(UInt(bitPattern: target) &+ UInt(offset)),
                                       vm_size_t(length),
                                       vm_address_t(UInt(bitPattern: window.baseAddress!)),
                                       &outLen)
@@ -275,8 +278,7 @@ enum FairPlayKernelDecryptor {
             typealias Signature = @convention(c) (UnsafeMutableRawPointer?, Int, Int32, UInt32, UInt32) -> Int32
             return unsafeBitCast(fn, to: Signature.self)(addr, length, prot, cpuType, cpuSubtype)
         }
-        return syscall(mremapSyscallNumber, Int(bitPattern: UInt(bitPattern: addr)), length,
-                       Int(prot), Int(cpuType), Int(cpuSubtype))
+        return ipadnRawMremapEncrypted(addr, length, prot, cpuType, cpuSubtype)
     }
 
     private static func stageData(_ data: Data, path: String, root: URL) throws {

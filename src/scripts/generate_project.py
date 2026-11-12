@@ -40,6 +40,11 @@ for path in sorted((ROOT / "iPadn").rglob("*.swift")):
     reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="sourcecode.swift", path=relative, sourceTree="<group>")
     app_files.append(reference)
     sources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
+for path in sorted((ROOT / "iPadn").rglob("*.c")):
+    relative = path.relative_to(ROOT / "iPadn").as_posix()
+    reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="sourcecode.c.c", path=relative, sourceTree="<group>")
+    app_files.append(reference)
+    sources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
 resources = []
 for path, file_type in [("Resources/SAPRuntime", "folder"), ("Resources/Assets.xcassets", "folder.assetcatalog"), ("Resources/PrivacyInfo.xcprivacy", "text.xml"), ("Resources/app-name-directory.json", "text.json")]:
     reference = add("File/" + path, "PBXFileReference", lastKnownFileType=file_type, path=path, sourceTree="<group>")
