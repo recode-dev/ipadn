@@ -41,7 +41,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 55
     defaults:
       run:
