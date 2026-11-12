@@ -80282,6 +80282,2806 @@
           }
         }
       }
+    },
+    "Decryptor": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密器"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decryptor"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号ツール"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화 도구"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Декриптор"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desencriptador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffreur"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseler"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografador"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فك التشفير"
+          }
+        }
+      }
+    },
+    "FairPlay 凭据": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 凭据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 憑證"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay credential"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 認証情報"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 자격 증명"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ FairPlay"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiant FairPlay"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay-Schlüssel"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتاح FairPlay"
+          }
+        }
+      }
+    },
+    "FairPlay 凭据与此应用的账号授权不匹配": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 凭据与此应用的账号授权不匹配"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 憑證與此應用的帳號授權不匹配"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The FairPlay credential does not match this app’s account license"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 認証情報がこのアプリのアカウント ライセンスと一致しません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 자격 증명이 이 앱의 계정 라이선스와 일치하지 않습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ FairPlay не соответствует лицензии этого приложения"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La credencial FairPlay no coincide con la licencia de esta app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’identifiant FairPlay ne correspond pas à la licence de cette app"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der FairPlay-Schlüssel passt nicht zur Lizenz dieser App"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A credencial FairPlay não corresponde à licença deste app"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتاح FairPlay لا يتطابق مع ترخيص هذا التطبيق"
+          }
+        }
+      }
+    },
+    "FairPlay 凭据已就绪": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 凭据已就绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 憑證已就緒"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay credential ready"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 認証情報は準備完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 자격 증명 준비됨"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ FairPlay готов"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay lista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiant FairPlay prêt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay-Schlüssel bereit"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay pronta"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتاح FairPlay جاهز"
+          }
+        }
+      }
+    },
+    "Mach-O 结构异常：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach-O 结构异常：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach-O 結構異常：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach-O structure problem: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach-O の構造に問題があります：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach-O 구조 문제: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некорректная структура Mach-O: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problema en la estructura Mach-O: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problème de structure Mach-O : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problem in der Mach-O-Struktur: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problema na estrutura Mach-O: %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشكلة في بنية Mach-O: %@"
+          }
+        }
+      }
+    },
+    "SINF 授权记录无效：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SINF 授权记录无效：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SINF 授權記錄無效：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid SINF license record: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SINF ライセンス レコードが無効です：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SINF 라이선스 레코드가 잘못됨: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недействительная запись лицензии SINF: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro de licencia SINF no válido: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement de licence SINF non valide : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungültiger SINF-Lizenzdatensatz: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro de licença SINF inválido: %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجل ترخيص SINF غير صالح: %@"
+          }
+        }
+      }
+    },
+    "授权页表无效：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授权页表无效：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授權頁表無效：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid license key table: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス キー テーブルが無効です：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이선스 키 테이블이 잘못됨: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недействительная таблица ключей лицензии: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabla de claves de licencia no válida: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Table de clés de licence non valide : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungültige Lizenz-Schlüsseltabelle: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabela de chaves de licença inválida: %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جدول مفاتيح الترخيص غير صالح: %@"
+          }
+        }
+      }
+    },
+    "解密结果校验失败：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密结果校验失败：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密結果校驗失敗：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decryption verification failed: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号結果の検証に失敗しました：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화 결과 검증 실패: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверка результата расшифровки не пройдена: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falló la verificación del descifrado: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de la vérification du déchiffrement : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifikation der Entschlüsselung fehlgeschlagen: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falha na verificação da descriptografia: %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فشل التحقق من نتيجة فك التشفير: %@"
+          }
+        }
+      }
+    },
+    "下载的安装包不可用，请重试": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载的安装包不可用，请重试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載的安裝包不可用，請重試"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded package is unusable, please try again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードしたパッケージが使用できません。もう一度お試しください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드한 패키지를 사용할 수 없습니다. 다시 시도하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загруженный пакет недоступен, попробуйте снова"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El paquete descargado no se puede usar, inténtalo de nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le paquet téléchargé est inutilisable, réessayez"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das geladene Paket ist unbrauchbar, bitte erneut versuchen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O pacote baixado está inutilizável, tente novamente"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحزمة التي تم تنزيلها غير قابلة للاستخدام، حاول مرة أخرى"
+          }
+        }
+      }
+    },
+    "下载超时，请稍后在下载页重试": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载超时，请稍后在下载页重试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載逾時，請稍後在下載頁重試"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download timed out, retry later from the downloads page"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードがタイムアウトしました。後ほどダウンロード ページから再試行してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다운로드 시간이 초과되었습니다. 나중에 다운로드 페이지에서 다시 시도하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка прервана по тайм-ауту, повторите позже на странице загрузок"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La descarga agotó el tiempo, reintenta más tarde desde la página de descargas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement expiré, réessayez plus tard depuis la page des téléchargements"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download-Timeout, später auf der Download-Seite erneut versuchen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O download expirou, tente novamente mais tarde na página de downloads"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انتهت مهلة التنزيل، حاول مرة أخرى لاحقًا من صفحة التنزيلات"
+          }
+        }
+      }
+    },
+    "凭据保存在钥匙串，只在本机使用。它对应导入时所用 Apple ID 账号。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "凭据保存在钥匙串，只在本机使用。它对应导入时所用 Apple ID 账号。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "憑證保存在鑰匙圈，只在本機使用。它對應導入時所用 Apple ID 帳號。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credential is stored in the keychain and only used on this device. It belongs to the Apple ID account it was imported for."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報はキーチェーンに保存され、このデバイスでのみ使用されます。取り込んだ Apple ID アカウントに対応します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명은 키체인에 저장되며 이 기기에서만 사용됩니다. 가져온 Apple ID 계정에 해당합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ хранится в связке ключей и используется только на этом устройстве. Он принадлежит аккаунту Apple ID, для которого был импортирован."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La credencial se guarda en el llavero y solo se usa en este dispositivo. Corresponde a la cuenta de Apple ID con la que se importó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’identifiant est conservé dans le trousseau et utilisé uniquement sur cet appareil. Il correspond au compte Apple ID utilisé lors de l’import."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Schlüssel wird im Schlüsselbund gespeichert und nur auf diesem Gerät verwendet. Er gehört zum Apple-ID-Konto, für das er importiert wurde."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A credencial fica no chaveiro e só é usada neste aparelho. Ela pertence à conta Apple ID usada na importação."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُحفظ المفتاح في حلقة المفاتيح ويُستخدم على هذا الجهاز فقط. وهو مرتبط بحساب Apple ID الذي تم استيراده له."
+          }
+        }
+      }
+    },
+    "凭据必须是 16 字节（32 位十六进制）": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "凭据必须是 16 字节（32 位十六进制）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "憑證必須是 16 位元組（32 位十六進制）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credential must be 16 bytes (32 hex characters)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報は 16 バイト（32 桁の 16 進数）である必要があります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명은 16바이트(32자리 16진수)여야 합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ должен быть 16 байт (32 шестнадцатеричных символа)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La credencial debe tener 16 bytes (32 caracteres hexadecimales)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’identifiant doit comporter 16 octets (32 caractères hexadécimaux)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Schlüssel muss 16 Bytes (32 Hexzeichen) haben"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A credencial deve ter 16 bytes (32 caracteres hexadecimais)"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجب أن يكون المفتاح 16 بايت (32 حرفًا سداسيًا عشريًا)"
+          }
+        }
+      }
+    },
+    "凭据无效：需要 16 字节（32 位十六进制）": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "凭据无效：需要 16 字节（32 位十六进制）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "憑證無效：需要 16 位元組（32 位十六進制）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid credential: 16 bytes (32 hex characters) required"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報が無効です：16 バイト（32 桁の 16 進数）が必要です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잘못된 자격 증명: 16바이트(32자리 16진수)가 필요합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недействительный ключ: требуется 16 байт (32 шестнадцатеричных символа)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial no válida: se requieren 16 bytes (32 caracteres hexadecimales)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiant non valide : 16 octets (32 caractères hexadécimaux) requis"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungültiger Schlüssel: 16 Bytes (32 Hexzeichen) erforderlich"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial inválida: são necessários 16 bytes (32 caracteres hexadecimais)"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مفتاح غير صالح: يلزم 16 بايت (32 حرفًا سداسيًا عشريًا)"
+          }
+        }
+      }
+    },
+    "安装包中的二进制过大，无法在设备上解密": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装包中的二进制过大，无法在设备上解密"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝包中的二進制過大，無法在裝置上解密"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The binary in this package is too large to decrypt on the device"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パッケージ内のバイナリが大きすぎてデバイス上で復号できません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "패키지의 바이너리가 너무 커서 기기에서 복호화할 수 없습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Двоичный файл в пакете слишком велик для расшифровки на устройстве"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El binario de este paquete es demasiado grande para descifrarlo en el dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le binaire de ce paquet est trop volumineux pour être déchiffré sur l’appareil"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Binärdatei im Paket ist zu groß zum Entschlüsseln auf dem Gerät"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O binário deste pacote é grande demais para descriptografar no aparelho"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملف الثنائي في هذه الحزمة كبير جدًا ولا يمكن فك تشفيره على الجهاز"
+          }
+        }
+      }
+    },
+    "导入文件": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入檔案"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを読み込む"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 가져오기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Импорт файла"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar archivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer un fichier"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei importieren"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar arquivo"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استيراد ملف"
+          }
+        }
+      }
+    },
+    "已保存 FairPlay 凭据": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存 FairPlay 凭据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存 FairPlay 憑證"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay credential saved"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 認証情報を保存しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 자격 증명을 저장했습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ FairPlay сохранён"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay guardada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiant FairPlay enregistré"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay-Schlüssel gespeichert"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credencial FairPlay salva"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم حفظ مفتاح FairPlay"
+          }
+        }
+      }
+    },
+    "已装应用": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已装应用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已裝應用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed apps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール済みアプリ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치된 앱"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Установленные приложения"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps instaladas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps installées"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installierte Apps"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps instalados"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التطبيقات المثبتة"
+          }
+        }
+      }
+    },
+    "无 DRM 版本已安装": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无 DRM 版本已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無 DRM 版本已安裝"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The DRM-free version is installed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM フリー版をインストールしました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM 없는 버전이 설치되었습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Версия без DRM установлена"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La versión sin DRM está instalada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La version sans DRM est installée"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die DRM-freie Version ist installiert"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A versão sem DRM está instalada"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم تثبيت النسخة الخالية من DRM"
+          }
+        }
+      }
+    },
+    "无 DRM 版本已覆盖安装": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无 DRM 版本已覆盖安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無 DRM 版本已覆蓋安裝"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The DRM-free version replaced the installed app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM フリー版で上書きインストールしました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM 없는 버전으로 덮어 설치했습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Версия без DRM установлена поверх прежней"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La versión sin DRM reemplazó a la app instalada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La version sans DRM a remplacé l’app installée"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die DRM-freie Version hat die App ersetzt"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A versão sem DRM substituiu o app instalado"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استبدلت النسخة الخالية من DRM التطبيق المثبت"
+          }
+        }
+      }
+    },
+    "无法保存凭据（%lld）": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存凭据（%lld）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法保存憑證（%lld）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save the credential (%lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報を保存できません（%lld）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명을 저장할 수 없습니다(%lld)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось сохранить ключ (%lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar la credencial (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer l’identifiant (%lld)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel konnte nicht gespeichert werden (%lld)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar a credencial (%lld)"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر حفظ المفتاح (%lld)"
+          }
+        }
+      }
+    },
+    "无法更新凭据（%lld）": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新凭据（%lld）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法更新憑證（%lld）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not update the credential (%lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報を更新できません（%lld）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명을 업데이트할 수 없습니다(%lld)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось обновить ключ (%lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo actualizar la credencial (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de mettre à jour l’identifiant (%lld)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel konnte nicht aktualisiert werden (%lld)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível atualizar a credencial (%lld)"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر تحديث المفتاح (%lld)"
+          }
+        }
+      }
+    },
+    "无法识别凭据文件：需要 credential.bin 或 32 位十六进制": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法识别凭据文件：需要 credential.bin 或 32 位十六进制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法識別憑證檔案：需要 credential.bin 或 32 位十六進制"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unrecognized credential file: need credential.bin or 32 hex characters"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報ファイルを認識できません：credential.bin か 32 桁の 16 進数が必要です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명 파일을 인식할 수 없습니다: credential.bin 또는 32자리 16진수가 필요합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл ключа не распознан: нужен credential.bin или 32 шестнадцатеричных символа"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivo de credencial no reconocido: se necesita credential.bin o 32 caracteres hexadecimales"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichier d’identifiant non reconnu : credential.bin ou 32 caractères hexadécimaux requis"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüsseldatei nicht erkannt: credential.bin oder 32 Hexzeichen erforderlich"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivo de credencial não reconhecido: é preciso credential.bin ou 32 caracteres hexadecimais"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملف المفتاح غير معروف: يلزم credential.bin أو 32 حرفًا سداسيًا عشريًا"
+          }
+        }
+      }
+    },
+    "正在下载加密安装包…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载加密安装包…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載加密安裝包…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the encrypted package…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗号化パッケージをダウンロード中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호화된 패키지 다운로드 중…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка зашифрованного пакета…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando el paquete cifrado…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement du paquet chiffré…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsseltes Paket wird geladen…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando o pacote criptografado…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تنزيل الحزمة المشفرة…"
+          }
+        }
+      }
+    },
+    "正在下载加密安装包… %lld": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载加密安装包… %lld"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載加密安裝包… %lld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading the encrypted package… %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗号化パッケージをダウンロード中… %lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호화된 패키지 다운로드 중… %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Загрузка зашифрованного пакета… %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando el paquete cifrado… %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement du paquet chiffré… %lld"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsseltes Paket wird geladen… %lld"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando o pacote criptografado… %lld"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تنزيل الحزمة المشفرة… %lld"
+          }
+        }
+      }
+    },
+    "正在解密…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在解密…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在解密…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decrypting…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화 중…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расшифровка…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descifrando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffrement…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsselung läuft…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografando…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ فك التشفير…"
+          }
+        }
+      }
+    },
+    "此应用没有商店记录，无法取得加密安装包": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此应用没有商店记录，无法取得加密安装包"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此應用沒有商店記錄，無法取得加密安裝包"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This app has no store record, so the encrypted package cannot be fetched"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアプリにはストアの記録がなく、暗号化パッケージを取得できません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 앱은 스토어 기록이 없어 암호화된 패키지를 가져올 수 없습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У этого приложения нет записи в магазине, зашифрованный пакет недоступен"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta app no tiene registro en la tienda, no se puede obtener el paquete cifrado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette app n’a pas de fiche sur la boutique, impossible d’obtenir le paquet chiffré"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese App hat keinen Store-Eintrag, das verschlüsselte Paket ist nicht verfügbar"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este app não tem registro na loja, não é possível obter o pacote criptografado"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يوجد سجل متجر لهذا التطبيق، ولا يمكن الحصول على الحزمة المشفرة"
+          }
+        }
+      }
+    },
+    "点按「解密」后 iPadn 会用当前下载账号取得该应用的加密安装包（本地已有则直接使用），在手机上完成解密并保存无 DRM 的安装包。仅用于解密你拥有许可的应用。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按「解密」后 iPadn 会用当前下载账号取得该应用的加密安装包（本地已有则直接使用），在手机上完成解密并保存无 DRM 的安装包。仅用于解密你拥有许可的应用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點按「解密」後 iPadn 會用當前下載帳號取得該應用的加密安裝包（本地已有則直接使用），在手機上完成解密並保存無 DRM 的安裝包。僅用於解密你擁有許可的應用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap Decrypt and iPadn fetches the app’s encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone and saves the DRM-free package. Only for apps you are licensed to use."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「復号」をタップすると、iPadn が現在のダウンロード アカウントでこのアプリの暗号化パッケージを取得し（ローカルにあればそれを使用）、スマートフォン上で復号して DRM フリーのパッケージを保存します。ライセンスを持っているアプリのみに使用してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "'복호화'를 탭하면 iPadn이 현재 다운로드 계정으로 이 앱의 암호화된 패키지를 가져와(로컬 사본이 있으면 그것을 사용) 휴대폰에서 복호화하고 DRM 없는 패키지를 저장합니다. 사용 허가를 받은 앱에만 사용하세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "После нажатия «Расшифровать» iPadn получит зашифрованный пакет приложения под текущим аккаунтом загрузки (использует локальную копию, если она есть), расшифрует его прямо на телефоне и сохранит пакет без DRM. Только для приложений, на которые у вас есть лицензия."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al pulsar «Descifrar», iPadn obtiene el paquete cifrado de la app con la cuenta de descargas actual (reutiliza la copia local si existe), lo descifra en el propio teléfono y guarda el paquete sin DRM. Solo para apps con licencia."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après avoir touché « Déchiffrer », iPadn récupère le paquet chiffré de l’app avec le compte de téléchargement actuel (réutilise la copie locale si elle existe), le déchiffre directement sur le téléphone et enregistre le paquet sans DRM. Uniquement pour les apps que vous êtes autorisé à utiliser."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach dem Antippen von „Entschlüsseln“ lädt iPadn das verschlüsselte Paket der App mit dem aktuellen Download-Konto (nutzt die lokale Kopie, falls vorhanden), entschlüsselt es direkt auf dem Telefon und speichert das DRM-freie Paket. Nur für Apps, die du lizenziert nutzen darfst."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ao tocar em «Descriptografar», o iPadn obtém o pacote criptografado do app com a conta de download atual (reutiliza a cópia local quando existir), descriptografa no próprio celular e salva o pacote sem DRM. Somente para apps que você tem licença para usar."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بعد لمس «فك التشفير» سيحصل iPadn على الحزمة المشفرة للتطبيق بحساب التنزيل الحالي (ويعيد استخدام النسخة المحلية إن وجدت)، ويكشف التشفير على الهاتف نفسه ويحفظ الحزمة الخالية من DRM. للتطبيقات التي تملك ترخيص استخدامها فقط."
+          }
+        }
+      }
+    },
+    "粘贴 32 位十六进制凭据": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴 32 位十六进制凭据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上 32 位十六進制憑證"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste the 32-character hex credential"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32 桁の 16 進数の認証情報を貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32자리 16진수 자격 증명 붙여넣기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вставьте 32 шестнадцатеричных символа ключа"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pega la credencial de 32 caracteres hexadecimales"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez l’identifiant de 32 caractères hexadécimaux"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32 Hexzeichen des Schlüssels einfügen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cole a credencial de 32 caracteres hexadecimais"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الصق مفتاح 32 حرفًا سداسيًا عشريًا"
+          }
+        }
+      }
+    },
+    "解密": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decrypt"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расшифровать"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descifrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffrer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografar"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فك التشفير"
+          }
+        }
+      }
+    },
+    "解密器读取本机已装的应用，并借助原生安装重装无 DRM 的版本。完成一次配对后即可使用。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密器读取本机已装的应用，并借助原生安装重装无 DRM 的版本。完成一次配对后即可使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密器讀取本機已裝的應用，並借助原生安裝重裝無 DRM 的版本。完成一次配對後即可使用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The decryptor reads the apps installed on this device and reinstalls the DRM-free version through the native installation. Complete the one-time pairing to use it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号ツールはこのデバイスにインストール済みのアプリを読み取り、ネイティブ インストールで DRM フリー版を再インストールします。一度のペアリングで使用できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화 도구는 이 기기에 설치된 앱을 읽고 네이티브 설치로 DRM 없는 버전을 다시 설치합니다. 한 번 페어링하면 사용할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Декриптор читает приложения, установленные на этом устройстве, и через нативную установку ставит версию без DRM. Нужна одна настройка сопряжения."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El desencriptador lee las apps instaladas en este dispositivo y reinstala la versión sin DRM mediante la instalación nativa. Completa el emparejamiento único para usarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le déchiffreur lit les apps installées sur cet appareil et réinstalle la version sans DRM via l’installation native. Un appariement unique suffit."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Entschlüsseler liest die auf diesem Gerät installierten Apps und installiert die DRM-freie Version über die native Installation. Einmaliges Koppeln genügt."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O descriptografador lê os apps instalados neste aparelho e reinstala a versão sem DRM pela instalação nativa. Basta um pareamento único."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يقرأ أداة فك التشفير التطبيقات المثبتة على هذا الجهاز ويعيد تثبيت النسخة الخالية من DRM عبر التثبيت الأصلي. يلزم الاقتران مرة واحدة فقط."
+          }
+        }
+      }
+    },
+    "解密完成（%lld 页）：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密完成（%lld 页）：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密完成（%lld 頁）：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decrypted (%lld pages): %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号完了（%lld ページ）：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화 완료(%lld페이지): %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расшифровка завершена (%lld стр.): %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descifrado (%lld páginas): %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffré (%lld pages) : %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsselt (%lld Seiten): %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descriptografado (%lld páginas): %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم فك التشفير (%lld صفحة): %@"
+          }
+        }
+      }
+    },
+    "请先导入 FairPlay 凭据": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先导入 FairPlay 凭据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請先匯入 FairPlay 憑證"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import the FairPlay credential first"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先に FairPlay 認証情報を取り込んでください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 FairPlay 자격 증명을 가져오세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала импортируйте ключ FairPlay"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa primero la credencial FairPlay"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importez d’abord l’identifiant FairPlay"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuerst den FairPlay-Schlüssel importieren"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importe primeiro a credencial FairPlay"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استورد مفتاح FairPlay أولاً"
+          }
+        }
+      }
+    },
+    "输出文件已存在": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输出文件已存在"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸出檔案已存在"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The output file already exists"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出力ファイルが既に存在します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출력 파일이 이미 있습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выходной файл уже существует"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo de salida ya existe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier de sortie existe déjà"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Ausgabedatei existiert bereits"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo de saída já existe"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملف الإخراج موجود بالفعل"
+          }
+        }
+      }
+    },
+    "还没有 FairPlay 凭据": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有 FairPlay 凭据"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有 FairPlay 憑證"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No FairPlay credential yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FairPlay 認証情報がまだありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 FairPlay 자격 증명이 없습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключа FairPlay пока нет"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay credencial FairPlay"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore d’identifiant FairPlay"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein FairPlay-Schlüssel"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há credencial FairPlay"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يوجد مفتاح FairPlay بعد"
+          }
+        }
+      }
+    },
+    "这不是有效的 Mach-O 二进制": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这不是有效的 Mach-O 二进制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這不是有效的 Mach-O 二進制"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not a valid Mach-O binary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効な Mach-O バイナリではありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유효한 Mach-O 바이너리가 아닙니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недействительный двоичный файл Mach-O"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No es un binario Mach-O válido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n’est pas un binaire Mach-O valide"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine gültige Mach-O-Binärdatei"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não é um binário Mach-O válido"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ليس ملفًا ثنائيًا صالحًا بصيغة Mach-O"
+          }
+        }
+      }
+    },
+    "这个二进制没有加密（cryptid=0）": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个二进制没有加密（cryptid=0）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個二進制沒有加密（cryptid=0）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This binary is not encrypted (cryptid=0)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このバイナリは暗号化されていません（cryptid=0）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 바이너리는 암호화되어 있지 않습니다(cryptid=0)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот двоичный файл не зашифрован (cryptid=0)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este binario no está cifrado (cryptid=0)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce binaire n’est pas chiffré (cryptid=0)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Binärdatei ist nicht verschlüsselt (cryptid=0)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este binário não está criptografado (cryptid=0)"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هذا الملف الثنائي غير مشفر (cryptid=0)"
+          }
+        }
+      }
+    },
+    "需要先登录 Apple 账号才能取得应用的加密安装包": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要先登录 Apple 账号才能取得应用的加密安装包"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要先登入 Apple 帳號才能取得應用的加密安裝包"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with an Apple account first to fetch the app’s encrypted package"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの暗号化パッケージを取得するには、先に Apple ID でサインインしてください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱의 암호화된 패키지를 가져오려면 먼저 Apple 계정으로 로그인하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Чтобы получить зашифрованный пакет приложения, сначала войдите в аккаунт Apple"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia sesión con una cuenta de Apple para obtener el paquete cifrado de la app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez-vous d’abord avec un compte Apple pour obtenir le paquet chiffré de l’app"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melde dich zuerst mit einem Apple-Konto an, um das verschlüsselte Paket der App zu laden"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entre com uma conta Apple antes de obter o pacote criptografado do app"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجّل الدخول بحساب Apple أولاً للحصول على الحزمة المشفرة للتطبيق"
+          }
+        }
+      }
+    },
+    "无 DRM": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无 DRM"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無 DRM"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM-free"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM フリー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DRM 없음"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без DRM"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin DRM"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans DRM"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne DRM"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem DRM"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بدون DRM"
+          }
+        }
+      }
+    },
+    "对已装应用一键去除 FairPlay 加密（cryptid=1），在手机上生成无 DRM 的安装包。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对已装应用一键去除 FairPlay 加密（cryptid=1），在手机上生成无 DRM 的安装包。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "對已裝應用一鍵去除 FairPlay 加密（cryptid=1），在手機上生成無 DRM 的安裝包。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One-tap FairPlay removal (cryptid=1) for installed apps — builds a DRM-free package right on the phone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール済みアプリの FairPlay 暗号化（cryptid=1）をワンタップで解除し、スマートフォン上で DRM フリーのパッケージを作成します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치된 앱의 FairPlay 암호화(cryptid=1)를 탭 한 번으로 제거하고 휴대폰에서 DRM 없는 패키지를 만듭니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Одно нажатие снимает FairPlay-шифрование (cryptid=1) с установленных приложений и собирает пакет без DRM прямо на телефоне."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina el cifrado FairPlay (cryptid=1) de las apps instaladas con un toque y genera un paquete sin DRM en el propio teléfono."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retire en un geste le chiffrement FairPlay (cryptid=1) des apps installées et fabrique un paquet sans DRM directement sur le téléphone."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt mit einem Fingertipp die FairPlay-Verschlüsselung (cryptid=1) installierter Apps und baut ein DRM-freies Paket direkt auf dem Telefon."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove com um toque a criptografia FairPlay (cryptid=1) dos apps instalados e monta um pacote sem DRM no próprio celular."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إزالة تشفير FairPlay (cryptid=1) من التطبيقات المثبتة بلمسة واحدة وإنشاء حزمة خالية من DRM على الهاتف نفسه."
+          }
+        }
+      }
+    },
+    "凭据由 Apple ID 一次性生成：运行 fp-credential 工作流（登录你的 Apple ID）下载 credential.bin，或粘贴 32 位十六进制到这里。之后解密任何应用都只需一次点按。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "凭据由 Apple ID 一次性生成：运行 fp-credential 工作流（登录你的 Apple ID）下载 credential.bin，或粘贴 32 位十六进制到这里。之后解密任何应用都只需一次点按。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "憑證由 Apple ID 一次性生成：執行 fp-credential 工作流（登入你的 Apple ID）下載 credential.bin，或貼上 32 位十六進制到這裡。之後解密任何應用都只需一次點按。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credential is generated once per Apple ID: run the fp-credential workflow (sign in with your Apple ID) to get credential.bin, or paste 32 hex characters here. After that, decrypting any app takes a single tap."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報は Apple ID ごとに一度だけ生成します：fp-credential ワークフローを実行して Apple ID でサインインし credential.bin を入手するか、32 桁の 16 進数をここに貼り付けてください。以後はワンタップで任意のアプリを復号できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자격 증명은 Apple ID당 한 번만 생성합니다: fp-credential 워크플로를 실행해(Apple ID로 로그인) credential.bin을 받거나 32자리 16진수를 여기에 붙여넣으세요. 이후에는 탭 한 번으로 어떤 앱이든 복호화할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ключ создаётся один раз для Apple ID: запустите воркфлоу fp-credential (войдя со своим Apple ID), скачайте credential.bin или вставьте сюда 32 шестнадцатеричных символа. После этого расшифровка любого приложения — одно нажатие."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La credencial se genera una vez por Apple ID: ejecuta el flujo fp-credential (inicia sesión con tu Apple ID) para obtener credential.bin, o pega aquí 32 caracteres hexadecimales. Después, descifrar cualquier app es un solo toque."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’identifiant est généré une fois par Apple ID : lancez le workflow fp-credential (connectez-vous avec votre Apple ID) pour obtenir credential.bin, ou collez ici 32 caractères hexadécimaux. Ensuite, déchiffrer une app ne demande qu’un seul geste."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Schlüssel wird einmal pro Apple ID erzeugt: führe den fp-credential-Workflow aus (mit deiner Apple ID anmelden), um credential.bin zu erhalten, oder füge hier 32 Hexzeichen ein. Danach genügt ein Fingertipp zum Entschlüsseln jeder App."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A credencial é gerada uma vez por Apple ID: execute o fluxo fp-credential (entre com seu Apple ID) para obter o credential.bin, ou cole aqui 32 caracteres hexadecimais. Depois, descriptografar qualquer app é um toque."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُنشأ المفتاح مرة واحدة لكل Apple ID: شغّل سير العمل fp-credential (وسجّل الدخول بمعرّف Apple ID) للحصول على credential.bin، أو الصق هنا 32 حرفًا سداسيًا عشريًا. بعد ذلك يكون فك تشفير أي تطبيق بلمسة واحدة."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

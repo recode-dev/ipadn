@@ -88,6 +88,14 @@ struct AccountsView: View {
             if apple.active != nil {
                 Section { Button("退出登录", role: .destructive) { signingOut = true }.frame(maxWidth: .infinity) }
             }
+            if DecryptorView.isSupported {
+                Section {
+                    NavigationLink { DecryptorView() } label: { Label("Decryptor", systemImage: "checkmark.shield") }
+                        .accessibilityIdentifier("accounts.decryptor")
+                } footer: {
+                    Text("对已装应用一键去除 FairPlay 加密（cryptid=1），在手机上生成无 DRM 的安装包。")
+                }
+            }
         }
         .animation(UX.motion(reduceMotion), value: apple.accounts.map(\.id))
         .overlay { if store.accountRemoving != nil { ProgressView("正在移除账号…").padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
