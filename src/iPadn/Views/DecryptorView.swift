@@ -10,7 +10,7 @@ struct DecryptorView: View {
     @State private var loaded = false
     @State private var issue: String?
     @State private var term = ""
-    @State private var credential: Data?
+    @State private var engineIssue: String?
     @State private var busy: Set<String> = []
     @State private var rowStatus: [String: String] = [:]
     @State private var encryptedFlag: [String: Bool] = [:]
@@ -28,6 +28,14 @@ struct DecryptorView: View {
 
     var body: some View {
         List {
+            Section {
+                HStack(spacing: 8) {
+                    Image(systemName: engineIssue == nil ? "checkmark.seal.fill" : "xmark.octagon.fill")
+                        .foregroundStyle(engineIssue == nil ? Color.green : Color.orange)
+                    Text(engineIssue == nil ? "FairPlay engine verified on this device" : (engineIssue ?? "Engine not checked yet"))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             if !paired {
                 Section {
                     VStack(spacing: 10) {
@@ -52,7 +60,10 @@ struct DecryptorView: View {
         }
         .toolPage().navigationTitle(Text("Decryptor")).navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
-        .task { if !loaded { await load() } }
+        .task {
+            engineIssue = FairPlayEngineCheck.run()
+            if !loaded { await load() }
+        }
         .compatibleOnChange(of: scenePhase) { phase in
             if phase == .active, issue != nil, apps.isEmpty { Task { await load() } }
         }
@@ -89,7 +100,7 @@ struct DecryptorView: View {
         } header: {
             Text("Installed apps") + Text(verbatim: " · \(shown.count)")
         } footer: {
-            Text("Tap Decrypt and iPadn fetches the app’s encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone and saves the DRM-free package. Only for apps you are licensed to use.")
+            Text("Tap Decrypt and iPadn fetches the app’s encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone with the system FairPlay kernel and saves the DRM-free package. No computer is ever involved. Only for apps you are licensed to use.")
         }
     }
 
@@ -137,10 +148,6 @@ struct DecryptorView: View {
         guard paired, !loading else { return }
         loading = true
         defer { loading = false; loaded = true }
-        credential = FairPlayCredentialStore.load()
-        if credential == nil {
-            credential = await FairPlayCredentialStore.fetchFromEndpoint()
-        }
         #if DEBUG
         if LocalResources.isPreview {
             apps = InstalledAppsView.previewApps
@@ -192,12 +199,7 @@ struct DecryptorView: View {
                 try await finishClearPackage(url, app: app, bundleID: bundleID)
                 return
             }
-            rowStatus[bundleID] = AppText.text("Preparing the FairPlay license…")
-            guard let credential = await acquireCredential() else {
-                rowStatus[bundleID] = AppText.text("FairPlay key unavailable for this account")
-                throw ToolError.message(AppText.text("This app is FairPlay-encrypted and the account’s license key isn’t available on the device yet. The decryptor fetches it automatically; tap Decrypt again in a moment."))
-            }
-            rowStatus[bundleID] = AppText.text("Decrypting…")
+            rowStatus[bundleID] = AppText.text("Decrypting on-device with the FairPlay kernel…")
             let listing = app.storeItemID.flatMap { listings[$0] }
             let name = listing?.name ?? app.name ?? app.bundleID ?? "App"
             let version = listing?.version ?? app.version ?? ""
@@ -207,7 +209,7 @@ struct DecryptorView: View {
             }
             let destination = LocalResources.packages.appendingPathComponent(outputName)
             try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
-            let result = try FairPlayDecryptor.decryptIPA(at: url, credential: credential, destination: destination)
+            let result = try FairPlayDecryptor.decryptIPA(at: url, credential: FairPlayCredentialStore.load(), destination: destination)
             let pages = result.binaries.reduce(0) { $0 + $1.pages }
             encryptedFlag[bundleID] = false
             rowStatus[bundleID] = nil
@@ -220,13 +222,6 @@ struct DecryptorView: View {
             rowStatus[bundleID] = nil
             store.errorMessage = error.localizedDescription
         }
-    }
-
-    private func acquireCredential() async -> Data? {
-        if let existing = FairPlayCredentialStore.load() { return existing }
-        let fetched = await FairPlayCredentialStore.fetchFromEndpoint()
-        if let fetched { credential = fetched }
-        return fetched
     }
 
     private func finishClearPackage(_ url: URL, app: NativeInstaller.InstalledApp, bundleID: String) async throws {

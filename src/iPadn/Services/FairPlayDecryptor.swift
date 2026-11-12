@@ -56,6 +56,45 @@ enum FairPlayDecryptor {
         let subtype: UInt32
     }
 
+    static func isMachOMagic(_ bytes: [UInt8]) -> Bool {
+        guard bytes.count >= 4 else { return false }
+        if bytes[0] == 0xCA, bytes[1] == 0xFE, bytes[2] == 0xBA, (bytes[3] == 0xBE || bytes[3] == 0xBF) { return true }
+        return (bytes[0] == 0xCF || bytes[0] == 0xCE) && bytes[1] == 0xFA && bytes[2] == 0xED && bytes[3] == 0xFE
+    }
+
+    private struct MagicProbe: Error { let bytes: [UInt8] }
+
+    static func entryMagic(_ entry: Entry, archive: Archive) -> [UInt8]? {
+        guard entry.uncompressedSize >= 4 else { return nil }
+        var bytes: [UInt8] = []
+        do {
+            _ = try archive.extract(entry, bufferSize: 64, consumer: { chunk in
+                bytes = Array(chunk.prefix(4))
+                throw MagicProbe(bytes: bytes)
+            })
+        } catch let probe as MagicProbe {
+            return probe.bytes
+        } catch {
+            return nil
+        }
+        return bytes.isEmpty ? nil : bytes
+    }
+
+    static func bundleRootCandidate(_ path: String) -> Bool {
+        let parts = path.split(separator: "/").map { String($0) }
+        guard parts.count >= 3, parts[0] == "Payload" else { return false }
+        let parent = parts[parts.count - 2]
+        return parent.hasSuffix(".app") || parent.hasSuffix(".appex") || parent.hasSuffix(".framework")
+    }
+
+    static func isLicensePath(_ path: String) -> Bool {
+        let parts = path.lowercased().split(separator: "/").map { String($0) }
+        let lastName = parts.last ?? ""
+        return parts.contains("sc_info")
+            && (lastName.hasSuffix(".sinf") || lastName.hasSuffix(".supf") || lastName.hasSuffix(".supp")
+                || lastName.hasSuffix(".v4.sinf") || lastName.hasSuffix(".v5.supf") || lastName.hasSuffix(".v4.supp"))
+    }
+
     static func encryptedSlice(in data: [UInt8]) throws -> EncryptedSlice? {
         var candidates: [ARMCandidate] = []
         if data.count >= 4, data[0] == 0xCA, data[1] == 0xFE, data[2] == 0xBA, data[3] == 0xBE {
@@ -411,10 +450,19 @@ enum FairPlayDecryptor {
         return (encrypted, checked)
     }
 
-    static func decryptIPA(at url: URL, credential: Data, destination: URL) throws -> IpaResult {
+    static func decryptIPA(at url: URL, credential: Data?, destination: URL) throws -> IpaResult {
         guard !FileManager.default.fileExists(atPath: destination.path) else {
             throw ToolError.message(AppText.text("The output file already exists"))
         }
+        do {
+            return try FairPlayKernelDecryptor.decryptIPA(at: url, destination: destination)
+        } catch {
+            guard let credential, credential.count == 16 else { throw error }
+            return try legacyDecryptIPA(at: url, credential: credential, destination: destination)
+        }
+    }
+
+    private static func legacyDecryptIPA(at url: URL, credential: Data, destination: URL) throws -> IpaResult {
         let credentialBytes = Array(credential)
         guard credentialBytes.count == 16 else { throw DecryptError.badLicense("credential must be 16 bytes") }
 
@@ -461,18 +509,11 @@ enum FairPlayDecryptor {
         let output = try Archive(url: destination, accessMode: .create)
         for entry in archive {
             guard entry.type == .file else { continue }
-            let path = entry.path.lowercased()
-            let parts = path.split(separator: "/").map { String($0) }
-            let lastName = parts.last ?? ""
-            let isLicense = parts.contains("sc_info")
-                && (lastName.hasSuffix(".sinf") || lastName.hasSuffix(".supf")
-                    || lastName.hasSuffix(".supp") || lastName.hasSuffix(".v4.sinf")
-                    || lastName.hasSuffix(".v5.supf") || lastName.hasSuffix(".v4.supp"))
-            if isLicense {
+            if isLicensePath(entry.path) {
                 strippedAny = true
                 continue
             }
-            let isBinary = parts.count == 3 && parts[0] == "payload" && parts[1].hasSuffix(".app")
+            let isBinary = isMachOMagic(entryMagic(entry, archive: archive) ?? [])
             let data = try readEntry(entry, archive: archive)
             if isBinary {
                 sawBinary = true
@@ -489,16 +530,16 @@ enum FairPlayDecryptor {
         let binary: Entry
         let sinf: Data?
         let license: Data?
+        let sinfPath: String?
+        let licensePath: String?
     }
 
-    private static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
+    static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
         var binaries: [Entry] = []
         for entry in archive {
-            let parts = entry.path.split(separator: "/")
-            if parts.count == 3, parts[0] == "Payload", parts[1].hasSuffix(".app"),
-               entry.type == .file, !entry.path.hasSuffix("/") {
-                binaries.append(entry)
-            }
+            guard entry.type == .file, !entry.path.hasSuffix("/"), bundleRootCandidate(entry.path) else { continue }
+            guard isMachOMagic(entryMagic(entry, archive: archive) ?? []) else { continue }
+            binaries.append(entry)
         }
         var plans: [BinaryPlan] = []
         for binary in binaries {
@@ -508,34 +549,44 @@ enum FairPlayDecryptor {
             let prefix = bundlePath + "/SC_Info/"
             var sinf: Data?
             var license: Data?
+            var sinfPath: String?
+            var licensePath: String?
             for entry in archive where entry.path.hasPrefix(prefix) && entry.type == .file {
                 let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
                 if name == "\(stem).sinf" || name == "\(stem).v4.sinf" {
                     sinf = try readEntry(entry, archive: archive)
+                    sinfPath = entry.path
                 } else if name == "\(stem).supf" || name == "\(stem).v5.supf"
                             || name == "\(stem).supp" || name == "\(stem).v4.supp" {
                     license = try readEntry(entry, archive: archive)
+                    licensePath = entry.path
                 }
             }
             if sinf == nil || license == nil {
                 var fallbackSinf: Data?
                 var fallbackLicense: Data?
+                var fallbackSinfPath: String?
+                var fallbackLicensePath: String?
                 for entry in archive where entry.path.hasPrefix(prefix) && entry.type == .file {
                     let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
-                    if name.hasSuffix(".sinf") || name.hasSuffix(".v4.sinf") { fallbackSinf = try readEntry(entry, archive: archive) }
+                    if name.hasSuffix(".sinf") || name.hasSuffix(".v4.sinf") {
+                        fallbackSinf = try readEntry(entry, archive: archive)
+                        fallbackSinfPath = entry.path
+                    }
                     if name.hasSuffix(".supf") || name.hasSuffix(".v5.supf") || name.hasSuffix(".supp") || name.hasSuffix(".v4.supp") {
                         fallbackLicense = try readEntry(entry, archive: archive)
+                        fallbackLicensePath = entry.path
                     }
                 }
-                if sinf == nil { sinf = fallbackSinf }
-                if license == nil { license = fallbackLicense }
+                if sinf == nil { sinf = fallbackSinf; sinfPath = fallbackSinfPath }
+                if license == nil { license = fallbackLicense; licensePath = fallbackLicensePath }
             }
-            plans.append(BinaryPlan(binary: binary, sinf: sinf, license: license))
+            plans.append(BinaryPlan(binary: binary, sinf: sinf, license: license, sinfPath: sinfPath, licensePath: licensePath))
         }
         return plans
     }
 
-    private static func readEntry(_ entry: Entry, archive: Archive, limit: Int = maxBinaryBytes) throws -> Data {
+    static func readEntry(_ entry: Entry, archive: Archive, limit: Int = maxBinaryBytes) throws -> Data {
         guard entry.uncompressedSize <= UInt64(limit) else {
             throw ToolError.message(AppText.text("The binary in this package is too large to decrypt on the device"))
         }
@@ -549,7 +600,7 @@ enum FairPlayDecryptor {
         return data
     }
 
-    private static func writeEntry(_ data: Data, to archive: Archive, path: String) throws {
+    static func writeEntry(_ data: Data, to archive: Archive, path: String) throws {
         let scratch = LocalResources.support.appendingPathComponent("decrypt-entry-\(UUID().uuidString)", isDirectory: true)
         let file = scratch.appendingPathComponent(path)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -596,5 +647,51 @@ enum FairPlayDecryptor {
 
     private static func le32(_ data: [UInt8], _ offset: Int) -> UInt32 {
         UInt32(data[offset]) | UInt32(data[offset + 1]) << 8 | UInt32(data[offset + 2]) << 16 | UInt32(data[offset + 3]) << 24
+    }
+}
+
+enum FairPlayEngineCheck {
+
+    static func run() -> String? {
+        do {
+            let work: [UInt8] = [0x8c, 0x01, 0xe1, 0x0b, 0xe9, 0x54, 0xa7, 0x86, 0x46, 0xa7, 0x6e, 0x01, 0xa3, 0xfa, 0x34, 0x7c]
+            let wrapped: [UInt8] = (0xF0...0xFF).map { UInt8($0) }
+            let key = try FairPlayDecryptor.derivePageKey(work: work, wrapped: wrapped, pageByteOffset: 0x0102030405060708)
+            let expected: [UInt8] = [0x45, 0xf8, 0x9e, 0xa4, 0xa3, 0xa1, 0xe9, 0xb9, 0x7e, 0x03, 0x8b, 0xcb, 0x27, 0xf2, 0x69, 0xc9]
+            guard key == expected else { return AppText.text("FairPlay page-key self-check mismatch") }
+        } catch {
+            return AppText.text("FairPlay self-check failed: \(error.localizedDescription)")
+        }
+        do {
+            guard let slice = try syntheticEncryptedSlice(),
+                  slice.base == 0, slice.cryptOff == 0x4000, slice.cryptSize == 0x2000 else {
+                return AppText.text("Mach-O self-check mismatch")
+            }
+        } catch {
+            return AppText.text("Mach-O self-check failed: \(error.localizedDescription)")
+        }
+        return nil
+    }
+
+    private static func syntheticEncryptedSlice() throws -> FairPlayDecryptor.EncryptedSlice? {
+        var data = [UInt8](repeating: 0, count: 0x6000)
+        func put32(_ offset: Int, _ value: UInt32) {
+            data[offset] = UInt8(value & 0xFF)
+            data[offset + 1] = UInt8((value >> 8) & 0xFF)
+            data[offset + 2] = UInt8((value >> 16) & 0xFF)
+            data[offset + 3] = UInt8((value >> 24) & 0xFF)
+        }
+        put32(0, 0xFEEDFACF)
+        put32(4, 0x0100000C)
+        put32(12, 2)
+        put32(16, 1)
+        put32(20, 24)
+        put32(32, 0x2C)
+        put32(36, 24)
+        put32(40, 0x4000)
+        put32(44, 0x2000)
+        put32(48, 1)
+        for i in 0..<0x2000 { data[0x4000 + i] = UInt8((i * 7 + 0x5B) & 0xFF) }
+        return try FairPlayDecryptor.encryptedSlice(in: data)
     }
 }
