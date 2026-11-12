@@ -95,7 +95,6 @@ final class FairPlayDecryptorTests: XCTestCase {
     /// Minimal thin arm64 Mach-O: page 0 header + load commands, encrypted
     /// body pages after that.
     private func makeMachO(pages: Int) -> (data: [UInt8], cryptidOffset: Int) {
-        func seg(_ payload: [UInt8]) -> [UInt8] { payload }
         let nsects = 1
         let segCmdSize = 72 + nsects * 80
         var header: [UInt8] = []
@@ -140,7 +139,7 @@ final class FairPlayDecryptorTests: XCTestCase {
             let offset = 4096 + i * 4096
             let wrapped = Array(SHA256.hash(data: Data("seed".utf8) + Data([0, 0, 0, UInt8(i)]))[0..<16])
             let iv = Array(SHA256.hash(data: Data("seediv".utf8) + Data([0, 0, 0, UInt8(i)]))[0..<16])
-            let key = try FairPlayDecryptor.derivePageKey(work: work, wrapped: wrapped, pageByteOffset: UInt64(i) << 12)
+            let key = try FairPlayDecryptor.derivePageKey(work: work, wrapped: wrapped, pageByteOffset: UInt64(i + 1) << 12)
             let block = try Self.aesCBCEncryptForTest(key: key, iv: iv, data: Array(encrypted[offset..<(offset + 4096)]))
             encrypted.replaceSubrange(offset..<(offset + 4096), with: block)
         }
