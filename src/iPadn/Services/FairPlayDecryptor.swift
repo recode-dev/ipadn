@@ -460,6 +460,12 @@ enum FairPlayDecryptor {
                 continue
             }
         }
+        // A package where no binary could be identified must never be
+        // reported as a clear (cryptid=0) package: the caller would route it
+        // to the DRM-free path and surface "Not a valid Mach-O binary".
+        // Treat it as encrypted so the kernel decryptor runs and reports a
+        // precise diagnosis instead.
+        if checked == 0 { encrypted = true }
         return (encrypted, checked)
     }
 
@@ -491,7 +497,13 @@ enum FairPlayDecryptor {
 
         for plan in plans {
             let binaryData = try readEntry(plan.binary, archive: archive)
-            guard (try encryptedSlice(in: Array(binaryData))) != nil else { continue }
+            do {
+                guard (try encryptedSlice(in: Array(binaryData))) != nil else { continue }
+            } catch DecryptError.notMachO {
+                continue
+            } catch DecryptError.badHeader {
+                continue
+            }
             guard let sinf = plan.sinf, let license = plan.license else {
                 throw DecryptError.badSinf("\(plan.binary.path) is missing SINF/SUPF license files")
             }
@@ -520,17 +532,28 @@ enum FairPlayDecryptor {
         var strippedAny = false
         try? FileManager.default.removeItem(at: destination)
         let output = try Archive(url: destination, accessMode: .create)
-        for entry in archive {
-            guard entry.type == .file else { continue }
+        // Materialize once and probe every file entry at any depth, so the
+        // DRM-free path no longer depends on where the executable sits.
+        let entries = Array(archive).filter { $0.type == .file && !$0.path.hasSuffix("/") }
+        var binaryPaths = Set<String>()
+        for entry in entries {
+            if isMachOMagic(entryMagic(entry, archive: archive) ?? []) {
+                binaryPaths.insert(entry.path)
+            }
+        }
+        for entry in entries {
             if isLicensePath(entry.path) {
                 strippedAny = true
                 continue
             }
-            let isBinary = isMachOMagic(entryMagic(entry, archive: archive) ?? [])
             let data = try readEntry(entry, archive: archive)
-            if isBinary {
+            if binaryPaths.contains(entry.path) {
                 sawBinary = true
-                guard (try encryptedSlice(in: Array(data))) == nil else { throw DecryptError.notEncrypted }
+                if let slice = try? encryptedSlice(in: Array(data)), slice != nil {
+                    throw DecryptError.notEncrypted
+                }
+                // A binary whose slice layout cannot be parsed passes
+                // through untouched instead of failing the whole package.
             }
             try writeEntry(data, to: output, path: entry.path)
         }
@@ -547,24 +570,85 @@ enum FairPlayDecryptor {
         let licensePath: String?
     }
 
+    /// Resolve binaries the way TetherlessiOS does: each bundle names its
+    /// executable in its own Info.plist (CFBundleExecutable), so the Mach-O
+    /// file is located deterministically instead of being guessed from entry
+    /// probes. Magic probing stays only as a fallback for packages whose
+    /// plists are missing, and the final fallback probes every entry.
     static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
+        // Materialize the entry list once and never interleave extraction
+        // with central-directory iteration.
+        let entries = Array(archive).filter { $0.type == .file && !$0.path.hasSuffix("/") }
+        let byPath = Dictionary(entries.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var planned = Set<String>()
         var binaries: [Entry] = []
-        for entry in archive {
-            guard entry.type == .file, !entry.path.hasSuffix("/"), bundleRootCandidate(entry.path) else { continue }
-            guard isMachOMagic(entryMagic(entry, archive: archive) ?? []) else { continue }
+        func accept(_ entry: Entry, trustingPlist: Bool) {
+            guard !planned.contains(entry.path) else { return }
+            if !trustingPlist {
+                guard isMachOMagic(entryMagic(entry, archive: archive) ?? []) else { return }
+            }
+            // Plist-trusted candidates are accepted unconditionally: the
+            // kernel decryptor parses the staged file and reports precisely
+            // if it really is not Mach-O.
+            planned.insert(entry.path)
             binaries.append(entry)
         }
+
+        // TetherlessiOS method: Payload/Name.app/Info.plist -> CFBundleExecutable.
+        for entry in entries {
+            let parts = entry.path.split(separator: "/").map(String.init)
+            guard parts.count >= 2, parts.last?.lowercased() == "info.plist" else { continue }
+            let bundleName = parts[parts.count - 2]
+            guard bundleName.hasSuffix(".app") || bundleName.hasSuffix(".appex") || bundleName.hasSuffix(".framework") else { continue }
+            let dir = parts.dropLast().joined(separator: "/")
+            let plist = (try? readEntry(entry, archive: archive, limit: 8 << 20)) ?? Data()
+            let dict = (try? ApplePropertyList.dictionary(plist)) ?? [:]
+            let exec = dict["CFBundleExecutable"] as? String
+            if let exec, !exec.isEmpty, exec != ".", exec != "..", !exec.contains("/") {
+                if let binary = byPath[dir + "/" + exec] {
+                    accept(binary, trustingPlist: true)
+                }
+            }
+            // Convention fallback: the executable usually shares the bundle
+            // name (Payload/Foo.app -> Foo).
+            let stem = bundleName.hasSuffix(".app") ? String(bundleName.dropLast(4)) : bundleName
+            if !stem.isEmpty, stem != exec, !stem.contains("/") {
+                if let binary = byPath[dir + "/" + stem] {
+                    accept(binary, trustingPlist: false)
+                }
+            }
+        }
+
+        // Second layer: probe files sitting directly in a bundle directory
+        // (main binaries, extensions, frameworks).
+        if binaries.isEmpty {
+            for entry in entries where bundleRootCandidate(entry.path) {
+                accept(entry, trustingPlist: false)
+            }
+        }
+
+        // Last resort: probe every remaining file at any depth, so a package
+        // with an unusual layout still decrypts instead of surfacing a
+        // misleading "not a Mach-O" alert.
+        if binaries.isEmpty {
+            for entry in entries {
+                accept(entry, trustingPlist: false)
+            }
+        }
+
         var plans: [BinaryPlan] = []
         for binary in binaries {
             let stem = (binary.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
             guard !stem.isEmpty else { continue }
             let bundlePath = binary.path.split(separator: "/").dropLast().joined(separator: "/")
             let prefix = bundlePath + "/SC_Info/"
+            let licenseEntries = entries.filter { $0.path.hasPrefix(prefix) }
             var sinf: Data?
             var license: Data?
             var sinfPath: String?
             var licensePath: String?
-            for entry in archive where entry.path.hasPrefix(prefix) && entry.type == .file {
+            for entry in licenseEntries {
                 let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
                 if name == "\(stem).sinf" || name == "\(stem).v4.sinf" {
                     sinf = try readEntry(entry, archive: archive)
@@ -580,7 +664,7 @@ enum FairPlayDecryptor {
                 var fallbackLicense: Data?
                 var fallbackSinfPath: String?
                 var fallbackLicensePath: String?
-                for entry in archive where entry.path.hasPrefix(prefix) && entry.type == .file {
+                for entry in licenseEntries {
                     let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
                     if name.hasSuffix(".sinf") || name.hasSuffix(".v4.sinf") {
                         fallbackSinf = try readEntry(entry, archive: archive)

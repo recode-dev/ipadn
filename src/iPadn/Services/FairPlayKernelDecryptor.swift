@@ -213,21 +213,32 @@ enum FairPlayKernelDecryptor {
 
     private static func decryptSlice(fd: Int32, slice: SliceInfo, outFd: Int32) throws -> Int {
         let pagesize = Int(sysconf(Int32(_SC_PAGESIZE)))
-        let mapLen = ((slice.cryptOff + slice.cryptSize + pagesize - 1) / pagesize) * pagesize
-        var mmapError: Int32 = 0
+        // Map the whole file from offset 0 so no slice offset can break
+        // mmap's page-alignment requirement.
+        let span = Int(slice.fileOffset) + slice.cryptOff + slice.cryptSize
+        let mapLen = ((span + pagesize - 1) / pagesize) * pagesize
+        // Mirror the TetherlessiOS helper call site exactly: the third
+        // mremap_encrypted argument is the FairPlay cryptid (1 = app
+        // encryption, 2 = model encryption), not a memory protection.
+        // XNU rejects any other value with EINVAL. Executable slices are
+        // mapped PROT_READ|PROT_EXEC and decrypted with cryptid 1; data
+        // slices are mapped PROT_READ and decrypted with cryptid 2.
+        let variants: [(mmapProt: Int32, cryptid: UInt32)] = [
+            (PROT_READ | PROT_EXEC, 1),
+            (PROT_READ, 2),
+            (PROT_READ, 1),
+            (PROT_READ | PROT_EXEC, 2),
+        ]
         var mremapError: Int32 = 0
         var pageFailure: KernelError?
-        for variant in 0..<2 {
-            let mmapProt: Int32 = variant == 0 ? PROT_READ : (PROT_READ | PROT_EXEC)
-            let callProt: Int32 = variant == 0 ? 2 : 3
-            let mapping = mmap(nil, mapLen, mmapProt, MAP_PRIVATE, fd, off_t(slice.fileOffset))
+        for variant in variants {
+            let mapping = mmap(nil, mapLen, variant.mmapProt, MAP_PRIVATE, fd, 0)
             guard let base = mapping, base != UnsafeMutableRawPointer(bitPattern: UInt.max) else {
-                mmapError = errno
                 continue
             }
             defer { munmap(base, mapLen) }
-            let target = base.advanced(by: slice.cryptOff)
-            let kr = callMremapEncrypt(target, slice.cryptSize, callProt, slice.cpuType, slice.cpuSubtype)
+            let target = base.advanced(by: Int(slice.fileOffset) + slice.cryptOff)
+            let kr = callMremapEncrypt(target, slice.cryptSize, Int32(variant.cryptid), slice.cpuType, slice.cpuSubtype)
             guard kr == 0 else {
                 mremapError = kr == -1 ? errno : kr
                 continue
@@ -270,17 +281,16 @@ enum FairPlayKernelDecryptor {
         }
         if let pageFailure { throw pageFailure }
         if mremapError != 0 { throw KernelError.mremap(mremapError) }
-        if mmapError != 0 { throw KernelError.mmap(mmapError) }
         throw KernelError.entropy
     }
 
-    private static func callMremapEncrypt(_ addr: UnsafeMutableRawPointer, _ length: Int, _ prot: Int32,
+    private static func callMremapEncrypt(_ addr: UnsafeMutableRawPointer, _ length: Int, _ cryptid: Int32,
                                           _ cpuType: UInt32, _ cpuSubtype: UInt32) -> Int32 {
         if let fn = symbol {
             typealias Signature = @convention(c) (UnsafeMutableRawPointer?, Int, Int32, UInt32, UInt32) -> Int32
-            return unsafeBitCast(fn, to: Signature.self)(addr, length, prot, cpuType, cpuSubtype)
+            return unsafeBitCast(fn, to: Signature.self)(addr, length, cryptid, cpuType, cpuSubtype)
         }
-        return ipadnRawMremapEncrypted(addr, length, prot, cpuType, cpuSubtype)
+        return ipadnRawMremapEncrypted(addr, length, cryptid, cpuType, cpuSubtype)
     }
 
     private static func stageData(_ data: Data, path: String, root: URL) throws {
