@@ -472,7 +472,7 @@ enum FairPlayDecryptor {
                 strippedAny = true
                 continue
             }
-            let isBinary = parts.count == 3, parts[0] == "payload", parts[1].hasSuffix(".app")
+            let isBinary = parts.count == 3 && parts[0] == "payload" && parts[1].hasSuffix(".app")
             let data = try readEntry(entry, archive: archive)
             if isBinary {
                 sawBinary = true
