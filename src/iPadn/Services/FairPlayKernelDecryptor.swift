@@ -1,6 +1,7 @@
 import Foundation
 import Darwin
 import MachO
+import ZIPFoundation
 
 enum FairPlayKernelDecryptor {
 
@@ -148,20 +149,20 @@ enum FairPlayKernelDecryptor {
             UInt32(bytes[offset]) | UInt32(bytes[offset + 1]) << 8 | UInt32(bytes[offset + 2]) << 16 | UInt32(bytes[offset + 3]) << 24
         }
 
-        let magic = try read(4, 0)
+        let magic = try read(4, at: 0)
         var candidates: [(offset: UInt64, size: UInt64)] = []
         if magic[0] == 0xCA, magic[1] == 0xFE, magic[2] == 0xBA, magic[3] == 0xBE {
-            let count = Int(be32(try read(4, 4), 0))
+            let count = Int(be32(try read(4, at: 4), 0))
             guard count > 0, count <= 16, 8 + count * 20 <= Int(total) else { throw KernelError.truncated("invalid FAT32 architecture table") }
             for i in 0..<count {
-                let entry = try read(20, UInt64(8 + i * 20))
+                let entry = try read(20, at: UInt64(8 + i * 20))
                 candidates.append((UInt64(be32(entry, 8)), UInt64(be32(entry, 12))))
             }
         } else if magic[0] == 0xCA, magic[1] == 0xFE, magic[2] == 0xBA, magic[3] == 0xBF {
-            let count = Int(be32(try read(4, 4), 0))
+            let count = Int(be32(try read(4, at: 4), 0))
             guard count > 0, count <= 16, 8 + count * 32 <= Int(total) else { throw KernelError.truncated("invalid FAT64 architecture table") }
             for i in 0..<count {
-                let entry = try read(32, UInt64(8 + i * 32))
+                let entry = try read(32, at: UInt64(8 + i * 32))
                 candidates.append((be64(entry, 8), be64(entry, 16)))
             }
         } else if (magic[0] == 0xCF || magic[0] == 0xCE), magic[1] == 0xFA, magic[2] == 0xED, magic[3] == 0xFE {
@@ -173,7 +174,7 @@ enum FairPlayKernelDecryptor {
         var out: [SliceInfo] = []
         for candidate in candidates {
             guard candidate.offset + 32 <= total else { continue }
-            let header = try read(32, candidate.offset)
+            let header = try read(32, at: candidate.offset)
             let sliceMagic = le32(header, 0)
             let is64 = sliceMagic == 0xFEEDFACF
             guard is64 || sliceMagic == 0xFEEDFACE else { continue }
@@ -184,7 +185,7 @@ enum FairPlayKernelDecryptor {
             let headerSize = is64 ? 32 : 28
             guard ncmds > 0, ncmds <= 1000, sizeofcmds >= 8, sizeofcmds <= 1 << 24,
                   candidate.offset + UInt64(headerSize) + UInt64(sizeofcmds) <= total else { continue }
-            let commands = try read(sizeofcmds, candidate.offset + UInt64(headerSize))
+            let commands = try read(sizeofcmds, at: candidate.offset + UInt64(headerSize))
             let encCmd: UInt32 = is64 ? 0x2C : 0x21
             var pos = 0
             while pos + 8 <= sizeofcmds {
