@@ -141,8 +141,13 @@ jobs:
             fi
           fi
           killall -9 com.apple.CoreSimulator.CoreSimulatorService || true
+          # Pick whatever iPhone the runner's Xcode actually ships, so a
+          # newer toolchain (no "iPhone 17 Pro" anymore) still runs the tests.
+          DEVICE=$(xcrun simctl list devices available | awk -F ' \\(' '/iPhone/{print $1; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          [ -n "$DEVICE" ] || DEVICE="iPhone 17 Pro"
+          echo "test simulator: $DEVICE"
           xcodebuild test -project iPadn.xcodeproj -scheme iPadn \
-            -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17 Pro,OS=latest" \
+            -configuration Debug -destination "platform=iOS Simulator,name=$DEVICE,OS=latest" \
             -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 120 \
             -destination-timeout 120 -derivedDataPath build/TestDerivedData \
