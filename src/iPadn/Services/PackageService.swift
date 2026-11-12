@@ -1,0 +1,219 @@
+import Foundation
+import ZIPFoundation
+
+enum PackageService {
+    static func inspect(_ url: URL) throws -> StoreApp {
+        let archive = try Archive(url: url, accessMode: .read)
+        guard let info = archive.first(where: { entry in
+            let parts = entry.path.split(separator: "/")
+            return parts.count == 3 && parts[0] == "Payload" && parts[1].hasSuffix(".app") && parts[2] == "Info.plist"
+        }) else { throw ToolError.message(AppText.text("This isn't a valid IPA package")) }
+        let plist = try readPlist(info, archive: archive)
+        let metadata: [String: Any]
+        if let entry = archive["iTunesMetadata.plist"] { metadata = (try? readPlist(entry, archive: archive)) ?? [:] }
+        else { metadata = [:] }
+        let name = plistString(plist["CFBundleDisplayName"] ?? plist["CFBundleName"])
+        let id = plistString(metadata["itemId"])
+        let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? 0
+        return StoreApp(id: id.isEmpty ? UUID().uuidString : id, name: name.isEmpty ? url.deletingPathExtension().lastPathComponent : name,
+                        bundleID: plistString(plist["CFBundleIdentifier"]), version: plistString(plist["CFBundleShortVersionString"]),
+                        size: size, minimumOS: plistString(plist["MinimumOSVersion"]))
+    }
+
+    static func deviceFamilies(_ url: URL) throws -> Set<Int> {
+        let archive = try Archive(url: url, accessMode: .read)
+        guard let info = archive.first(where: { entry in
+            let parts = entry.path.split(separator: "/")
+            return parts.count == 3 && parts[0] == "Payload" &&
+                parts[1].hasSuffix(".app") && parts[2] == "Info.plist"
+        }) else { throw ToolError.message(AppText.text("This isn't a valid IPA package")) }
+        let plist = try readPlist(info, archive: archive)
+        return Set(plist["UIDeviceFamily"] as? [Int] ?? [])
+    }
+
+    static func supportedPlatforms(_ url: URL) throws -> Set<String> {
+        let archive = try Archive(url: url, accessMode: .read)
+        guard let info = archive.first(where: { entry in
+            let parts = entry.path.split(separator: "/")
+            return parts.count == 3 && parts[0] == "Payload" &&
+                parts[1].hasSuffix(".app") && parts[2] == "Info.plist"
+        }) else { throw ToolError.message(AppText.text("This isn't a valid IPA package")) }
+        let plist = try readPlist(info, archive: archive)
+        return Set(plist["CFBundleSupportedPlatforms"] as? [String] ?? [])
+    }
+
+    /// What the package itself says it runs on, for showing the user which
+    /// platform a downloaded file really is (not what was requested).
+    static func describePlatforms(families: Set<Int>, platforms: Set<String>) -> String {
+        let names: [(Int, String)] = [(1, "iPhone"), (2, "iPad"), (3, "Apple TV"), (4, "Apple Watch"), (6, "Mac"), (7, "Vision Pro")]
+        let devices = names.filter { families.contains($0.0) }.map(\.1)
+        // Device names only; the raw platform identifiers mean nothing to users.
+        if devices.isEmpty { return platforms.contains("AppleTVOS") ? "Apple TV" : AppText.text("Unknown") }
+        return devices.joined(separator: ", ")
+    }
+
+    static func platformSummary(_ url: URL) throws -> String {
+        describePlatforms(families: try deviceFamilies(url), platforms: try supportedPlatforms(url))
+    }
+
+    private static func readPlist(_ entry: Entry, archive: Archive) throws -> [String: Any] {
+        let limit = 2 * 1024 * 1024
+        guard entry.type == .file, entry.uncompressedSize <= UInt64(limit) else { throw ToolError.message(AppText.text("The package is damaged")) }
+        var data = Data()
+        let checksum = try archive.extract(entry, consumer: {
+            guard data.count + $0.count <= limit else { throw ToolError.message(AppText.text("The package is damaged")) }
+            data.append($0)
+        })
+        guard checksum == entry.checksum else { throw ToolError.message(AppText.text("The package is damaged. Download it again.")) }
+        guard let result = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+            throw ToolError.message(AppText.text("The package is damaged"))
+        }
+        return result
+    }
+
+    static func finish(staging: URL, id: UUID, asset: DownloadAsset?) throws -> (String, StoreApp) {
+        let working = LocalResources.support.appendingPathComponent("\(id.uuidString).working.ipa")
+        try? FileManager.default.removeItem(at: working)
+        try FileManager.default.copyItem(at: staging, to: working)
+        defer { try? FileManager.default.removeItem(at: working) }
+        if let asset = asset {
+            guard let sinf = asset.sinf, !sinf.isEmpty, let metadata = asset.metadata else {
+                throw ToolError.message(AppText.text("Download license is missing. Download again."))
+            }
+            let archive = try Archive(url: working, accessMode: .update)
+
+            // 1. Write / Update iTunesMetadata.plist
+            try replace("iTunesMetadata.plist", data: metadata, archive: archive)
+
+            // 2. Replicate SINFs for all binaries (ipatool parity)
+            let allSinfs = (asset.sinfs?.isEmpty == false) ? asset.sinfs! : [sinf]
+            var sinfReplicated = false
+
+            // Look for Manifest.plist in Payload/*.app/SC_Info/Manifest.plist
+            if let manifestEntry = archive.first(where: { entry in
+                let parts = entry.path.split(separator: "/")
+                return parts.count == 4 && parts[0] == "Payload" && parts[1].hasSuffix(".app") &&
+                    parts[2] == "SC_Info" && parts[3] == "Manifest.plist"
+            }) {
+                let manifestData = try readPlist(manifestEntry, archive: archive)
+                guard let sinfPaths = manifestData["SinfPaths"] as? [String], !sinfPaths.isEmpty else {
+                    throw ToolError.message(AppText.text("The package's multi-component license manifest is invalid"))
+                }
+                let parts = manifestEntry.path.split(separator: "/")
+                let bundleFolder = String(parts[1])
+                for target in try sinfTargets(paths: sinfPaths, sinfs: allSinfs, bundleFolder: bundleFolder) {
+                    try replace(target.path, data: target.data, archive: archive)
+                }
+                sinfReplicated = true
+            }
+
+            // Fallback for packages without Manifest.plist
+            if !sinfReplicated {
+                let supplemental = archive.first { entry in
+                    let parts = entry.path.split(separator: "/")
+                    return parts.count == 4 && parts[0] == "Payload" && parts[1].hasSuffix(".app") &&
+                        parts[2] == "SC_Info" && parts[3].hasSuffix(".supp")
+                }
+                let existingSinf = archive.first { entry in
+                    let parts = entry.path.split(separator: "/")
+                    return parts.count == 4 && parts[0] == "Payload" && parts[1].hasSuffix(".app") &&
+                        parts[2] == "SC_Info" && parts[3].hasSuffix(".sinf")
+                }
+                if let sourcePath = supplemental?.path ?? existingSinf?.path {
+                    var sinfPath = sourcePath
+                    if sinfPath.hasSuffix(".supp") { sinfPath = String(sinfPath.dropLast(5)) + ".sinf" }
+                    sinfPath = sinfPath.replacingOccurrences(of: #"\.v\d+(?=\.sinf$)"#, with: "", options: .regularExpression)
+                    try replace(sinfPath, data: sinf, archive: archive)
+                } else if let mainApp = archive.first(where: { entry in
+                    let parts = entry.path.split(separator: "/")
+                    return parts.count == 3 && parts[0] == "Payload" && parts[1].hasSuffix(".app") && parts[2] == "Info.plist"
+                }), let infoPlist = try? readPlist(mainApp, archive: archive),
+                   let executable = infoPlist["CFBundleExecutable"] as? String {
+                    let parts = mainApp.path.split(separator: "/")
+                    let bundleFolder = String(parts[1])
+                    let targetPath = "Payload/\(bundleFolder)/SC_Info/\(executable).sinf"
+                    try replace(targetPath, data: sinf, archive: archive)
+                } else {
+                    throw ToolError.message(AppText.text("The package is missing its license data and can't be used"))
+                }
+            }
+        }
+        var app = try inspect(working)
+        if let asset = asset {
+            let platform = asset.platform.lowercased()
+            if platform == "appletvos" || platform == "tvos" || platform == "atv9" {
+                guard try deviceFamilies(working).contains(3),
+                      try supportedPlatforms(working).contains("AppleTVOS") else {
+                    throw ToolError.message(AppText.text("The downloaded file doesn't support Apple TV"))
+                }
+            } else if platform == "ipad" {
+                guard try deviceFamilies(working).contains(2) else {
+                    throw ToolError.message(AppText.text("This package doesn't support iPad"))
+                }
+            }
+            guard app.bundleID == asset.app.bundleID, app.version == asset.app.version else {
+                throw ToolError.message(AppText.text("The downloaded file doesn't match the selected app or version. Try again."))
+            }
+            app.id = asset.app.id
+            app.externalVersionID = asset.app.externalVersionID
+        }
+        let filename = "\(id.uuidString)-\(filenameComponent(app.name, limit: 100))_\(filenameComponent(app.version, limit: 40)).ipa"
+        let destination = LocalResources.packages.appendingPathComponent(filename)
+        // A retry or identifier collision must not delete an existing user package.
+        try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
+        try FileManager.default.moveItem(at: working, to: destination)
+        return (filename, app)
+    }
+
+    static func sinfTargets(paths: [String], sinfs: [Data], bundleFolder: String) throws -> [(path: String, data: Data)] {
+        guard !paths.isEmpty, paths.count == sinfs.count else {
+            throw ToolError.message(AppText.text("The number of licenses doesn't match the package. Download again."))
+        }
+        var seen = Set<String>()
+        return try zip(paths, sinfs).map { pair in
+            let (relative, data) = pair
+            guard !relative.hasPrefix("/"), relative.hasSuffix(".sinf"), isSafeArchivePath(relative) else {
+                throw ToolError.message(AppText.text("The package contains an invalid license path"))
+            }
+            let fullPath = "Payload/\(bundleFolder)/\(relative)"
+            guard isSafeArchivePath(fullPath), seen.insert(fullPath).inserted else {
+                throw ToolError.message(AppText.text("The package contains an invalid license path"))
+            }
+            return (fullPath, data)
+        }
+    }
+
+    private static func replace(_ path: String, data: Data, archive: Archive) throws {
+        guard isSafeArchivePath(path) else { throw ToolError.message(AppText.text("The package is damaged")) }
+        if let entry = archive[path] { try archive.remove(entry) }
+        // Use the file API rather than depending on a version-specific Provider integer type.
+        let scratch = LocalResources.support.appendingPathComponent("entry-\(UUID().uuidString)", isDirectory: true)
+        let file = scratch.appendingPathComponent(path)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        try data.write(to: file, options: .atomic)
+        try archive.addEntry(with: path, relativeTo: scratch, compressionMethod: .deflate)
+    }
+
+    static func isSafeArchivePath(_ path: String) -> Bool {
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false)
+        return !path.contains("\\") && !path.contains("\0") && !parts.isEmpty &&
+            parts.allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
+    static func safeName(_ name: String) -> String {
+        let invalid = CharacterSet(charactersIn: "/\\:?%*|\"<>\n\r\t").union(.controlCharacters)
+        let value = name.components(separatedBy: invalid).joined(separator: "_").trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? "App" : String(value.prefix(80))
+    }
+
+    private static func filenameComponent(_ value: String, limit: Int) -> String {
+        var result = "", bytes = 0
+        for character in safeName(value) {
+            let count = String(character).utf8.count
+            if bytes + count > limit { break }
+            result.append(character); bytes += count
+        }
+        return result.isEmpty ? "App" : result
+    }
+}

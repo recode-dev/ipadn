@@ -1,0 +1,50 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Search apps in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search apps in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Import a package with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a package with ${applicationName}"
+          }
+        }
+      }
+    },
+    "Check updates with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check updates with ${applicationName}"
+          }
+        }
+      }
+    },
+    "Download progress in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download progress in ${applicationName}"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
