@@ -466,7 +466,7 @@ enum FairPlayDecryptor {
             guard let sinf = plan.sinf, let license = plan.license else {
                 throw DecryptError.badSinf("\(plan.binary.path) is missing SINF/SUPF license files")
             }
-            let (decrypted, pages) = try decryptBinary(Array(binaryData), sinf: sinf, license: license,
+            let (decrypted, pages) = try decryptBinary(Array(binaryData), sinf: Array(sinf), license: Array(license),
                                                        credential: credentialBytes, verify: true)
             try writeEntry(Data(decrypted), to: output, path: plan.binary.path)
             handled.insert(plan.binary.path)
@@ -487,7 +487,7 @@ enum FairPlayDecryptor {
     // MARK: - Archive plumbing
 
     struct BinaryPlan {
-        let binary: Archive.Entry
+        let binary: Entry
         let sinf: Data?
         let license: Data?
     }
@@ -495,7 +495,7 @@ enum FairPlayDecryptor {
     /// Matches Payload/<App>.app/<Executable> with its SC_Info license files
     /// by basename stem, like the ipatool-family tools do.
     private static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
-        var binaries: [Archive.Entry] = []
+        var binaries: [Entry] = []
         for entry in archive {
             let parts = entry.path.split(separator: "/")
             if parts.count == 3, parts[0] == "Payload", parts[1].hasSuffix(".app"),
@@ -539,7 +539,7 @@ enum FairPlayDecryptor {
         return plans
     }
 
-    private static func readEntry(_ entry: Archive.Entry, archive: Archive, limit: Int = maxBinaryBytes) throws -> Data {
+    private static func readEntry(_ entry: Entry, archive: Archive, limit: Int = maxBinaryBytes) throws -> Data {
         guard entry.uncompressedSize <= UInt64(limit) else {
             throw ToolError.message(AppText.text("安装包中的二进制过大，无法在设备上解密"))
         }
