@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""Checks project references, plist/asset files, and lexical Swift delimiter balance.
-
-This is not a substitute for swiftc, Xcode, XCTest or real-device tests.
-"""
 import hashlib
 import json
 import plistlib
