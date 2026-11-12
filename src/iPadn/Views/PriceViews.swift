@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// The app's price in each chosen storefront, converted for comparison.
 struct RegionPriceView: View {
     @EnvironmentObject private var store: ToolStore
     let app: StoreApp
@@ -13,9 +12,7 @@ struct RegionPriceView: View {
     @State private var inApps: [String: [InAppPrice]] = [:]
     @State private var inAppsLoading = false
     @State private var inAppNames: [String: String] = [:]
-    /// Bumped to reload: on opening, after the region list was edited, on pull to refresh.
     @State private var reload = 0
-    /// The latest load; an older one that finishes late changes nothing.
     @State private var generation = 0
     @State private var loadedRegions: [String] = []
     static let currencies = ["CNY", "HKD", "TWD", "USD", "JPY", "KRW", "EUR", "GBP", "SGD", "AUD", "CAD", "TRY"]
@@ -62,7 +59,6 @@ struct RegionPriceView: View {
                 .accessibilityLabel("Price comparison")
             }
         }
-        // Reloads once the region list is closed, not on every tap in it.
         .sheet(isPresented: $editingRegions, onDismiss: {
             if store.settings.priceRegions != loadedRegions { reload += 1 }
         }) {
@@ -74,7 +70,6 @@ struct RegionPriceView: View {
         .refreshable { await load() }
     }
 
-    /// Listed storefronts whose pages this network could not open.
     private var blocked: [String] {
         prices.filter { $0.listing != nil && inApps[$0.country] == nil && InAppPriceService.redirected.contains(app.id + "|" + $0.country) }
             .map(\.country)
@@ -154,14 +149,12 @@ struct RegionPriceView: View {
         guard current == generation else { return }
         withAnimation(.easeOut(duration: 0.2)) { prices = found }
         loading = false
-        // In-app purchases come from each listed storefront's product page.
         inAppsLoading = true
         let listed = found.filter { $0.listing != nil }.map(\.country)
         let pages = await InAppPriceService.fetch(appID: app.id, countries: listed)
         guard current == generation else { return }
         withAnimation(.easeOut(duration: 0.2)) { inApps = pages }
         inAppsLoading = false
-        // Matching uses the English names; show them in the system language.
         let names = await InAppPriceService.localizedNames(appID: app.id, english: pages)
         guard current == generation, !names.isEmpty else { return }
         withAnimation(.easeOut(duration: 0.2)) { inAppNames = names }
@@ -205,7 +198,6 @@ struct RegionPriceRow: View {
 struct InAppGroupRow: View {
     let group: InAppGroup
     let rates: ExchangeRates?
-    /// The purchase's name in the system language when known.
     var name: String
     var body: some View {
         DisclosureGroup {
@@ -263,7 +255,6 @@ private struct RegionPriceSkeleton: View {
     }
 }
 
-/// Picks the storefronts to compare; chosen ones first.
 struct RegionSelectionView: View {
     @Binding var selection: [String]
     @Environment(\.dismiss) private var dismiss

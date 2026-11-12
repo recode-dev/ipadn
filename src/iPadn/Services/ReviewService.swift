@@ -1,6 +1,5 @@
 import Foundation
 
-/// One App Store customer review from Apple's public review feed.
 struct AppReview: Identifiable, Equatable {
     var id: String
     var author: String
@@ -12,10 +11,8 @@ struct AppReview: Identifiable, Equatable {
 }
 
 enum ReviewService {
-    /// The feed holds at most ten pages of fifty reviews.
     static let lastPage = 10
 
-    /// The most recent reviews in one storefront, newest first.
     static func reviews(appID: String, country: String, page: Int) async throws -> [AppReview] {
         guard UInt64(appID).map({ $0 > 0 }) == true, (1...lastPage).contains(page),
               let url = URL(string: "https://itunes.apple.com/\(country.lowercased())/rss/customerreviews/page=\(page)/id=\(appID)/sortby=mostrecent/json")
@@ -24,7 +21,6 @@ enum ReviewService {
         return parse(data)
     }
 
-    /// The feed's entries; one entry arrives as an object, none as no key.
     static func parse(_ data: Data) -> [AppReview] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let feed = json["feed"] as? [String: Any] else { return [] }
@@ -37,7 +33,6 @@ enum ReviewService {
         }
         let dates = ISO8601DateFormatter()
         return entries.compactMap { entry in
-            // A review has a rating; the app's own entry in older feeds does not.
             guard let rating = Int(label(entry, "im:rating")), (1...5).contains(rating) else { return nil }
             let author = (((entry["author"] as? [String: Any])?["name"] as? [String: Any])?["label"] as? String) ?? ""
             let id = label(entry, "id")

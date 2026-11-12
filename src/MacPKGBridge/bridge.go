@@ -1,16 +1,3 @@
-// iPadn Mac App Store package bridge.
-//
-// Built by scripts/build_mac_pkg_bridge.sh inside a pinned ipatool checkout
-// (it uses ipatool's internal StoreAgent runtime) as an iPhoneOS c-archive,
-// linked together with the no-JIT Unicorn TCI interpreter. The app resolves
-// these exports at runtime, so builds without the bridge simply report the
-// feature as unavailable.
-//
-// The bridge does what the Mac App Store client does on a Mac for the account
-// that was authorized for the download: open a StoreAgent session with the
-// account-bound dpInfo and the same hardware ID that produced the request's
-// kbsync, and decrypt the downloaded package stream. It never sees Apple ID
-// credentials and never writes dpInfo anywhere.
 package main
 
 /*
@@ -78,10 +65,6 @@ func failure(output *C.char, capacity C.int32_t, code C.int32_t, summary string,
 	return code
 }
 
-// iPadnMacPKGDecrypt decrypts encryptedPath into decryptedPath. Returns 0 on
-// success, 1 if cancelled, and a negative code with a message otherwise.
-// Only one package is processed at a time; later calls wait.
-//
 //export iPadnMacPKGDecrypt
 func iPadnMacPKGDecrypt(hardwareHex *C.char, dpInfo *C.uint8_t, dpInfoLength C.int32_t,
 	encryptedPath, decryptedPath *C.char, message *C.char, capacity C.int32_t) C.int32_t {
@@ -159,9 +142,6 @@ func iPadnMacPKGDecrypt(hardwareHex *C.char, dpInfo *C.uint8_t, dpInfoLength C.i
 	return 0
 }
 
-// iPadnMacPKGStatus reports the current stage (0 idle, 1 loading Apple
-// components, 2 starting StoreAgent, 3 decrypting) and bytes written.
-//
 //export iPadnMacPKGStatus
 func iPadnMacPKGStatus(bytes *C.int64_t) C.int32_t {
 	if bytes != nil {
@@ -170,8 +150,6 @@ func iPadnMacPKGStatus(bytes *C.int64_t) C.int32_t {
 	return C.int32_t(stage.Load())
 }
 
-// iPadnMacPKGCancel cancels the package currently being processed, if any.
-//
 //export iPadnMacPKGCancel
 func iPadnMacPKGCancel() {
 	cancelLock.Lock()

@@ -10,7 +10,6 @@ from xml.etree import ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Kept for compatibility with older call sites; the project is English-only.
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--development-language", default="en",
                     help="Unused; the project language is always English.")
@@ -42,16 +41,11 @@ for path in sorted((ROOT / "iPadn").rglob("*.swift")):
     app_files.append(reference)
     sources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
 resources = []
-for path, file_type in [("Resources/SAPRuntime", "folder"), ("Resources/Assets.xcassets", "folder.assetcatalog"), ("Resources/PrivacyInfo.xcprivacy", "text.xml"), ("Resources/app-name-directory.json", "text.json"),
-                        ("Resources/AppShortcuts.xcstrings", "text.json.xcstrings")]:
+for path, file_type in [("Resources/SAPRuntime", "folder"), ("Resources/Assets.xcassets", "folder.assetcatalog"), ("Resources/PrivacyInfo.xcprivacy", "text.xml"), ("Resources/app-name-directory.json", "text.json")]:
     reference = add("File/" + path, "PBXFileReference", lastKnownFileType=file_type, path=path, sourceTree="<group>")
     app_files.append(reference)
     resources.append(add("Build/" + path, "PBXBuildFile", fileRef=reference))
-# The primary icon is the dark 3D icon. AppIconAuto and AppIconFlat follow
-# the system appearance; the others are fixed light or dark. AppIconDark is
-# kept for installs that chose it before the primary icon became dark.
 ALTERNATE_ICONS = ["AppIconAuto", "AppIconFlat", "AppIconLight", "AppIconDark", "AppIconFlatLight", "AppIconFlatDark"]
-# Alternate icons also ship as standalone PNGs for SpringBoard and signing tools.
 for path in sorted((ROOT / "iPadn/Resources/AlternateIcons").glob("*.png")):
     relative = path.relative_to(ROOT / "iPadn").as_posix()
     reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="image.png", path=relative, sourceTree="<group>")
@@ -87,16 +81,13 @@ app_settings = {"PRODUCT_BUNDLE_IDENTIFIER": "app.local.iPadn", "PRODUCT_NAME": 
                 "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"],
                 "ENABLE_PREVIEWS": "YES", "SUPPORTS_MACCATALYST": "NO", "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
                 "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
-                # Empty unless scripts/build_unsigned_ipa.sh built the Mac PKG bridge.
                 "IPADN_MACPKG_LDFLAGS": "",
-                # Empty unless scripts/build_unsigned_ipa.sh built the native installation library.
                 "IPADN_NATIVE_LDFLAGS": "",
                 "OTHER_LDFLAGS": ["$(inherited)", "-weak_framework", "Translation", "$(IPADN_MACPKG_LDFLAGS)", "$(IPADN_NATIVE_LDFLAGS)"]}
 app_configs = configs("App", app_settings)
 add("AppTarget", "PBXNativeTarget", buildConfigurationList=app_configs, buildPhases=[assemble, app_sources, app_frameworks, app_resources],
     buildRules=[], dependencies=[], name="iPadn", packageProductDependencies=[app_package], productName="iPadn",
     productReference=app_product, productType="com.apple.product-type.application")
-# Live Activity extension: the pairing steps and code on the Lock Screen and in the Dynamic Island.
 extension_id = uid("ExtensionTarget")
 extension_product = add("ExtensionProduct", "PBXFileReference", explicitFileType="wrapper.app-extension", includeInIndex="0", path="iPadnLiveActivity.appex", sourceTree="BUILT_PRODUCTS_DIR")
 objects[products]["children"].append(extension_product)
@@ -178,7 +169,6 @@ info = {"CFBundleDevelopmentRegion": "$(DEVELOPMENT_LANGUAGE)", "CFBundleExecuta
         "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"],
         "CFBundleURLTypes": [{"CFBundleURLName": "app.local.iPadn", "CFBundleURLSchemes": ["ipadn"]}],
         "LSApplicationQueriesSchemes": ["itms-services"],
-        # audio keeps iPadn answering while the user pairs in Settings (on-device pairing only).
         "UIBackgroundModes": ["fetch", "audio"], "BGTaskSchedulerPermittedIdentifiers": ["app.local.iPadn.update-check"],
         "NSSupportsLiveActivities": True,
         "CADisableMinimumFrameDurationOnPhone": True,
@@ -194,8 +184,6 @@ info = {"CFBundleDevelopmentRegion": "$(DEVELOPMENT_LANGUAGE)", "CFBundleExecuta
                                     "NSExceptionDomains": {"127.0.0.1": {"NSExceptionAllowsInsecureHTTPLoads": True}}},
         "NSLocalNetworkUsageDescription": "Loads signing resources and serves installation packages over this device's loopback address, finds this device's installation service, and, when you turn on Wi-Fi Transfer, offers packages to computers on the same network.",
         "NSFaceIDUsageDescription": "Unlocks iPadn with Face ID.",
-        # Native installation finds this device's remote pairing port, and on
-        # iOS 27 advertises iPadn as a computer the device can pair with.
         "NSBonjourServices": ["_remotepairing._tcp", "_remotepairing-pairable-host._tcp"]}
 (ROOT / "iPadn/Info.plist").write_bytes(plistlib.dumps(info, sort_keys=False))
 privacy = {"NSPrivacyTracking": False, "NSPrivacyTrackingDomains": [], "NSPrivacyCollectedDataTypes": [],

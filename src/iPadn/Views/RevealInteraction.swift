@@ -2,11 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-// Native gesture recognizer from Telegram-iOS commit
-// 24638bc69bd083981b178dd1e7f921eebbf7fc46, GPL-2.0-or-later.
 
-/// A public-API recognizer with the reference's 25-point horizontal hysteresis.
-/// It fails early on vertical movement so the hosting scroll view can take over.
 final class ItemListRevealTouchGestureRecognizer: UIGestureRecognizer {
     var canBegin: ((CGPoint, CGFloat) -> Bool)?
     var horizontalIntent: (() -> Void)?
@@ -37,9 +33,6 @@ final class ItemListRevealTouchGestureRecognizer: UIGestureRecognizer {
         let dx = location.x - origin.x, dy = location.y - origin.y
         if state == .possible {
             if abs(dy) > 10 && abs(dy) >= abs(dx) { state = .failed; return }
-            // Telegram's context gesture permits simultaneous non-pan gestures.
-            // Cancel its pending long press on movement, without beginning the
-            // reveal before the reference's 25-point recognition threshold.
             if !reportedHorizontalIntent && abs(dx) > 10 && abs(dx) > abs(dy) && canBegin?(origin, dx < 0 ? -1 : 1) != false {
                 reportedHorizontalIntent = true
                 horizontalIntent?()
@@ -50,7 +43,6 @@ final class ItemListRevealTouchGestureRecognizer: UIGestureRecognizer {
                     self.state = .failed
                     return
                 }
-                // UIPan's observed translation starts at zero after its hysteresis.
                 recognizedOrigin = origin.x + (dx < 0 ? -1 : 1) * 25.0
                 translation = location.x - recognizedOrigin
                 state = .began
@@ -66,7 +58,6 @@ final class ItemListRevealTouchGestureRecognizer: UIGestureRecognizer {
         location = point
         samples.append((touch.timestamp, point.x))
         samples.removeAll { touch.timestamp - $0.time > 0.08 }
-        // Least-squares velocity tolerates coalesced samples and uneven event intervals.
         let count = CGFloat(samples.count)
         guard count > 1 else { return }
         let firstTime = samples[0].time
@@ -82,8 +73,6 @@ final class ItemListRevealTouchGestureRecognizer: UIGestureRecognizer {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = trackedTouch, touches.contains(touch) else { return }
-        // UIPan retains the last movement velocity while a stationary finger is
-        // held. The reference's ended callback confirms this; don't zero on lift.
         state = state == .began || state == .changed ? .ended : .failed
     }
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -123,7 +112,6 @@ private struct RevealGestureAttachment: UIViewRepresentable {
             recognizer.canBegin = { [weak self] origin, direction in
                 guard let self, let anchor = self.anchor, let host = self.host, self.parent.enabled else { return false }
                 let point = anchor.convert(origin, from: host)
-                // Leave the leading edge to the system's back swipe.
                 return !(self.layoutX(point.x) < 20 && self.layoutSign * direction > 0)
             }
             recognizer.horizontalIntent = { [weak self] in self?.cancelRowPresses() }
@@ -174,9 +162,6 @@ private struct RevealGestureAttachment: UIViewRepresentable {
             host?.removeGestureRecognizer(recognizer); host?.removeGestureRecognizer(closeTap); host = nil
         }
         @objc private func closeRow() { parent.close() }
-        /// UIKit reports touches left to right, while SwiftUI mirrors offsets
-        /// and edges in a right-to-left layout; these map touches into the
-        /// layout's direction so a swipe follows the finger in Arabic too.
         private var layoutSign: CGFloat {
             anchor?.effectiveUserInterfaceLayoutDirection == .rightToLeft ? -1 : 1
         }
@@ -189,14 +174,11 @@ private struct RevealGestureAttachment: UIViewRepresentable {
             let point = touch.location(in: anchor)
             guard anchor.bounds.contains(point) else { return false }
             let x = layoutX(point.x)
-            // The exposed operation stays a normal button, not a new swipe.
             if parent.offset < 0 && x > anchor.bounds.width + parent.offset { return false }
             if parent.offset > 0 && x < parent.offset { return false }
             return true
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            // Let the native recognizer observe movement while SwiftUI's
-            // press recognizer is active; horizontal intent cancels that press.
             !(otherGestureRecognizer is UIPanGestureRecognizer)
         }
         @objc private func handle() {
@@ -225,15 +207,12 @@ private struct RevealGestureAttachment: UIViewRepresentable {
 }
 
 
-/// A single owner across tabs: opening another row closes the previous one.
 @MainActor
 private final class RevealCoordinator: ObservableObject {
     static let shared = RevealCoordinator()
     @Published var active: String?
 }
 
-/// Only the actively moving row gets display-link updates. Telegram's pure
-/// motion model supplies resistance, velocity transfer and interruptible springs.
 @MainActor
 private final class RevealDriver: NSObject, ObservableObject {
     private struct Presentation: Equatable {
@@ -324,8 +303,6 @@ private final class RevealDriver: NSObject, ObservableObject {
         presentation = next
     }
     private func schedulePresentation() {
-        // Touch callbacks only update the model. Publish the latest complete
-        // frame once at the display boundary, rather than twice per refresh.
         if reduced || (!dragging && motion.isAtRest) { render(); stop() }
         else { animate() }
     }
@@ -369,16 +346,12 @@ private struct RevealSuppressesPressKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// Interaction is temporarily cancelled by a reveal, not unavailable.
     var revealSuppressesPress: Bool {
         get { self[RevealSuppressesPressKey.self] }
         set { self[RevealSuppressesPressKey.self] = newValue }
     }
 }
 
-/// Keep the normal row appearance while its original control is cancelled.
-/// The Button itself remains disabled; only its noninteractive label renders
-/// with the normal enabled appearance. Genuine disabled states still fade.
 struct RevealRowButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
     @Environment(\.revealSuppressesPress) private var suppressesPress
@@ -393,7 +366,6 @@ private struct RevealDeleteModifier: ViewModifier {
     let id: String
     let enabled: Bool
     let grouping: RevealRowGrouping
-    /// Leading inset of the hairline under a grouped row; nil draws none.
     let separatorInset: CGFloat?
     let title: LocalizedStringKey
     let style: RevealActionStyle
@@ -419,8 +391,6 @@ private struct RevealDeleteModifier: ViewModifier {
         return content
             .buttonStyle(RevealRowButtonStyle())
             .environment(\.revealSuppressesPress, driver.blocksPress || abs(driver.offset) > 1)
-            // Disabling the original control cancels an in-flight SwiftUI
-            // press; hit-testing alone still submits that press on touch-up.
             .disabled(driver.blocksPress || abs(driver.offset) > 1)
             .padding(.horizontal, 20).padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: style == .compact ? compactHeight * (60.0 / 36) : actionSize * (76.0 / 52), alignment: .leading)
@@ -455,9 +425,6 @@ private struct RevealDeleteModifier: ViewModifier {
             .padding(.vertical, 2)
             .background {
                 if grouping != .standalone {
-                    // Join the resting accounts to the native Add Account row.
-                    // The same reference spring rounds and detaches only the
-                    // row being dragged; the remaining group stays intact.
                     cardShape(rounding: 0).fill(Color(.secondarySystemGroupedBackground))
                         .overlay(alignment: .bottom) {
                             if let separatorInset {

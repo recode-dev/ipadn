@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-// Visual language modeled on the App Store with the iPadn monochrome accent:
-// grouped backgrounds, capsule action buttons, ring progress, large titles.
 enum UX {
     static func motion(_ reduceMotion: Bool) -> Animation? {
         reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.9)
@@ -10,8 +8,6 @@ enum UX {
     static let tint = Color.accentColor
     static let buttonTint = Color.accentColor
     static let onAccent = Color(uiColor: .systemBackground)
-    /// The monochrome accent is near-white in dark mode, which would make an "on" switch
-    /// track blend into its white thumb; switch to system green there.
     static let switchTint = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark ? .systemGreen : (UIColor(named: "AccentColor") ?? .label)
     })
@@ -20,7 +16,6 @@ enum UX {
     static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
 }
 
-/// Full-width primary action (App Store sign-in "Resume" style).
 struct PrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,14 +33,12 @@ struct PrimaryButtonStyle: ButtonStyle {
 }
 typealias MonochromeButtonStyle = PrimaryButtonStyle
 
-/// System switch with a tint that stays legible in both appearances (see `UX.switchTint`).
 struct TintedSwitchToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         Toggle(configuration).toggleStyle(.switch).tint(UX.switchTint)
     }
 }
 
-/// App Store "获取 / 打开" capsule. `filled` is the prominent variant.
 struct CapsuleButtonStyle: ButtonStyle {
     var filled = false
     @Environment(\.isEnabled) private var enabled
@@ -55,7 +48,6 @@ struct CapsuleButtonStyle: ButtonStyle {
             .environment(\.isEnabled, enabled || suppressesPress)
             .font(.subheadline.weight(.bold))
             .lineLimit(1)
-            // Capsule labels ("Download", "Get") must never be clipped.
             .fixedSize(horizontal: true, vertical: false)
             .foregroundStyle(filled ? UX.onAccent : UX.tint)
             .padding(.horizontal, 16).frame(minWidth: 74, minHeight: 30)
@@ -65,8 +57,6 @@ struct CapsuleButtonStyle: ButtonStyle {
     }
 }
 
-/// Capsule action inside a navigable List row. A Button there would be
-/// swallowed by the row's link, so it uses a high-priority tap instead.
 struct RowCapsule: View {
     let title: LocalizedStringKey
     var filled = false
@@ -75,7 +65,6 @@ struct RowCapsule: View {
     var body: some View {
         Text(title)
             .font(.subheadline.weight(.bold)).lineLimit(1)
-            // Capsule labels ("Download", "Get") must never be clipped.
             .fixedSize(horizontal: true, vertical: false)
             .foregroundStyle(filled ? UX.onAccent : UX.tint)
             .padding(.horizontal, 16).frame(minWidth: 74, minHeight: 30)
@@ -90,7 +79,6 @@ struct RowCapsule: View {
     }
 }
 
-/// App Store download progress: a ring with a stop/pause glyph.
 struct ProgressRing: View {
     var progress: Double?
     var symbol = "pause.fill"
@@ -144,7 +132,6 @@ struct EmptyState: View {
 }
 
 struct InlineIssue: View {
-    /// Already in its final language: service errors and store state arrive as text.
     let message: String
     var retry: (() -> Void)? = nil
     var body: some View {
@@ -158,8 +145,6 @@ struct InlineIssue: View {
     }
 }
 
-/// In-list search field. `capsule` is the App Store search-tab bar: a
-/// full-width pill that searches from the keyboard's Search key.
 struct SearchInput: View {
     @Binding var text: String
     var placeholder: LocalizedStringKey
@@ -194,8 +179,6 @@ struct SearchInput: View {
     }
 }
 
-/// A section header's 刷新 that turns into a small spinner while busy, in
-/// the same place, so nothing around it moves. Taps while busy are ignored.
 struct RefreshButton: View {
     let busy: Bool
     let action: () -> Void
@@ -212,9 +195,6 @@ struct RefreshButton: View {
     }
 }
 
-/// Root-tab chrome that pairs with `PageHeader`. The navigation bar stays
-/// visible (hiding it made the page jump when popping back from a pushed
-/// page); it shows the small title only once the header has scrolled away.
 struct RootTabBar: ViewModifier {
     let title: LocalizedStringKey
     let headerScrolledAway: Bool
@@ -234,8 +214,6 @@ struct RootTabBar: ViewModifier {
     }
 }
 extension View {
-    /// Sets `shown` once `active` has lasted a moment and clears it as soon
-    /// as it ends, so quick work (a cache hit) never flashes a spinner.
     func revealAfterDelay(_ active: Bool, into shown: Binding<Bool>, delay: Duration = .milliseconds(300)) -> some View {
         task(id: active) {
             guard active else {
@@ -250,7 +228,6 @@ extension View {
     func rootTabBar(_ title: LocalizedStringKey, headerScrolledAway: Bool) -> some View {
         modifier(RootTabBar(title: title, headerScrolledAway: headerScrolledAway))
     }
-    /// Reports whether this view has scrolled up under the navigation bar.
     func onScrolledUnderBar(_ action: @escaping (Bool) -> Void) -> some View {
         onGeometryChange(for: Bool.self) { proxy in
             proxy.frame(in: .global).maxY < 104
@@ -258,8 +235,6 @@ extension View {
     }
 }
 
-/// App Store root-tab header: large title with the trailing control (the
-/// account avatar) on the same line, instead of a separate toolbar row.
 struct PageHeader<Trailing: View>: View {
     let title: LocalizedStringKey
     @ViewBuilder var trailing: Trailing
@@ -287,8 +262,6 @@ struct TaskStatusPill: View {
         }
     }
     var body: some View {
-        // Not a Label: inside List rows a Label gets the list's icon column,
-        // which leaves a wide gap between the glyph and the text.
         HStack(spacing: 4) {
             Image(systemName: status.symbol).imageScale(.small)
             Text(status.title)
@@ -299,7 +272,6 @@ struct TaskStatusPill: View {
     }
 }
 
-/// Small outlined capsule for platform and state tags (iOS, 已下架…).
 struct TagBadge: View {
     let text: LocalizedStringKey
     var tint: Color = .secondary
@@ -330,10 +302,8 @@ struct AppSkeleton: View {
     }
 }
 
-/// One cell of the App Store product page's horizontal info strip.
 struct InfoStripItem: View {
     let caption: LocalizedStringKey
-    /// Store data (version, size, category): already in its final language.
     let value: String
     var detail: String? = nil
     var symbol: String? = nil
@@ -358,8 +328,6 @@ struct InfoStripItem: View {
     }
 }
 
-/// Six separate digit boxes like Apple's two-factor screen. Backed by one
-/// hidden one-time-code field so paste and SMS/AutoFill keep working.
 struct VerificationCodeField: View {
     @Binding var code: String
     var length = 6
@@ -414,8 +382,6 @@ struct ToolPageStyle: ViewModifier {
 }
 extension View { func toolPage() -> some View { modifier(ToolPageStyle()) } }
 
-/// One line of text that, when it does not fit, scrolls once in place to
-/// reveal the rest and returns, instead of being cut off with an ellipsis.
 struct MarqueeText: View {
     let text: String
     var font: Font = .subheadline
@@ -425,7 +391,6 @@ struct MarqueeText: View {
     @State private var offset: CGFloat = 0
     private var overflow: CGFloat { max(0, textWidth - boxWidth) }
     var body: some View {
-        // The hidden copy sets the line height and takes the available width.
         Text(text).font(font).lineLimit(1).hidden()
             .frame(maxWidth: .infinity, alignment: .leading)
             .overlay(alignment: .leading) {
@@ -460,9 +425,6 @@ struct MarqueeText: View {
 }
 
 extension AnyTransition {
-    /// Replaces a status label or button without the old and new content
-    /// being visible at the same time: the old one fades out quickly, then
-    /// the new one fades and scales in.
     static var statusSwap: AnyTransition {
         .asymmetric(
             insertion: .opacity.combined(with: .scale(scale: 0.92))
@@ -515,8 +477,6 @@ extension View {
     }
 }
 
-/// The reveal animation needs independently animated top and bottom radii.
-/// Native continuous corners are retained on iOS 17; iOS 16 uses circular arcs.
 struct CompatibleCardShape: Shape {
     var top: CGFloat
     var bottom: CGFloat

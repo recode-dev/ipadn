@@ -5,11 +5,8 @@ import Combine
 @MainActor
 final class InstallationService: ObservableObject {
     @Published private(set) var isHosting = false
-    // Servers of recent installs stay up together: installd may come back to
-    // an earlier one (retry, ranged request) after another install starts.
     private var hosted: [LoopbackServer] = []
     private var profileFiles: LoopbackServer?
-    /// The server of the latest install link, which also serves its Safari page.
     private weak var installServer: LoopbackServer?
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
@@ -23,8 +20,6 @@ final class InstallationService: ObservableObject {
         isHosting = true
         keepServingInBackground()
     }
-    /// installd fetches the package after iPadn goes to the background; ask
-    /// for time to keep serving. Ended inside the handler, as UIKit requires.
     private func keepServingInBackground() {
         guard backgroundTask == .invalid else { return }
         backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "iPadn installation") { [weak self] in
@@ -39,12 +34,6 @@ final class InstallationService: ObservableObject {
         keepServingInBackground()
         return url
     }
-    /// One-tap installation. installd only requires the *manifest* to be
-    /// HTTPS; the package itself may come over plain HTTP. The IPA is served
-    /// from this device on 127.0.0.1 and a public manifest generator returns
-    /// a manifest pointing at it, so no certificate, profile or server setup
-    /// is needed. Only name, bundle ID, version and the local URL leave the
-    /// device; the IPA never does.
     func automaticInstallURL(job: DownloadJob, file: URL) async throws -> URL {
         let server = LoopbackServer()
         try await server.start()
@@ -61,17 +50,11 @@ final class InstallationService: ObservableObject {
         }
         do { try await certificate.validateAsync(host: host) }
         catch InstallationCertificate.CheckFailure.outdated where (try? InstallationCertificate.localProfile()) != nil {
-            // Made by an earlier iPadn that didn't cover this address.
             throw ToolError.message(AppText.text("The certificate needs updating. Recreate it in Installation settings, then install and trust the new profile."))
         }
-        // The server listens on 127.0.0.1; any other answer (no network, or a
-        // proxy app that answers DNS itself) means the system can't reach it.
-        // Fallbacks are used only when the certificate covers them too.
         var candidates = host == ManifestBuilder.defaultLocalHost
             ? ManifestBuilder.fallbackLocalHosts.filter { $0 == host || (try? certificate.validate(host: $0)) != nil }
             : [host]
-        // With a proxy or VPN on, public names go through it; ipadn.local is
-        // answered on this device and proxy apps leave *.local alone.
         let proxied = LocalHostRecord.proxyOrVPNActive
         let coversLocal = (try? certificate.validate(host: LocalHostRecord.host)) != nil
         InstallLog.shared.add("proxy or VPN: \(proxied ? "on" : "off"), certificate covers ipadn.local: \(coversLocal)")
@@ -80,10 +63,6 @@ final class InstallationService: ObservableObject {
         }
         var found = await ManifestBuilder.firstLoopbackHost(candidates)
         if found == nil, proxied {
-            // Proxy apps answer lookups with a stand-in address and still
-            // connect straight to this device when a rule says so (DIRECT);
-            // let the system try, and the check after opening the link
-            // reports it if it couldn't connect.
             found = candidates.first { $0 != LocalHostRecord.host } ?? host
             InstallLog.shared.add("no loopback answer behind the proxy; trying \(found ?? host)")
         }
@@ -93,7 +72,6 @@ final class InstallationService: ObservableObject {
         let server = LoopbackServer(identity: certificate.identity, certificates: certificate.certificates, publicHost: reachable)
         try await server.start()
         let packageURL = try server.register(file)
-        // The home screen shows these while the app installs.
         var images: (small: URL, large: URL)?
         if let icon = await Self.iconImages(icon) {
             images = try (server.register(data: icon.small, contentType: "image/png"),
@@ -106,8 +84,6 @@ final class InstallationService: ObservableObject {
         return try ManifestBuilder.systemURL(manifestURL: manifestURL)
     }
 
-    /// The app icon as the two PNG sizes an install manifest names, or nil
-    /// when there is no icon or it can't be loaded quickly.
     private static func iconImages(_ url: URL?) async -> (small: Data, large: Data)? {
         guard let url else { return nil }
         var data: Data?
@@ -123,8 +99,6 @@ final class InstallationService: ObservableObject {
         return (png(57), png(512))
     }
 
-    /// A page on this device that opens `installURL`, for installing from
-    /// Safari when the install prompt doesn't appear from iPadn itself.
     func browserPage(installURL: URL, app: StoreApp) throws -> URL {
         guard let server = installServer, server.baseURL != nil else {
             throw ToolError.message(AppText.text("The installation service isn't ready. Try again."))
@@ -135,7 +109,6 @@ final class InstallationService: ObservableObject {
         return url
     }
 
-    // Original Surge/Loon rules expect http://127.0.0.1:8000/<filename>.
     private let files = LoopbackServer(port: 8000, compatibilityMode: true)
 
     func installURL(job: DownloadJob, file: URL, plistServer: String) async throws -> URL {
@@ -156,24 +129,13 @@ final class InstallationService: ObservableObject {
 }
 
 enum ManifestBuilder {
-    /// The installer does not open install links whose host is an IP
-    /// address or "localhost". These public names resolve to 127.0.0.1, so
-    /// the link carries a real domain while the connection stays on this
-    /// device. The generated certificate covers all of them.
-    /// The install prompt names this host ("ipadn.localtest.me 想要安装…").
     static let defaultLocalHost = "ipadn.localtest.me"
-    /// Tried in order when the default is set: the first that resolves to
-    /// this device on the current network is used.
     static let fallbackLocalHosts = [defaultLocalHost, "ipadn.lvh.me", "127.0.0.1.sslip.io"]
     static let localHostNames = ["127.0.0.1.sslip.io", "localtest.me", "*.localtest.me", "lvh.me", "*.lvh.me", "localhost", LocalHostRecord.host]
-    /// Hosts that earlier versions used; they are replaced by the default.
     static func migratedLocalHost(_ value: String) -> String {
         let host = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return ["", "127.0.0.1", "localhost", "127.0.0.1.sslip.io"].contains(host) ? defaultLocalHost : value
     }
-    /// The first of `hosts` (in order) that resolves to this device. The
-    /// lookups run side by side and give up after `timeout`, so a network
-    /// with broken DNS can't hold the install up.
     static func firstLoopbackHost(_ hosts: [String], timeout: TimeInterval = 3) async -> String? {
         guard !hosts.isEmpty else { return nil }
         final class Race: @unchecked Sendable {
@@ -186,7 +148,6 @@ enum ManifestBuilder {
             }
             func record(_ index: Int, loopback: Bool) {
                 lock.lock(); answers[index] = loopback
-                // Decided once every host before the first loopback one has answered.
                 let decided = answers.firstIndex { $0 != false }
                 if decided == nil { finishLocked(nil) }
                 else if let decided, answers[decided] == true { finishLocked(hosts[decided]) }
@@ -209,7 +170,6 @@ enum ManifestBuilder {
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { race.timeOut() }
         }
     }
-    /// Numeric addresses the system resolves `host` to.
     static func addresses(of host: String) -> [String] {
         var hints = addrinfo(); hints.ai_socktype = SOCK_STREAM
         var result: UnsafeMutablePointer<addrinfo>?
@@ -245,17 +205,12 @@ enum ManifestBuilder {
         }
         return try PropertyListSerialization.data(fromPropertyList: ["items": [[
             "assets": assets,
-            // ManifestURL is an enterprise/web-distribution transport. Keep its
-            // documented metadata faithful to the package; private App Store
-            // metadata keys here are ignored and cannot change the install source.
             "metadata": ["bundle-identifier": app.bundleID, "bundle-version": app.version,
                          "kind": "software", "title": app.name]
         ]]], format: .xml, options: 0)
     }
     static let manifestGenerator = "https://api.palera.in/genPlist"
 
-    /// Opens the install link as soon as Safari loads it, with a button in
-    /// case Safari asks first.
     static func browserPage(installURL: URL, name: String) -> String {
         func escape(_ value: String) -> String {
             value.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
@@ -277,8 +232,6 @@ enum ManifestBuilder {
         """
     }
 
-    /// RFC 3986 unreserved characters only (ASCII), so '&', '=' and non-ASCII
-    /// text survive being nested inside another URL's query.
     private static let strictQuery = CharacterSet(charactersIn:
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
@@ -325,7 +278,6 @@ enum ManifestBuilder {
             URLQueryItem(name: "name", value: app.name), URLQueryItem(name: "bundleId", value: app.bundleID),
             URLQueryItem(name: "displayVersion", value: app.version), URLQueryItem(name: "fileName", value: filename)
         ]
-        // Preserve the original service contract: the entire metadata query is URL-encoded once.
         let query = metadata.percentEncodedQuery ?? ""
         var allowed = CharacterSet.urlQueryAllowed; allowed.remove(charactersIn: "&=?+#%")
         let wrapped = query.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One review: stars, title, when and for which version, and the text.
 struct ReviewRow: View {
     let review: AppReview
     var lineLimit: Int? = 4
@@ -30,7 +29,6 @@ struct ReviewRow: View {
     }
 }
 
-/// The detail page's card: the three newest reviews and a link to the rest.
 struct ReviewsCard: View {
     @EnvironmentObject private var store: ToolStore
     let app: StoreApp
@@ -67,7 +65,6 @@ struct ReviewsCard: View {
     }
 }
 
-/// All recent reviews in one storefront, fifty at a time.
 struct ReviewsView: View {
     @EnvironmentObject private var store: ToolStore
     let app: StoreApp

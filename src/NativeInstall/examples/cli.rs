@@ -1,8 +1,3 @@
-//! Runs the library from a computer on the same network as the device, for
-//! checking a pairing file and the install path without building the app.
-//!
-//!   cargo run --example cli -- lookup  <pairing> <host> <port> <bundle-id>
-//!   cargo run --example cli -- install <pairing> <host> <port> <bundle-id> <ipa>
 
 use std::ffi::{CStr, CString, c_void};
 

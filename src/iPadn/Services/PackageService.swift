@@ -42,12 +42,9 @@ enum PackageService {
         return Set(plist["CFBundleSupportedPlatforms"] as? [String] ?? [])
     }
 
-    /// What the package itself says it runs on, for showing the user which
-    /// platform a downloaded file really is (not what was requested).
     static func describePlatforms(families: Set<Int>, platforms: Set<String>) -> String {
         let names: [(Int, String)] = [(1, "iPhone"), (2, "iPad"), (3, "Apple TV"), (4, "Apple Watch"), (6, "Mac"), (7, "Vision Pro")]
         let devices = names.filter { families.contains($0.0) }.map(\.1)
-        // Device names only; the raw platform identifiers mean nothing to users.
         if devices.isEmpty { return platforms.contains("AppleTVOS") ? "Apple TV" : AppText.text("Unknown") }
         return devices.joined(separator: ", ")
     }
@@ -82,14 +79,11 @@ enum PackageService {
             }
             let archive = try Archive(url: working, accessMode: .update)
 
-            // 1. Write / Update iTunesMetadata.plist
             try replace("iTunesMetadata.plist", data: metadata, archive: archive)
 
-            // 2. Replicate SINFs for all binaries (ipatool parity)
             let allSinfs = (asset.sinfs?.isEmpty == false) ? asset.sinfs! : [sinf]
             var sinfReplicated = false
 
-            // Look for Manifest.plist in Payload/*.app/SC_Info/Manifest.plist
             if let manifestEntry = archive.first(where: { entry in
                 let parts = entry.path.split(separator: "/")
                 return parts.count == 4 && parts[0] == "Payload" && parts[1].hasSuffix(".app") &&
@@ -107,7 +101,6 @@ enum PackageService {
                 sinfReplicated = true
             }
 
-            // Fallback for packages without Manifest.plist
             if !sinfReplicated {
                 let supplemental = archive.first { entry in
                     let parts = entry.path.split(separator: "/")
@@ -159,7 +152,6 @@ enum PackageService {
         }
         let filename = "\(id.uuidString)-\(filenameComponent(app.name, limit: 100))_\(filenameComponent(app.version, limit: 40)).ipa"
         let destination = LocalResources.packages.appendingPathComponent(filename)
-        // A retry or identifier collision must not delete an existing user package.
         try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
         try FileManager.default.moveItem(at: working, to: destination)
         return (filename, app)
@@ -186,7 +178,6 @@ enum PackageService {
     private static func replace(_ path: String, data: Data, archive: Archive) throws {
         guard isSafeArchivePath(path) else { throw ToolError.message(AppText.text("The package is damaged")) }
         if let entry = archive[path] { try archive.remove(entry) }
-        // Use the file API rather than depending on a version-specific Provider integer type.
         let scratch = LocalResources.support.appendingPathComponent("entry-\(UUID().uuidString)", isDirectory: true)
         let file = scratch.appendingPathComponent(path)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)

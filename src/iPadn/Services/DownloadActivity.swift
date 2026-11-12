@@ -3,8 +3,6 @@ import Combine
 import Foundation
 import UIKit
 
-/// Keeps the download Live Activity in step with the download list
-/// (Settings › Downloads › Live Activity).
 @MainActor
 final class DownloadActivity {
     static let shared = DownloadActivity()
@@ -16,7 +14,6 @@ final class DownloadActivity {
     private var timer: Timer?
     private var lastSent: Any?
     private var lastSentAt = Date.distantPast
-    /// The downloads the activity was showing at the last refresh.
     private var shownIDs = Set<UUID>()
 
     func attach(_ manager: DownloadManager, enabled: Bool) {
@@ -24,7 +21,6 @@ final class DownloadActivity {
         self.enabled = enabled
         if self.manager !== manager {
             self.manager = manager
-            // One left from an earlier run is picked up rather than duplicated.
             let existing = Activity<DownloadActivityAttributes>.activities
             activity = existing.first
             for old in existing.dropFirst() { Task { await old.end(nil, dismissalPolicy: .immediate) } }
@@ -49,7 +45,6 @@ final class DownloadActivity {
             guard let current else { return }
             activity = nil
             lastSent = nil
-            // Everything it showed finished: say so briefly. Paused, failed or removed: just go.
             let shown = manager.jobs.filter { shownIDs.contains($0.id) }
             let finished = !shown.isEmpty && shown.count == shownIDs.count && shown.allSatisfy { $0.status == .completed }
             shownIDs = []
@@ -70,7 +65,6 @@ final class DownloadActivity {
         } else if manager.jobs.contains(where: { $0.status == .running }),
                   UIApplication.shared.applicationState == .active,
                   ActivityAuthorizationInfo().areActivitiesEnabled {
-            // Only the app in front may start one.
             activity = try? Activity.request(attributes: DownloadActivityAttributes(),
                                              content: ActivityContent(state: state, staleDate: nil))
             lastSent = state; lastSentAt = Date()
@@ -103,7 +97,6 @@ final class DownloadActivity {
                      written: written, expected: expected, updated: now, estimatedEnd: end)
     }
 
-    /// Changes of phase, app or count go out at once; progress every few seconds.
     @available(iOS 16.2, *)
     private func send(_ state: DownloadActivityAttributes.ContentState, to activity: Activity<DownloadActivityAttributes>) {
         let last = lastSent as? DownloadActivityAttributes.ContentState

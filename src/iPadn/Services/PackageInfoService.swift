@@ -1,12 +1,9 @@
 import Foundation
 import ZIPFoundation
 
-/// What a package declares about itself, read from its Info.plist files only.
-/// Nothing in the package is run or decrypted.
 struct PackageInfo: Equatable {
     struct Permission: Equatable, Identifiable {
         var key: String
-        /// The developer's reason, in the package's own language.
         var reason: String
         var id: String { key }
     }
@@ -30,7 +27,6 @@ struct PackageInfo: Equatable {
     var hasAppClip = false
     var frameworks = 0
     var frameworkNames: [String] = []
-    /// The package file's size on disk.
     var packageSize: Int64 = 0
 }
 
@@ -58,7 +54,6 @@ enum PackageInfoService {
         }).sorted()
         info.frameworks = info.frameworkNames.count
         info.packageSize = ((try? FileManager.default.attributesOfItem(atPath: url.path)[.size]) as? NSNumber)?.int64Value ?? 0
-        // Extensions: PlugIns/*.appex and Extensions/*.appex, each with its own Info.plist.
         for path in paths where isExtensionInfo(path) {
             guard let entry = archive[prefix + path], let extensionPlist = try? readPlist(entry, archive: archive) else { continue }
             let point = plistString((extensionPlist["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"]
@@ -70,7 +65,6 @@ enum PackageInfoService {
         return info
     }
 
-    /// The parts of a main Info.plist the page shows. Internal for tests.
     static func describe(_ plist: [String: Any]) -> PackageInfo {
         var info = PackageInfo()
         info.name = plistString(plist["CFBundleDisplayName"] ?? plist["CFBundleName"])
@@ -94,7 +88,6 @@ enum PackageInfoService {
             && parts[1].hasSuffix(".appex") && parts[2] == "Info.plist"
     }
 
-    /// Localizations the app ships, as language codes; Base is not a language.
     static func languages(in paths: [String]) -> [String] {
         Set(paths.compactMap { path -> String? in
             guard let first = path.split(separator: "/").first, first.hasSuffix(".lproj") else { return nil }
@@ -117,8 +110,6 @@ enum PackageInfoService {
         return result
     }
 
-    /// Permissions under their readable names, one row per name: several keys
-    /// mean the same thing (old and new Bluetooth or location keys).
     static func groupedPermissions(_ permissions: [PackageInfo.Permission]) -> [(name: String, reasons: [String])] {
         var groups: [(name: String, reasons: [String])] = []
         for permission in permissions {
@@ -133,7 +124,6 @@ enum PackageInfoService {
         return groups.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
-    /// A readable name for a privacy permission key; nil for keys without one.
     static func permissionName(_ key: String) -> String? {
         let names: [String: String] = [
             "NSCameraUsageDescription": "Camera",
@@ -168,7 +158,6 @@ enum PackageInfoService {
         return names[key].map { AppText.text(String.LocalizationValue($0)) }
     }
 
-    /// A readable name for a background mode; nil for unknown modes.
     static func backgroundModeName(_ mode: String) -> String? {
         let names: [String: String] = [
             "audio": "Audio playback", "location": "Location updates", "voip": "Internet calls", "fetch": "Background refresh",
@@ -179,7 +168,6 @@ enum PackageInfoService {
         return names[mode].map { AppText.text(String.LocalizationValue($0)) }
     }
 
-    /// A readable name for an extension point; nil for unknown points.
     static func extensionKind(_ point: String) -> String? {
         let kinds: [String: String] = [
             "com.apple.widgetkit-extension": "Widget",

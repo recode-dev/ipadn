@@ -49,7 +49,6 @@ def version_entry(release):
     if release.get("draft") or release.get("prerelease") or not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
         return None
     assets = {asset["name"]: asset for asset in release.get("assets", [])}
-    # The standard package (with the extension); the lite one is for App ID-limited signing.
     package = next((asset for name, asset in assets.items() if name.endswith("-unsigned.ipa") and "-lite-" not in name), None)
     if package is None:
         return None
@@ -61,7 +60,7 @@ def version_entry(release):
             details = json.loads(fetch(info["browser_download_url"]))
             build = str(details.get("build") or build)
             minimum = str(details.get("minimum_ios") or minimum)
-        except Exception as error:  # A missing detail is not worth failing a release for.
+        except Exception as error:
             print("build-info for " + tag + ": " + str(error), file=sys.stderr)
     return {
         "version": version,
@@ -107,7 +106,6 @@ def source(releases):
                     "NSLocalNetworkUsageDescription": "Loads signing resources and serves installation packages over this device's loopback address, and finds this device's installation service."
                 },
             },
-            # Fields older clients read instead of "versions".
             "version": latest["version"],
             "versionDate": latest["date"],
             "versionDescription": latest["localizedDescription"],

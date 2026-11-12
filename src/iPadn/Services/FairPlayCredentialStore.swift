@@ -1,11 +1,6 @@
 import Foundation
 import Security
 
-/// The 16-byte per-account FairPlay credential that unlocks SINF records for
-/// every app that account owns. Obtained once (for example from the repo's
-/// `fp-credential` workflow, which signs the Apple ID into the macOS App
-/// Store on a runner and saves `~/Library/FairPlay/credential.bin`), stored in
-/// the keychain, reused for every decryption afterwards.
 enum FairPlayCredentialStore {
 
     static let hexLength = 32
@@ -20,7 +15,6 @@ enum FairPlayCredentialStore {
          kSecAttrAccount as String: "fairplay-credential-v1"]
     }
 
-    /// The stored 16-byte credential, or nil when none was imported yet.
     static func load() -> Data? {
         var request = query()
         request[kSecReturnData as String] = true
@@ -53,12 +47,8 @@ enum FairPlayCredentialStore {
         SecItemDelete(query() as CFDictionary)
     }
 
-    /// Where the app downloads the credential from. Point this at any URL
-    /// serving the 16 raw bytes or the 32 hex characters.
     static var credentialEndpoint = URL(string: "https://raw.githubusercontent.com/recode-dev/ipadn/main/credential.bin")
 
-    /// Silent setup: downloads the credential from the endpoint and caches it.
-    /// Returns the credential when it is available afterwards.
     static func fetchFromEndpoint() async -> Data? {
         if let cached = load() { return cached }
         guard let endpoint = credentialEndpoint else { return nil }
@@ -72,8 +62,6 @@ enum FairPlayCredentialStore {
         return parsed
     }
 
-    /// Parses user input into a credential: 32 hex characters, base64, or a
-    /// 16-byte file (credential.bin). Whitespace is ignored.
     static func parse(_ raw: String) -> Data? {
         var text = raw
         if text.hasPrefix("0x") || text.hasPrefix("0X") { text.removeFirst(2) }
@@ -87,7 +75,6 @@ enum FairPlayCredentialStore {
         return nil
     }
 
-    /// Reads a credential from a file (credential.bin style).
     static func parseFile(at url: URL) -> Data? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         if data.count == 16 { return data }

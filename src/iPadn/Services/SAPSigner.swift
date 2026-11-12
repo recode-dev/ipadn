@@ -27,17 +27,13 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
     private var idleTimeout: Task<Void, Never>?
     private var memoryObserver: AnyCancellable?
 
-    /// Set around work the user is waiting for (getting an app, signing in).
-    /// It goes ahead of background work such as reading version details.
     @TaskLocal static var userInitiated = false
     private struct Waiter {
         let id: UUID
         let urgent: Bool
         let continuation: CheckedContinuation<Void, Error>
     }
-    /// Operations waiting for the runtime, served urgent first, then in order.
     private var waiters: [Waiter] = []
-    /// How long an idle runtime is kept. Loading it again takes seconds.
     private static let idleKeepSeconds: UInt64 = 300
 
     override init() {
@@ -205,8 +201,6 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
         do {
             return try await executeAttempt(title: title, script: script, arguments: arguments, timeoutSeconds: timeoutSeconds, reuseRuntime: reuseRuntime)
         } catch {
-            // executeAttempt's defer must release the operation before a retry
-            // can acquire it. Retrying inside that attempt deadlocks on itself.
             try Task.checkCancellation()
             if error is RuntimeRetry {
                 return try await executeAttempt(title: title, script: script, arguments: arguments, timeoutSeconds: timeoutSeconds, reuseRuntime: false)
@@ -223,10 +217,6 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
     }
 
     private func executeAttempt(title: String, script: String, arguments: [String: Any], timeoutSeconds: UInt64 = 180, reuseRuntime: Bool = true) async throws -> String {
-        // One operation at a time: wait for the current one (for example a
-        // background purchase sync) instead of failing the user's action.
-        // Waiting in a queue, not polling: a busy background loop must not
-        // keep taking the runtime before a waiting user action gets it.
         try await acquireTurn()
         let id = UUID(); operationID = id; terminalError = nil
         let revision = cacheRevision
@@ -283,8 +273,6 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
                     }
                 }
             } catch {
-                // Preserve explicit cancellation and timeout errors; neither is
-                // evidence of a stale cached WebKit runtime.
                 try checkActive(id)
                 if warm {
                     discardIdleRuntime()
@@ -308,10 +296,8 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let waiter = Waiter(id: ticket, urgent: urgent, continuation: continuation)
-                // Urgent requests line up after other urgent ones, ahead of background work.
                 if urgent, let index = waiters.firstIndex(where: { !$0.urgent }) { waiters.insert(waiter, at: index) }
                 else { waiters.append(waiter) }
-                // Freed while this was being queued.
                 if operationID == nil { handOver() }
             }
         } onCancel: {
@@ -321,8 +307,6 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
             }
         }
     }
-    /// Gives the free runtime to the next waiter. Its operation takes
-    /// operationID right away, before anyone else can.
     private func handOver() {
         guard operationID == nil, !waiters.isEmpty else { return }
         operationID = UUID()
@@ -383,8 +367,6 @@ final class SAPSigner: NSObject, ObservableObject, WKNavigationDelegate, WKScrip
     }
     func clearCache() { cacheRevision = UUID(); signatureCache.removeAll(); kbCache.removeAll(); discardIdleRuntime() }
 
-    /// Loads the runtime ahead of a likely request (an app page opened), so
-    /// getting the app does not wait for it. Does nothing if it is loaded or busy.
     func prewarm() {
         guard operationID == nil, waiters.isEmpty, reusableWebView == nil,
               UIApplication.shared.applicationState == .active else { return }

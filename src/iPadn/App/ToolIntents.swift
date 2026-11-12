@@ -52,7 +52,6 @@ struct DownloadIPAURLIntent: AppIntent {
     }
 }
 
-/// Looks up an App ID or App Store link in the current storefront.
 @MainActor
 private func storeApp(_ input: String) async throws -> (app: StoreApp, versionID: String?) {
     guard case .appID(let id, let versionID) = try SearchQuery.parse(input) else {

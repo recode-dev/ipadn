@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// App Store-style account page: profile header, accounts, settings.
 struct AccountsView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -67,7 +66,6 @@ struct AccountsView: View {
                         .disabled(store.accountRemoving != nil)
                         .revealDelete(id: "account." + account.id, enabled: store.accountRemoving == nil,
                                       grouping: account.id == apple.accounts.first?.id ? .first : .middle,
-                                      // Text starts after the 20pt margin, 36pt avatar and 12pt gap.
                                       separatorInset: 68, title: "Remove") { deleting = account }
                     }
                     NavigationLink { LoginView() } label: { Label("Add account", systemImage: "plus") }
@@ -110,7 +108,6 @@ struct AccountsView: View {
         }
     }
 
-    /// The account ID, then what removing it means for this device.
     private var removalMessage: LocalizedStringKey {
         let id = deleting?.id ?? ""
         return deleting?.id == apple.activeID
@@ -119,17 +116,13 @@ struct AccountsView: View {
     }
 }
 
-/// Step 2 of Apple sign-in: a dedicated two-factor page with six digit boxes.
-/// Submits automatically once six digits are entered.
 struct VerificationStep: View {
     let account: String
     @Binding var code: String
     let busy: Bool
     let issue: String?
     var submitTitle = AppText.text("Verify")
-    /// False while iPadn is still asking Apple to send a code.
     var sent = true
-    /// Asks Apple to send a new code; nil hides the button.
     var resend: (() -> Void)? = nil
     let submit: () -> Void
     var changeAccount: (() -> Void)? = nil
@@ -180,7 +173,6 @@ struct VerificationStep: View {
     }
 }
 
-/// Step 1 of Apple sign-in, App Store style.
 struct LoginView: View {
     let initialAccountID: String?
     let onSignedIn: (() -> Void)?
@@ -271,7 +263,6 @@ struct LoginView: View {
         .onAppear { if email.isEmpty { focus = .email } else if password.isEmpty { focus = .password } }
     }
 
-    /// Signing in again without a code makes Apple send a new one.
     private func resendCode() {
         guard !busy else { return }
         busy = true; failure = nil; code = ""
@@ -279,7 +270,6 @@ struct LoginView: View {
             defer { busy = false; loginTask = nil }
             do {
                 try await apple.login(email: email, password: password, code: "", useCache: store.settings.useSignerCache)
-                // Signed in without a code this time.
                 password = ""; UX.success(); onSignedIn?(); dismiss()
             } catch AppleLoginError.verificationRequired {
                 failure = nil
@@ -308,10 +298,7 @@ struct LoginView: View {
     }
 }
 
-/// Re-verification of the current account (no password), same two-factor page.
 struct ExistingAccountVerificationView: View {
-    /// When Apple last signed in without a code here. Asked again soon after,
-    /// signing in silently evidently did not satisfy Apple: stop and ask for a code.
     @MainActor private static var lastSilentSignIn: Date?
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -339,8 +326,6 @@ struct ExistingAccountVerificationView: View {
         }
     }
 
-    /// Makes Apple send the code this page asks for. If Apple signs in without
-    /// one, the action that needed verification simply continues.
     private func requestCode() {
         guard !busy else { return }
         busy = true; issue = nil; sent = false
@@ -350,7 +335,6 @@ struct ExistingAccountVerificationView: View {
                 if try await apple.requestVerificationCode(expectedID: accountID, useCache: store.settings.useSignerCache) {
                     sent = true
                 } else if let last = Self.lastSilentSignIn, Date().timeIntervalSince(last) < 60 {
-                    // Signed in, yet the store still wants verification: only a code helps.
                     Self.lastSilentSignIn = nil
                     sent = true
                     issue = AppText.text("Apple still requires verification for this account. On a device signed in to it, open Settings › [your name] › Sign-In & Security › Get Verification Code and enter the code shown.")

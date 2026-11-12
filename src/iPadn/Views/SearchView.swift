@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// App Store-style search: title with the account avatar on one line, a
-/// capsule search bar under it, filter chips, recent
-/// searches as suggestions, and result rows with a "Get" capsule.
 struct SearchView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -11,7 +8,6 @@ struct SearchView: View {
     @State private var getting: StoreApp?
     @State private var viewingFavorite: StoreApp?
     @State private var headerAway = false
-    /// The common storefronts, in this order; names follow the interface language.
     private static let regions = ["CN", "US", "HK", "TW", "JP", "GB", "SG", "CA", "AU", "KR", "DE", "FR"]
     var body: some View {
         List {
@@ -29,8 +25,6 @@ struct SearchView: View {
             }
             .listRowBackground(Color.clear).listRowSeparator(.hidden)
 
-            // Placeholders where the results will appear, so they replace the
-            // loading rows instead of pushing everything down.
             if store.searching {
                 Section {
                     HStack { ProgressView(); Text("Searching…").font(.subheadline).foregroundStyle(.secondary); Spacer(); Button("Cancel") { store.cancelSearch() } }
@@ -132,7 +126,6 @@ struct SearchView: View {
                 }
             }
         }
-        // The charts come after what the user searched and follows.
         DiscoverSection()
     }
 
@@ -165,7 +158,6 @@ struct SearchView: View {
     }
 }
 
-/// App Store's top-right account button: avatar with a quick account switcher.
 struct AccountMenuButton: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService

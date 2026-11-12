@@ -2,16 +2,12 @@ import LocalAuthentication
 import SwiftUI
 import UIKit
 
-/// Face ID, Touch ID or the device passcode in front of iPadn (Settings ›
-/// App Lock). The lock screen is its own window above everything, sheets
-/// included, and also hides the app in the app switcher.
 @MainActor
 final class AppLock: ObservableObject {
     static let shared = AppLock()
 
     enum Method { case faceID, touchID, passcode, unavailable }
 
-    /// How this device can confirm its owner.
     static var method: Method {
         let context = LAContext()
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil) else { return .unavailable }
@@ -32,7 +28,6 @@ final class AppLock: ObservableObject {
     }
 
     @Published private(set) var locked = false
-    /// The system prompt makes the scene inactive; that is not leaving the app.
     private var authenticating = false
     private var leftAt: Date?
     private var window: UIWindow?
@@ -40,7 +35,6 @@ final class AppLock: ObservableObject {
     private var delay: TimeInterval = 0
     private var appearance = "system"
 
-    /// Called with the settings at launch and whenever they change.
     func configure(enabled: Bool, delay: Int, appearance: String, launching: Bool) {
         self.enabled = enabled
         self.delay = TimeInterval(max(0, delay))
@@ -59,8 +53,6 @@ final class AppLock: ObservableObject {
         case .inactive:
             updateCover(active: false)
         case .active:
-            // Only a return from the background asks again: the scene also
-            // turns active when a cancelled prompt goes away.
             guard let left = leftAt else { updateCover(active: true); return }
             leftAt = nil
             if enabled, Date().timeIntervalSince(left) >= delay { locked = true }
@@ -70,7 +62,6 @@ final class AppLock: ObservableObject {
         }
     }
 
-    /// Asks for Face ID, Touch ID or the passcode.
     func authenticate(reason: String) async -> Bool {
         guard !authenticating else { return false }
         authenticating = true
@@ -81,7 +72,6 @@ final class AppLock: ObservableObject {
     }
 
     #if DEBUG
-    /// Screenshots of the lock screen without asking anyone to authenticate.
     func showPreview() { locked = true }
     #endif
 
@@ -121,7 +111,6 @@ struct AppLockScreen: View {
     @ObservedObject var lock: AppLock
     @Environment(\.colorScheme) private var colorScheme
     @State private var shown = false
-    /// The icon the Home Screen shows: its style, and its light or dark look.
     private let icon = AppIconService().current
     private var brand: String { icon.style.preview }
     private var iconScheme: ColorScheme {
@@ -181,7 +170,6 @@ struct AppLockScreen: View {
         .onAppear { withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { shown = true } }
     }
 
-    /// A quiet wash of grey with the brand mark blurred far behind.
     private var background: some View {
         ZStack {
             Color(.systemBackground)

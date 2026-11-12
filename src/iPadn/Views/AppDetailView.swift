@@ -5,7 +5,6 @@ struct AppDetailView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
     let app: StoreApp
-    /// Start the primary download as soon as the page opens (search "Get").
     var autoStart = false
     @State private var autoStarted = false
     @State private var versions: [AppVersion] = []
@@ -15,29 +14,19 @@ struct AppDetailView: View {
     @State private var manualID = ""
     @State private var versionSearch = ""
     @State private var versionError: String?
-    /// Apple's full list, on unless turned off; remembered across apps.
     @AppStorage("storage_officialVersions") private var official = true
-    /// Shown above a public list when Apple's could not be used.
     @State private var versionNote: String?
-    /// Version number and date per version ID, read from Apple as rows appear.
     @State private var metadata: [String: VersionMetadata] = [:]
     @State private var metadataLoading = Set<String>()
     @State private var metadataFailures = 0
     @State private var metadataStopped = false
-    /// Long histories start with the newest five versions.
     @State private var showAllVersions = false
-    /// Release notes by version number, from the App Store page's version history.
     @State private var releaseNotes: [String: ReleaseNote] = [:]
     @State private var expandedNotes = Set<String>()
-    /// Translations chosen in the system sheet, by version ID.
     @State private var translatedNotes: [String: String] = [:]
     @State private var translatedDescription: String?
-    /// The rows on screen belong to the previous region, platform or source
-    /// and are replaced as soon as the new list arrives.
     @State private var versionsStale = false
     @State private var showsMacSpinner = false
-    /// The latest version-list load; an earlier, cancelled one must not end
-    /// its loading state.
     @State private var versionsLoadID = UUID()
     @State private var showLogin = false
     @State private var reauthenticationID: String?
@@ -62,14 +51,10 @@ struct AppDetailView: View {
     @State private var macDownloadURL = ""
     @State private var headerAway = false
     @State private var extras: StoreService.ListingExtras?
-    /// Until the store listing arrives, the preview keeps its place with
-    /// placeholders so the page below doesn't jump.
     @State private var extrasLoaded = LocalResources.isPreview
     @State private var viewing: StoreService.Screenshot?
     @Namespace private var screenshotZoom
     @State private var developerApps: [StoreApp] = []
-    /// Listing artwork, else what a download of this app brought along
-    /// (delisted apps have no public listing to show).
     private var iconURL: URL? { app.iconURL ?? store.localArtwork(app.id) }
     private var storeURL: URL { URL(string: "https://apps.apple.com/\(store.settings.store.country.lowercased())/app/id\(app.id)")! }
     private var filtered: [AppVersion] {
@@ -78,14 +63,9 @@ struct AppDetailView: View {
         }
     }
     private func displayVersion(_ version: AppVersion) -> String { metadata[version.id]?.version ?? version.version }
-    /// Lists from Apple carry only version IDs; each row then reads its own
-    /// number and date. Other lists use what is already known.
-    /// Apple's list needs a signed-in account; otherwise the public list is shown.
     private var usesApple: Bool { official && apple.active != nil }
     private var readsMetadata: Bool { usesApple && versionNote == nil && !metadataStopped }
     var body: some View {
-        // A scroll view of drawn cards rather than a List, so the screenshot
-        // strip can run from screen edge to screen edge as in the App Store.
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 24) {
                 CardSection {
@@ -172,7 +152,6 @@ struct AppDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // App Store shows the small icon in the bar once the header is gone.
             ToolbarItem(placement: .principal) {
                 AppIcon(url: iconURL, size: 30)
                     .opacity(headerAway ? 1 : 0)
@@ -246,7 +225,6 @@ struct AppDetailView: View {
         }
         .onDisappear { downloadTask?.cancel(); macOfficialTask?.cancel() }
         .task {
-            // Getting the app needs the signing runtime; load it while the page is read.
             if apple.active != nil, store.settings.useSignerCache { store.signer.prewarm() }
             guard autoStart, !autoStarted else { return }
             autoStarted = true
@@ -255,13 +233,8 @@ struct AppDetailView: View {
             else { downloadAppleMacPKG() }
         }
         .task(id: versionsKey) {
-            // Coming back to the page (e.g. from the Downloads tab) keeps the
-            // loaded list; only a new key or 刷新 fetches again.
             guard versionsKey != loadedVersionsKey else { return }
             let forced = reloadID != loadedReloadID
-            // A different region, platform or account lists different versions.
-            // The old rows stay (dimmed) until the new list replaces them, so the
-            // page doesn't collapse and grow again.
             if !forced { versionsStale = !versions.isEmpty }
             let loaded = await fetchVersions(force: forced)
             if loaded { loadedVersionsKey = versionsKey; loadedReloadID = reloadID }
@@ -273,7 +246,6 @@ struct AppDetailView: View {
         }
         .task(id: "notes-\(app.id)-\(store.settings.store.country)") {
             guard !LocalResources.isPreview, !app.isDelisted else { return }
-            // The search region's page, else the account's.
             var countries = [store.settings.store.country.uppercased()]
             if !countries.contains(store.watchCountry) { countries.append(store.watchCountry) }
             let notes = await ReleaseNotesService.notes(appID: app.id, countries: countries)
@@ -281,7 +253,6 @@ struct AppDetailView: View {
             withAnimation(.easeOut(duration: 0.2)) { releaseNotes = notes }
         }
         .task(id: "extras-\(app.id)-\(store.settings.store.platform.rawValue)-\(store.settings.store.country)") {
-            // Demo data stays offline.
             guard !LocalResources.isPreview else { return }
             let found = try? await StoreService.listingExtras(id: app.id, country: store.settings.store.country,
                                                             platform: store.settings.store.platform)
@@ -298,13 +269,11 @@ struct AppDetailView: View {
                 .zoomTransition(shot.id, in: screenshotZoom)
         }
     }
-    /// Versions shown before “Show all”.
     static let collapsedVersions = 5
     private func sectionTitle(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.title3.weight(.bold)).foregroundStyle(.primary).textCase(nil)
     }
 
-    /// App Store product header: big icon, name, subtitle and the primary capsule.
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
             AppIcon(url: iconURL, size: 112)
@@ -371,8 +340,6 @@ struct AppDetailView: View {
         }
     }
 
-    /// Info strip under the header. At most four equal cells so it always
-    /// fits on one line; everything else is in the 信息 section below.
     private var infoStrip: some View {
         let items = Array(stripItems.prefix(4))
         return HStack(spacing: 0) {
@@ -421,11 +388,8 @@ struct AppDetailView: View {
                 SearchInput(text: $versionSearch, placeholder: "Filter by version or version ID")
             }
             let matches = filtered
-            // A search shows every match; otherwise five until expanded.
             let limit = showAllVersions || !versionSearch.isEmpty ? matches.count : Self.collapsedVersions
             if versions.isEmpty && versionsLoading {
-                // Placeholders where the rows will be, instead of a spinner row
-                // that appears and disappears.
                 ForEach(0..<3, id: \.self) { _ in VersionRowSkeleton() }
             }
             ForEach(matches.prefix(limit)) { version in
@@ -532,9 +496,7 @@ struct AppDetailView: View {
             metadata[version.id] = try await store.versionMetadata(app: app, versionID: version.id)
             metadataFailures = 0
         } catch {
-            // Scrolled away: not a failure.
             if Task.isCancelled || error is CancellationError { return }
-            // Never prompt from a list row; the next download asks to sign in.
             if error is AppleAuthError || error is AppleLoginError { metadataStopped = true; return }
             metadataFailures += 1
             if metadataFailures >= 3 { metadataStopped = true }
@@ -565,8 +527,6 @@ struct AppDetailView: View {
                 Link(destination: website) { Label("Developer website", systemImage: "safari") }
             }
         } header: {
-            // Looking for the developer's installers shows here rather than
-            // as a row that comes and goes.
             HStack(alignment: .firstTextBaseline) {
                 sectionTitle("Mac package")
                 Spacer()
@@ -577,12 +537,8 @@ struct AppDetailView: View {
     }
 
     private func copy(_ text: String) { UIPasteboard.general.string = text; store.infoMessage = AppText.text("Copied to clipboard"); UX.feedback() }
-    /// Returns whether the list was loaded. The previous list stays visible
-    /// until the new one arrives.
     @discardableResult
     private func fetchVersions(force: Bool) async -> Bool {
-        // An earlier error stays until this attempt settles, instead of
-        // disappearing and coming back.
         let loadID = UUID(); versionsLoadID = loadID
         versionsLoading = true
         defer { if versionsLoadID == loadID { versionsLoading = false } }
@@ -592,7 +548,6 @@ struct AppDetailView: View {
                 result = try await store.loadVersions(for: app, force: force, official: usesApple)
                 versionNote = nil
             } catch is AppleLicenseError {
-                // Not got by this account yet: show what is public, and say why.
                 result = try await store.loadVersions(for: app, force: force, official: false)
                 versionNote = AppText.text("This account hasn't acquired the app, so the public version details are shown. Get it to see the full list.")
             } catch {
@@ -667,8 +622,6 @@ struct AppDetailView: View {
         }
     }
 
-    /// A download claims a free app's license, so a list that failed for
-    /// lack of one can load now.
     private func reloadIfLicenseWasMissing() {
         if versionNote != nil || versionError == AppleLicenseError.notOwned.errorDescription { reloadID += 1 }
     }
@@ -731,17 +684,11 @@ struct AppDetailView: View {
     }
 }
 
-/// App Store style preview strip: screenshots side by side on the page
-/// background, snapping to the leading margin, with the next one peeking in.
 private struct ScreenshotStrip: View {
-    /// Empty while the listing is still loading: placeholders only.
     let screenshots: [StoreService.Screenshot]
     let platform: AppPlatform
     let zoom: Namespace.ID
     var open: (StoreService.Screenshot) -> Void
-    /// Loaded images. The size in a screenshot link is only the box Apple
-    /// fits the image into, so a landscape game shot can arrive under a
-    /// portrait-looking link: once all are in, lay each one out by the real image.
     @State private var images: [URL: UIImage] = [:]
     @State private var failed = Set<URL>()
     @State private var legacyWidth: CGFloat = 1
@@ -753,11 +700,8 @@ private struct ScreenshotStrip: View {
     var body: some View {
         let margin = CardSection<EmptyView, EmptyView>.pageMargin
         let placeholders = screenshots.isEmpty
-        // iPhone shots are portrait; iPad, Apple TV and Mac shots are mostly wide.
         let placeholderAspect = platform == .iOS ? 0.462 : platform == .iPadOS ? 1.33 : 1.6
         VStack(alignment: .leading, spacing: 10) {
-            // Full page width: screenshots scroll from screen edge to screen
-            // edge and rest lined up with the cards.
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     if placeholders {
@@ -807,8 +751,6 @@ private struct ScreenshotStrip: View {
         }
     }
 
-    /// Portrait: about two thirds of the card width, so the next one shows;
-    /// landscape: nearly all of it. Never taller than 560 pt (wide screens).
     nonisolated static func tileWidth(_ width: CGFloat, aspect: Double) -> CGFloat {
         let width = max(1, width) * (aspect < 1 ? 0.64 : 0.92)
         return min(width, CGFloat(560 * aspect))
@@ -819,19 +761,16 @@ private struct ScreenshotStrip: View {
             for shot in screenshots where images[shot.url] == nil {
                 group.addTask { (shot.url, await ScreenshotCache.image(shot.url)) }
             }
-            // Applied together, so the strip changes once.
             var loaded = images, missing = failed
             for await (url, image) in group {
                 if let image { loaded[url] = image } else { missing.insert(url) }
             }
-            // Left the page or tapped early: unloaded ones aren't failures.
             guard !Task.isCancelled else { return }
             images = loaded; failed = missing
         }
     }
 }
 
-/// Where a version row will be while the list loads.
 private struct VersionRowSkeleton: View {
     var body: some View {
         HStack(spacing: 12) {
@@ -847,7 +786,6 @@ private struct VersionRowSkeleton: View {
     }
 }
 
-/// The App Store's outline device glyph under the screenshots.
 private struct DeviceGlyph: View {
     let platform: AppPlatform
     var body: some View {
@@ -862,8 +800,6 @@ private struct DeviceGlyph: View {
     }
 }
 
-/// A titled group of rows on a rounded card, like an inset grouped list
-/// section, or (plain) content straight on the page.
 struct CardSection<Content: View, Header: View>: View {
     static var pageMargin: CGFloat { 16 }
     static var cornerRadius: CGFloat {
@@ -899,11 +835,9 @@ private struct CardRowInsetsKey: _ViewTraitKey {
     static var defaultValue: EdgeInsets? { nil }
 }
 extension View {
-    /// Padding of this row inside a card (default: as in a list row).
     func cardRowInsets(_ insets: EdgeInsets) -> some View { _trait(CardRowInsetsKey.self, insets) }
 }
 
-/// Rows of a card with hairlines between them.
 private struct CardRows: _VariadicView_UnaryViewRoot {
     func body(children: _VariadicView.Children) -> some View {
         let last = children.last?.id
@@ -918,7 +852,6 @@ private struct CardRows: _VariadicView_UnaryViewRoot {
     }
 }
 
-/// Label on the left, value on the right, as in a list.
 private struct CardLabeledContentStyle: LabeledContentStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -929,8 +862,6 @@ private struct CardLabeledContentStyle: LabeledContentStyle {
     }
 }
 
-/// Screenshots already loaded by the strip, so the full-screen view opens
-/// on them at once.
 private enum ScreenshotCache {
     private actor Requests {
         var pending: [URL: Task<UIImage?, Never>] = [:]
@@ -949,7 +880,6 @@ private enum ScreenshotCache {
         }
     }
     private static let requests = Requests()
-    /// Decoded screenshots are large (up to 2000 px); keep a bounded amount.
     private static let cache: NSCache<NSURL, UIImage> = {
         let cache = NSCache<NSURL, UIImage>(); cache.totalCostLimit = 96 * 1024 * 1024; return cache
     }()
@@ -978,8 +908,6 @@ private struct ScreenshotTile: View {
     }
 }
 
-/// Full-screen screenshots as in the App Store: one large screenshot in the
-/// middle with its neighbours peeking in, swiped one at a time.
 private struct ScreenshotViewer: View {
     let screenshots: [StoreService.Screenshot]
     let selection: StoreService.Screenshot
@@ -998,7 +926,6 @@ private struct ScreenshotViewer: View {
         GeometryReader { proxy in
             let height = max(1, proxy.size.height - 96)
             let widest = proxy.size.width - 64
-            // Each screenshot as large as fits, leaving room for the neighbours.
             let widths = screenshots.map { min(widest, height * aspect($0)) }
             let margin = max(24, (proxy.size.width - (widths.max() ?? widest)) / 2)
             if #available(iOS 17, *) {
@@ -1057,7 +984,6 @@ private struct ScreenshotViewer: View {
 }
 
 extension View {
-    /// Where a full-screen view zooms out of and back into (iOS 18 and later).
     @ViewBuilder func zoomSource(_ id: some Hashable, in namespace: Namespace.ID) -> some View {
         if #available(iOS 18, *) { matchedTransitionSource(id: id, in: namespace) } else { self }
     }
@@ -1066,7 +992,6 @@ extension View {
     }
 }
 
-/// Small cards for the developer's other apps, opening their own pages.
 private struct DeveloperAppsStrip: View {
     let apps: [StoreApp]
     var body: some View {

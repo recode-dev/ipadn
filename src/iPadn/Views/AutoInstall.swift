@@ -1,14 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// Opens the install sheet for downloads that just finished (Settings ›
-/// Downloads › Install When Downloaded), one at a time, above whatever page
-/// or sheet is showing, once iPadn is in front and unlocked.
 @MainActor
 enum AutoInstall {
     private static weak var showing: UIViewController?
 
-    /// From a publisher, which fires before the published value is set.
     static func presentSoon(_ store: ToolStore) {
         DispatchQueue.main.async { presentNext(store) }
     }
@@ -55,14 +51,12 @@ private final class AutoInstallHost: UIHostingController<AnyView> {
     var closed: (() -> Void)?
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        // Gone for good, not just covered by something it presented.
         if presentingViewController == nil || isBeingDismissed {
             closed?(); closed = nil
         }
     }
 }
 
-/// Shown above the download list while downloads wait for Wi-Fi.
 struct WiFiWaitRow: View {
     @EnvironmentObject private var manager: DownloadManager
     var body: some View {

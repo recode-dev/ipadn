@@ -11,8 +11,6 @@ enum PackageImportService {
         do {
             var coordinationError: NSError?
             var copyError: Error?
-            // Coordinate provider access so Files and iCloud can materialize their
-            // local copy before we inspect it. The original file remains untouched.
             NSFileCoordinator().coordinate(readingItemAt: source, options: .withoutChanges, error: &coordinationError) { readable in
                 do { try FileManager.default.copyItem(at: readable, to: stage) }
                 catch { copyError = error }

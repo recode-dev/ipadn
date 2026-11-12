@@ -5,12 +5,10 @@ import UIKit
 struct AppIcon: View {
     var url: URL?
     var size: CGFloat = 56
-    /// The image last loaded, with the address it came from.
     @State private var loaded: (url: URL, image: UIImage)?
     private var source: URL? { url.map { $0.isFileURL ? $0 : StoreService.sharpArtwork($0) } }
     var body: some View {
         let source = source
-        // An icon already in memory shows in the very first frame.
         let image = loaded.flatMap { $0.url == source ? $0.image : nil } ?? source.flatMap { IconCache.cached($0, size: size) }
         ZStack {
             placeholder
@@ -25,7 +23,6 @@ struct AppIcon: View {
         .accessibilityHidden(true)
         .task(id: source) {
             guard let source else { return }
-            // Kept here too, in case memory pressure later empties the cache.
             if let cached = IconCache.cached(source, size: size) {
                 if loaded?.url != source { loaded = (source, cached) }
                 return
@@ -42,9 +39,6 @@ struct AppIcon: View {
     }
 }
 
-/// Decoded app icons shared by every `AppIcon`, so a row scrolled back into
-/// view, or the same app on the next page, shows its icon at once instead of
-/// a placeholder while it loads again.
 enum IconCache {
     private actor Requests {
         var pending: [String: Task<UIImage?, Never>] = [:]
@@ -66,11 +60,9 @@ enum IconCache {
         }
     }
     private static let requests = Requests()
-    /// Bounded by memory, not count: hundreds of list icons fit.
     private static let cache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>(); cache.totalCostLimit = 80 * 1024 * 1024; return cache
     }()
-    /// List rows and the large detail icon keep separate, right-sized copies.
     private static func pixels(for size: CGFloat) -> CGFloat { size <= 64 ? 192 : 384 }
     private static func key(_ url: URL, _ size: CGFloat) -> NSString { "\(Int(pixels(for: size)))|\(url.absoluteString)" as NSString }
     static func cost(of image: UIImage) -> Int {
@@ -83,11 +75,9 @@ enum IconCache {
     }
 }
 
-/// App Store list row: icon, name, subtitle and an optional trailing action.
 struct AppRow<Accessory: View>: View {
     let app: StoreApp
     var subtitle: String? = nil
-    /// A short state shown next to the size, e.g. 已下载.
     var badge: (text: LocalizedStringKey, tint: Color)? = nil
     @ViewBuilder var accessory: () -> Accessory
     var body: some View {
@@ -95,11 +85,8 @@ struct AppRow<Accessory: View>: View {
             AppIcon(url: app.iconURL, size: 64)
             VStack(alignment: .leading, spacing: 3) {
                 Text(app.name.isEmpty ? app.bundleID : app.name).font(.body.weight(.medium)).lineLimit(2)
-                // The category gets its own line so a long name in another
-                // language doesn't push the version out of view.
                 let detail = subtitle ?? app.displayCategory
                 if !detail.isEmpty {
-                    // Scrolls once in place when the row is too narrow, like download cards.
                     MarqueeText(text: detail).foregroundStyle(.secondary)
                 }
                 HStack(spacing: 6) {
@@ -159,8 +146,6 @@ struct RootView: View {
 
                     }.navigationTitle("iPadn").navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
                 } detail: {
-                    // Keep every section alive, like the iPhone tab bar does, so
-                    // switching sections keeps navigation, filters and scroll position.
                     ZStack {
                         ForEach(0..<destinations.count, id: \.self) { index in
                             NavigationStack {
@@ -190,7 +175,6 @@ struct RootView: View {
         .compatibleSelectionFeedback(trigger: store.tab)
         .sheet(item: $store.verificationRequest) { request in
             ExistingAccountVerificationView(accountID: request.accountID) {
-                // Runs after the sheet has closed, so a retry can present again.
                 let retry = request.retry
                 Task { @MainActor in try? await Task.sleep(for: .milliseconds(400)); retry?() }
             }
@@ -200,8 +184,6 @@ struct RootView: View {
                 SignerWebView(web: web).frame(width: 1, height: 1).opacity(0.01).allowsHitTesting(false).accessibilityHidden(true)
             }
         }
-        // Global success notices belong above the page, never on top of
-        // AppDetailView's fixed download CTA or the tab bar.
         .overlay(alignment: .top) {
             if let message = store.undoNotice?.message ?? store.infoMessage {
                 Group {
@@ -217,7 +199,6 @@ struct RootView: View {
                     }
                     .padding(.horizontal, 14)
                     } else {
-                        // Match 1.8.0: the whole compact notice dismisses on tap.
                         Button { store.infoMessage = nil } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
@@ -235,8 +216,6 @@ struct RootView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: 320)
                 .padding(.horizontal, 24)
-                // The top of the root tab container includes the navigation bar.
-                // On compact-height devices show the banner nearer the top.
                 .padding(.top, sizeClass == .regular ? 16 : verticalSizeClass == .compact ? 8 : 52)
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(1)
@@ -254,10 +233,8 @@ struct RootView: View {
             guard let message = store.infoMessage else { return }
             UIAccessibility.post(notification: .announcement, argument: message)
             #if DEBUG
-            // Deterministic geometry checks without changing real notice timing.
             if LocalResources.isPreview && ProcessInfo.processInfo.arguments.contains("--notice-preview") { return }
             #endif
-            // Longer notices (setup steps, other languages) stay up longer.
             let seconds = min(8, max(3.5, Double(message.count) / 14))
             do { try await Task.sleep(for: .seconds(seconds)) } catch { return }
             if store.infoMessage == message { store.infoMessage = nil }
@@ -281,8 +258,6 @@ struct RootView: View {
     }
 }
 
-/// The top notice inside a sheet, which covers RootView's own banner. The
-/// root still times the notice out and announces it; this only shows it.
 private struct SheetNotice: ViewModifier {
     @EnvironmentObject private var store: ToolStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -310,6 +285,5 @@ private struct SheetNotice: ViewModifier {
 }
 
 extension View {
-    /// Shows the app's top notice while this view is presented as a sheet.
     func sheetNotice() -> some View { modifier(SheetNotice()) }
 }

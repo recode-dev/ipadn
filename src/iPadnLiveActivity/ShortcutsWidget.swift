@@ -1,8 +1,6 @@
 import SwiftUI
 import WidgetKit
 
-/// Home Screen and Lock Screen shortcuts into iPadn. It shows no app data, so
-/// it needs nothing shared with the app (no App Group).
 struct ShortcutsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "app.local.iPadn.shortcuts", provider: ShortcutsProvider()) { _ in

@@ -2,7 +2,6 @@ import SwiftUI
 import Charts
 
 extension WatchChange {
-    /// A short tag for lists.
     var tag: LocalizedStringKey {
         switch self {
         case .newVersion: return "New version"
@@ -23,7 +22,6 @@ extension WatchChange {
     }
 }
 
-/// A followed app in the list: current price and version, and the latest change.
 struct WatchRow: View {
     @EnvironmentObject private var store: ToolStore
     let app: StoreApp
@@ -41,12 +39,10 @@ struct WatchRow: View {
     }
 }
 
-/// Price changes recorded since the app was followed.
 struct PriceHistorySection: View {
     @EnvironmentObject private var store: ToolStore
     let app: StoreApp
     @State private var country: String?
-    /// The account's storefront, then the comparison storefronts with a record.
     private var countries: [String] {
         var list = [store.watchCountry]
         for code in store.settings.priceRegions.map({ $0.uppercased() })
@@ -96,7 +92,6 @@ struct PriceHistorySection: View {
     }
 }
 
-/// The price a drop has to reach before iPadn announces it; empty means any drop.
 private struct TargetPriceRow: View {
     let record: WatchRecord
     let save: (Double?) -> Void
@@ -128,7 +123,6 @@ private struct TargetPriceRow: View {
             text = Self.string(value)
         }
     }
-    /// Accepts either decimal separator, whatever the keyboard offers.
     static func value(_ text: String) -> Double? {
         let cleaned = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
             .replacingOccurrences(of: "٫", with: ".")
@@ -144,7 +138,6 @@ private struct TargetPriceRow: View {
 struct PriceHistoryChart: View {
     let record: WatchRecord
     var body: some View {
-        // Prices hold until the next change: draw steps, extended to today.
         let points = record.history + (record.history.last.map { [PricePoint(date: max(Date(), $0.date), price: $0.price)] } ?? [])
         Chart(Array(points.enumerated()), id: \.offset) { item in
             LineMark(x: .value(AppText.text("Date"), item.element.date), y: .value(AppText.text("Price"), item.element.price))

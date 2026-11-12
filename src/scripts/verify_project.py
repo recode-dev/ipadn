@@ -75,7 +75,6 @@ for path in (ROOT / "iPadn/Resources/Assets.xcassets").rglob("Contents.json"):
             data = file.read_bytes()
             check(data[:8] == b"\x89PNG\r\n\x1a\n", "Icon is not PNG: " + str(file))
             width, height, depth, color = struct.unpack(">IIBB", data[16:26])
-            # Single-size icons (light, dark, tinted) have no scale.
             expected = int(float(image["size"].split("x")[0]) * float(image.get("scale", "1x").rstrip("x")))
             check(width == height == expected, "Incorrect icon dimensions: " + str(file))
             check(depth == 8 and color == 2, "Icon must be opaque 8-bit RGB: " + str(file))
@@ -118,17 +117,12 @@ for file in ROOT.rglob("*.swift"):
     try: balance_swift(file.read_text())
     except AssertionError as error: failures.append(str(file.relative_to(ROOT)) + ": " + str(error))
 
-# English-only: no string catalogs, no lproj folders, no Chinese left in
-# user-facing string literals of the app or the extension.
 check(not (ROOT / "iPadn/Resources/Localizable.xcstrings").exists(), "Localizable.xcstrings must be deleted (English-only build)")
 check(not (ROOT / "iPadn/Resources/InfoPlist.xcstrings").exists(), "InfoPlist.xcstrings must be deleted (English-only build)")
 lproj = [p.name for p in (ROOT / "iPadn/Resources").glob("*.lproj")]
 check(not lproj, "lproj folders must be deleted (English-only build): " + ", ".join(lproj))
-shortcut = json.loads((ROOT / "iPadn/Resources/AppShortcuts.xcstrings").read_text())
-check(shortcut.get("sourceLanguage") == "en", "AppShortcuts.xcstrings source language must be en")
+check(not (ROOT / "iPadn/Resources/AppShortcuts.xcstrings").exists(), "AppShortcuts.xcstrings must stay deleted: Xcode 27 rejects string catalogs for App Shortcuts below iOS 17, and this build targets iOS 16")
 cjk = re.compile(r"[\u4e00-\u9fff]")
-# Functional data matching, not UI: these literals compare against upstream
-# Chinese release-note prefixes and legacy error text, so they stay.
 functional_cjk = {"iPadn/Services/AppUpdateService.swift", "iPadn/Services/DownloadManager.swift"}
 for swift_file in list((ROOT / "iPadn").rglob("*.swift")) + list((ROOT / "iPadnLiveActivity").rglob("*.swift")):
     if swift_file.relative_to(ROOT).as_posix() in functional_cjk:

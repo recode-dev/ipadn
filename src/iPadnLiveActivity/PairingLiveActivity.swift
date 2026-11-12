@@ -48,7 +48,6 @@ private extension PairingActivityAttributes.ContentState {
     }
 }
 
-/// The code split into two groups of three, as Settings shows it.
 private struct CodeText: View {
     let code: String
     var size: CGFloat
@@ -64,7 +63,6 @@ private struct CodeText: View {
     }
 }
 
-/// Steps 1 to 3 as dots, so the user sees how far along they are.
 private struct StepDots: View {
     let step: Int
     var body: some View {

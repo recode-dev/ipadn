@@ -2,10 +2,6 @@ import Foundation
 import Network
 import Security
 
-/// Serves finished packages to a computer on the same Wi-Fi, read-only, only
-/// while the Wi-Fi Transfer page is open. The address carries a random
-/// 128-bit key; anything else gets a bare 404, and too many wrong guesses
-/// stop the server. Only private-network clients are answered.
 final class WiFiTransferServer: @unchecked Sendable {
     struct Item: Sendable {
         var id: String
@@ -29,7 +25,6 @@ final class WiFiTransferServer: @unchecked Sendable {
     private var misses = 0
     private static let missLimit = 20
     private static let chunk = 256 * 1024
-    /// Called on the main actor: a file was requested, or the server stopped.
     var onAccess: (@MainActor (Access) -> Void)?
     var onStop: (@MainActor (String?) -> Void)?
 
@@ -39,7 +34,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         key = bytes.map { String(format: "%02x", $0) }.joined()
     }
 
-    /// Starts listening on every interface and returns the port.
     func start(items: [Item]) async throws -> UInt16 {
         self.items = items
         let parameters = NWParameters.tcp
@@ -80,7 +74,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         URL(string: "http://\(host.contains(":") ? "[\(host)]" : host):\(port)/\(key)/")
     }
 
-    // MARK: Connections
 
     private func accept(_ connection: NWConnection) {
         guard let client = Self.clientAddress(connection.endpoint), Self.isPrivate(client) else {
@@ -88,7 +81,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         }
         connection.start(queue: queue)
         read(connection, client: client, buffer: Data())
-        // A client that never finishes its request is dropped.
         queue.asyncAfter(deadline: .now() + 30) { if connection.state != .cancelled { connection.cancel() } }
     }
 
@@ -168,7 +160,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         return Data((lines.joined(separator: "\r\n") + "\r\n\r\n").utf8)
     }
 
-    // MARK: Page
 
     private func html() -> String {
         let rows = items.map { item in
@@ -198,7 +189,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         return ascii.isEmpty ? "package.ipa" : ascii
     }
 
-    // MARK: Addresses
 
     static func clientAddress(_ endpoint: NWEndpoint) -> String? {
         guard case .hostPort(let host, _) = endpoint else { return nil }
@@ -209,7 +199,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         }
     }
 
-    /// Private, link-local or unique-local addresses: the same home or office network.
     static func isPrivate(_ address: String) -> Bool {
         let lower = address.lowercased()
         if lower.hasPrefix("::ffff:") { return isPrivate(String(lower.dropFirst(7))) }
@@ -223,7 +212,6 @@ final class WiFiTransferServer: @unchecked Sendable {
         }
     }
 
-    /// The device's IPv4 address on Wi-Fi (en0), if connected.
     static func wifiAddress() -> String? {
         var list: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&list) == 0, let first = list else { return nil }

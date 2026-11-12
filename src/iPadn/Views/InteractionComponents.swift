@@ -49,8 +49,6 @@ private struct ActionConfirmationModifier: ViewModifier {
     func body(content: Content) -> some View {
         content.sheet(isPresented: $isPresented) {
             ActionConfirmationView(title: title, message: message, confirmTitle: confirmTitle, destructive: destructive, action: action)
-                // A presented sheet can reset the parent's SwiftUI override.
-                // Keep its text size aligned with the page that opened it.
                 .environment(\.dynamicTypeSize, typeSize)
         }
     }
@@ -65,8 +63,6 @@ struct PackageDocumentPicker: UIViewControllerRepresentable {
     let completion: (Result<[URL], Error>) -> Void
     func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        // Providers disagree about the IPA UTI. Allow files here, then validate the
-        // extension and archive contents in the import service instead of disabling IPAs.
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data, .archive], asCopy: true)
         picker.allowsMultipleSelection = true
         picker.delegate = context.coordinator

@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Two downloaded packages of one app side by side: what the newer one
-/// changed (Pro mode, from Package Info).
 struct PackageCompareView: View {
     let older: (version: String, file: URL)
     let newer: (version: String, file: URL)

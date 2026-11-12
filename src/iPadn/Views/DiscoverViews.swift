@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The search page's Discover section: links to the top charts.
 struct DiscoverSection: View {
     @EnvironmentObject private var store: ToolStore
     var body: some View {
@@ -22,7 +21,6 @@ struct DiscoverSection: View {
     }
 }
 
-/// One top chart in the current storefront and platform.
 struct ChartView: View {
     @EnvironmentObject private var store: ToolStore
     @State var chart: AppChart
@@ -33,7 +31,6 @@ struct ChartView: View {
     @State private var getting: StoreApp?
 
     private var platform: AppPlatform { store.settings.store.platform }
-    /// Another storefront picked on this page; nil follows the search page.
     @State private var region: String?
     private var country: String { region ?? store.settings.store.country }
     private var regions: [String] {
@@ -64,7 +61,6 @@ struct ChartView: View {
             ForEach(Array(apps.enumerated()), id: \.element.id) { index, app in
                 Section {
                     NavigationLink { AppDetailView(app: app) } label: {
-                        // The rank leads the category line, so the name keeps the full width.
                         AppRow(app: app, subtitle: ["\(index + 1)", app.displayCategory].filter { !$0.isEmpty }.joined(separator: " · ")) {
                             RowCapsule(title: app.isFree ? "Get" : LocalizedStringKey(app.priceLabel)) { getting = app; UX.feedback() }
                                 .accessibilityLabel(AppText.text("Get \(app.name)"))

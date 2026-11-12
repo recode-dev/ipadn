@@ -4,7 +4,6 @@ import Network
 import UserNotifications
 import UIKit
 
-/// Progress has its own publisher: a byte counter must not invalidate every list.
 @MainActor
 final class DownloadProgressState: ObservableObject {
     @Published var bytes: (written: Int64, expected: Int64)?
@@ -32,11 +31,8 @@ final class DownloadManager: NSObject, ObservableObject {
     @Published private(set) var jobs: [DownloadJob] = []
     @Published var storageError: String?
     @Published private(set) var discoveryWarning: String?
-    /// The last save failed (for example, the disk is full); cleared by the next successful save.
     @Published private(set) var saveWarning: String?
-    /// Stage text for Mac App Store packages being processed on device.
     @Published private(set) var processingDetail: [UUID: String] = [:]
-    /// Mac tasks the user asked to cancel and that have not stopped yet.
     @Published private(set) var cancelling: Set<UUID> = []
     var backgroundCompletion: (() -> Void)?
     private var tasks: [UUID: URLSessionDownloadTask] = [:]
@@ -44,8 +40,6 @@ final class DownloadManager: NSObject, ObservableObject {
     @Published private(set) var removingIDs = Set<UUID>()
     private var loadingJobs = false
     private var startupTask: Task<Void, Never>?
-    /// Returns once the saved download list has been read (Shortcuts may
-    /// run before the app ever showed it).
     func loaded() async { await startupTask?.value }
     func progress(for id: UUID) -> DownloadProgressState {
         if let progress = rowProgress[id] { return progress }
@@ -71,21 +65,13 @@ final class DownloadManager: NSObject, ObservableObject {
     private var notifications = true
     private var compatibleDownloadMode = false
     private var fallbackForegroundIDs = Set<UUID>()
-    /// Settings: download only over Wi-Fi; install each finished download.
     private var wifiOnly = false
     private var autoInstall = false
     private var pathMonitor: NWPathMonitor?
-    /// The network in use is cellular (no Wi-Fi or wired connection).
     private var onCellular = false
-    /// "Download Anyway" until Wi-Fi is back.
     private var cellularAllowed = false
-    /// Downloads wait for Wi-Fi: the setting is on and only cellular is available.
     @Published private(set) var waitingForWiFi = false
-    /// Finished downloads waiting for the install sheet to open.
     @Published var pendingAutoInstalls: [UUID] = []
-    /// The system download service could not write into iPadn's container
-    /// (seen with some re-signed builds). Kept per app build: a new install
-    /// or signature may behave differently, so it is checked again then.
     @Published private(set) var backgroundDownloadsUnavailable = DownloadManager.loadBackgroundUnavailable()
     private static let backgroundUnavailableKey = "backgroundDownloadsUnavailableBuild"
     private static var currentBuild: String {
@@ -95,7 +81,6 @@ final class DownloadManager: NSObject, ObservableObject {
     private static func loadBackgroundUnavailable() -> Bool {
         UserDefaults.standard.string(forKey: backgroundUnavailableKey) == currentBuild
     }
-    /// Lets the next download try the system download service again.
     func retryBackgroundDownloads() {
         UserDefaults.standard.removeObject(forKey: Self.backgroundUnavailableKey)
         UserDefaults.standard.removeObject(forKey: Self.backgroundProbedKey)
@@ -108,11 +93,7 @@ final class DownloadManager: NSObject, ObservableObject {
         UserDefaults.standard.set(Self.currentBuild, forKey: Self.backgroundUnavailableKey)
     }
 
-    // A tiny download through the system download service, once per install:
-    // with signatures it cannot write for, it fails the same way a package
-    // would, but before the user waits for a whole package to download twice.
     nonisolated static let backgroundProbeDescription = "ipadn.background-probe"
-    /// Apple's own 68-byte connectivity page; no third-party host is contacted.
     private static let backgroundProbeURL = URL(string: "https://www.apple.com/library/test/success.html")!
     private static let backgroundProbedKey = "backgroundDownloadsProbedBuild"
     private func startBackgroundProbeIfNeeded() {
@@ -123,9 +104,6 @@ final class DownloadManager: NSObject, ObservableObject {
         task.taskDescription = Self.backgroundProbeDescription
         task.resume()
     }
-    /// The probe's outcome. Only a file-creation failure, or a file iPadn
-    /// can't read, says anything; other errors (offline, captive Wi-Fi) leave
-    /// it to be tried on a later launch.
     private func finishBackgroundProbe(error: NSError?, unreadable: Bool = false) {
         if unreadable {
             markBackgroundUnavailable()
@@ -135,8 +113,6 @@ final class DownloadManager: NSObject, ObservableObject {
         }
         UserDefaults.standard.set(Self.currentBuild, forKey: Self.backgroundProbedKey)
     }
-    /// The system service saved the file where iPadn may not read it (seen
-    /// with some re-signed builds): "you don't have permission to view it".
     nonisolated static func isPermissionError(_ error: Error) -> Bool {
         let error = error as NSError
         if error.domain == NSCocoaErrorDomain, [NSFileReadNoPermissionError, NSFileWriteNoPermissionError].contains(error.code) { return true }
@@ -144,8 +120,6 @@ final class DownloadManager: NSObject, ObservableObject {
         if let underlying = error.userInfo[NSUnderlyingErrorKey] as? Error { return isPermissionError(underlying) }
         return false
     }
-    /// Downloads the job again inside the app, once, and keeps later
-    /// downloads there for this build.
     private func fallBackToForeground(_ id: UUID) -> Bool {
         guard !fallbackForegroundIDs.contains(id), let index = jobs.firstIndex(where: { $0.id == id }) else { return false }
         fallbackForegroundIDs.insert(id)
@@ -217,7 +191,6 @@ final class DownloadManager: NSObject, ObservableObject {
         super.init()
         jobs = previewJobs
         self.saveJobs = saveJobs
-        // Screenshots never create a URLSession or start real transfers.
         tasks = activeTasks
         restoring = activeTasks.isEmpty
     }
@@ -226,7 +199,6 @@ final class DownloadManager: NSObject, ObservableObject {
     override init() {
         super.init()
         loadingJobs = true
-        // Write the latest progress to disk before the app can be suspended.
         NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification,
                                                object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.persist(wait: true) }
@@ -280,8 +252,6 @@ final class DownloadManager: NSObject, ObservableObject {
         pathMonitor = monitor
     }
 
-    /// On cellular with Wi-Fi only on, running downloads go back to the queue
-    /// (keeping their progress) and continue once Wi-Fi is back.
     private func applyNetworkRule() {
         let blocked = wifiOnly && onCellular && !cellularAllowed
         if waitingForWiFi != blocked { waitingForWiFi = blocked }
@@ -289,7 +259,6 @@ final class DownloadManager: NSObject, ObservableObject {
         for job in jobs where job.status == .running { pause(job.id, requeue: true) }
     }
 
-    /// Downloads over cellular this time, until Wi-Fi is back.
     func downloadOverCellular() {
         cellularAllowed = true
         applyNetworkRule()
@@ -375,10 +344,6 @@ final class DownloadManager: NSObject, ObservableObject {
         requestNotifications(); schedule()
     }
 
-    // The authorized Mac App Store URL is provided by Apple's account-bound
-    // dispatch. Protected packages are processed by StoreAgent on device after
-    // the download; every finished file is verified as a XAR PKG before the
-    // task completes, and Mac tasks only offer export (never iOS install).
     func enqueueOfficialMacPackage(_ offer: MacPackageOffer, for app: StoreApp) throws {
         if offer.protectedByApple {
             guard MacPackageDecryptor.isAvailable else {
@@ -460,7 +425,6 @@ final class DownloadManager: NSObject, ObservableObject {
         } else {
             var request = URLRequest(url: url)
             request.setValue(HTTPClient.userAgent, forHTTPHeaderField: "User-Agent")
-            // Also holds while iPadn is suspended and cannot watch the network.
             request.allowsCellularAccess = !wifiOnly || cellularAllowed
             task = active.downloadTask(with: request)
         }
@@ -473,7 +437,6 @@ final class DownloadManager: NSObject, ObservableObject {
         updateBackgroundTask()
         persist(); task.resume()
     }
-    /// Pauses a download; `requeue` puts it back in the queue instead.
     func pause(_ id: UUID, requeue: Bool = false) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
         if jobs[index].status == .queued { jobs[index].status = .paused; persist(); return }
@@ -486,8 +449,6 @@ final class DownloadManager: NSObject, ObservableObject {
                 if let data = data { try? data.write(to: LocalResources.resumeURL(id), options: .atomic) }
                 self.tasks.removeValue(forKey: id)
                 self.updateBackgroundTask()
-                // The byte count lives in the row's progress while running;
-                // keep it on the task so everything showing it stays right.
                 if let progress = self.rowProgress[id] { self.jobs[index] = progress.applying(to: self.jobs[index]) }
                 self.jobs[index].status = requeue ? .queued : .paused
                 self.persist(); self.schedule()
@@ -506,19 +467,16 @@ final class DownloadManager: NSObject, ObservableObject {
     func pauseAll() { for job in jobs where job.status == .running || job.status == .queued { pause(job.id) } }
     func resumeAll() { for job in jobs where job.status == .paused { resume(job.id) } }
     func move(from offsets: IndexSet, to destination: Int) {
-        // SwiftUI's move helper lives in SwiftUI; explicit order mutation keeps service UI-independent.
         let selected = offsets.sorted().map { jobs[$0] }
         for index in offsets.sorted(by: >) { jobs.remove(at: index) }
         let adjusted = destination - offsets.filter { $0 < destination }.count
         jobs.insert(contentsOf: selected, at: max(0, min(adjusted, jobs.count)))
         persist()
     }
-    /// Stops processing a Mac package (queued or running). The download is
-    /// kept and the task becomes paused, so it can be continued later.
     func cancelProcessing(_ id: UUID) {
         guard let job = jobs.first(where: { $0.id == id }), job.status == .processing,
               job.protectedMacPackage == true else { return }
-        guard cancelling.insert(id).inserted else { return } // repeated taps do nothing
+        guard cancelling.insert(id).inserted else { return }
         MacPackageDecryptor.cancel(job: id)
     }
 
@@ -526,7 +484,6 @@ final class DownloadManager: NSObject, ObservableObject {
         guard storageError == nil else { throw ToolError.message(storageError!) }
         guard let job = jobs.first(where: { $0.id == id }) else { return }
         if job.status == .processing, job.protectedMacPackage == true {
-            // Deleted once processing has stopped (see process()).
             removalAfterCancel.insert(id); cancelProcessing(id); return
         }
         guard job.status != .processing, job.status != .pausing else { throw ToolError.message(AppText.text("Wait for the file to finish processing or pausing before deleting")) }
@@ -554,9 +511,6 @@ final class DownloadManager: NSObject, ObservableObject {
         schedule()
     }
 
-    /// One durable commit for a batch. Pause live transfers first; move packages
-    /// aside and roll them back if the task-list write fails. Disk work is serial
-    /// with earlier progress saves, and never runs on the main actor.
     func removeBatch(_ ids: Set<UUID>) async throws -> Int {
         guard removingIDs.isEmpty, !loadingJobs else { throw ToolError.message(AppText.text("Saving the task list. Try again shortly.")) }
         guard storageError == nil else { throw ToolError.message(storageError!) }
@@ -615,8 +569,6 @@ final class DownloadManager: NSObject, ObservableObject {
         return removed.count
     }
 
-    /// Crash between moving a package aside and committing jobs must never
-    /// make a retained package disappear. A committed removal has no job left.
     nonisolated static func recoverRemovals(_ jobs: [DownloadJob], support: URL = LocalResources.support,
                                            packages: URL = LocalResources.packages) throws {
         let fm = FileManager.default
@@ -650,14 +602,11 @@ final class DownloadManager: NSObject, ObservableObject {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    /// Packages whose icon scan has started but not finished.
     private static let iconScanKey = "packageIconScansInProgress"
     func loadPackageIcons() async {
         guard !iconsLoading else { return }
         iconsLoading = true
         defer { iconsLoading = false }
-        // A scan that ended the app last time is not tried again: the list
-        // would otherwise end the app on every launch.
         var interrupted = Set(UserDefaults.standard.stringArray(forKey: Self.iconScanKey) ?? [])
         for job in jobs where job.status == .completed && job.rawFormat == nil {
             guard let file = fileURL(job), !Task.isCancelled else { continue }
@@ -672,8 +621,6 @@ final class DownloadManager: NSObject, ObservableObject {
             if job.packageIconScanned != true {
                 interrupted.insert(job.id.uuidString)
                 UserDefaults.standard.set(Array(interrupted), forKey: Self.iconScanKey)
-                // With store artwork available, only keep a package icon that is
-                // sharp at list size (64 pt at 3x).
                 let minimum = job.displayApp(packageIcon: nil).iconURL == nil ? 0 : 180
                 _ = await Task.detached(priority: .utility) {
                     try? PackageIconService.save(from: file, id: job.id, minimumPixels: minimum)
@@ -685,23 +632,17 @@ final class DownloadManager: NSObject, ObservableObject {
                 jobs[index].packageIconScanned = true
                 interrupted.remove(job.id.uuidString)
                 UserDefaults.standard.set(Array(interrupted), forKey: Self.iconScanKey)
-                // Never erase the catalog icon because IPA icon extraction failed.
                 if jobs[index].app.iconURL == nil {
                     jobs[index].app.iconURL = jobs[index].asset?.app.iconURL
                 }
                 persist()
             }
-            // Icons cached before small package PNGs were rejected: fall back to
-            // the sharper store artwork.
             if iconSizeChecked.insert(job.id).inserted, let cached = packageIconURL(job),
                job.displayApp(packageIcon: nil).iconURL != nil,
                PackageIconService.pixelWidth(cached) < 180 {
                 try? FileManager.default.removeItem(at: cached)
                 objectWillChange.send()
             }
-            // tvOS packages keep their icon in a layered asset catalog, and the
-            // stored artwork can be the shared App ID's iPhone icon. Replace
-            // the cached icon once with the Apple TV catalog artwork.
             guard job.platformLabel == "tvOS", job.appleTVArtwork != true,
                   catalogArtworkAttempted.insert(job.id).inserted,
                   jobs.contains(where: { $0.id == job.id }) else { continue }
@@ -722,7 +663,6 @@ final class DownloadManager: NSObject, ObservableObject {
             let fallback = packageIconURL(job) == nil ? current.displayApp(packageIcon: nil).iconURL : nil
             guard let artwork = tvArtwork ?? fallback, !Task.isCancelled else { continue }
             if (try? await PackageIconService.saveCatalogArtwork(from: artwork, id: job.id)) == true {
-                // A download can be deleted while the artwork request is in flight.
                 guard let index = jobs.firstIndex(where: { $0.id == job.id }) else {
                     try? FileManager.default.removeItem(at: PackageIconService.cacheURL(job.id))
                     continue
@@ -758,7 +698,6 @@ final class DownloadManager: NSObject, ObservableObject {
         guard let job = jobs.first(where: { $0.id == id }), processingIDs.insert(id).inserted else { return }
         var backgroundTask: UIBackgroundTaskIdentifier = .invalid
         backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "Prepare IPA") { [weak self] in
-            // Called on the main thread; the task must be ended before returning.
             MainActor.assumeIsolated {
                 self?.persist(wait: true)
                 let completion = self?.backgroundCompletion; self?.backgroundCompletion = nil; completion?()
@@ -778,8 +717,6 @@ final class DownloadManager: NSObject, ObservableObject {
             do {
                 let result = try await Task.detached(priority: .userInitiated) {
                     if job.protectedMacPackage == true {
-                        // StoreAgent turns Apple's protected download into the
-                        // real PKG, which must then pass full XAR validation.
                         let secret = try MacPackageSecrets.load(id)
                         let decrypted = Self.decryptedURL(id)
                         defer { try? FileManager.default.removeItem(at: decrypted) }
@@ -805,7 +742,6 @@ final class DownloadManager: NSObject, ObservableObject {
                 try? FileManager.default.removeItem(at: LocalResources.resumeURL(id))
                 if job.protectedMacPackage == true { MacPackageSecrets.delete(id) }
                 self.persist(); self.notify(title: AppText.text("Package ready"), body: result.1.name + " " + result.1.version)
-                // Only downloaded app packages; imported files and Mac packages are not installed here.
                 if self.autoInstall, job.rawFormat == nil, job.protectedMacPackage != true, job.sourceURL != nil,
                    !self.pendingAutoInstalls.contains(id) {
                     self.pendingAutoInstalls.append(id)
@@ -813,7 +749,6 @@ final class DownloadManager: NSObject, ObservableObject {
                 Task { await self.loadPackageIcons() }
             } catch is CancellationError {
                 self.cancelling.remove(id)
-                // Cancelled by the user: keep the download, continue later.
                 guard let index = self.jobs.firstIndex(where: { $0.id == id }) else { return }
                 self.jobs[index].status = .paused
                 self.jobs[index].error = nil
@@ -821,10 +756,6 @@ final class DownloadManager: NSObject, ObservableObject {
                 if self.removalAfterCancel.remove(id) != nil { try? self.remove(id) }
             } catch {
                 self.cancelling.remove(id)
-                // Retrying must download again rather than reprocess the same bad
-                // file (imported files have nothing to download and keep theirs).
-                // A protected Mac package keeps its download: its processing
-                // can fail for transient reasons (component download, network).
                 if job.protectedMacPackage != true, job.sourceURL != nil {
                     try? FileManager.default.removeItem(at: LocalResources.stagingURL(id))
                     try? FileManager.default.removeItem(at: LocalResources.resumeURL(id))
@@ -853,8 +784,6 @@ final class DownloadManager: NSObject, ObservableObject {
         }
     }
 
-    /// Processing moves the result into Packages before the job is saved as
-    /// completed; if the app was killed in between, finish the job from that file.
     private func adoptFinishedPackage(_ id: UUID) -> Bool {
         let prefix = id.uuidString + "-"
         guard let index = jobs.firstIndex(where: { $0.id == id }),
@@ -903,12 +832,6 @@ final class DownloadManager: NSObject, ObservableObject {
         persist(); schedule()
         notify(title: AppText.text("Download failed"), body: AppText.text("\(jobs[index].app.name): \(error.localizedDescription)"))
     }
-    /// Saves a snapshot of the task list. Encoding and writing happen on a
-    /// serial background queue, so writes stay in order and the main thread
-    /// never waits for the disk; `wait` blocks until it is written (used when
-    /// the app is about to be suspended).
-    /// A background session that cannot create its file needs a foreground
-    /// retry. Checked on the error, never on its localized text.
     private static func cannotCreateFile(_ error: Error) -> Bool {
         let ns = error as NSError
         if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCannotCreateFile || ns.code == NSURLErrorCannotWriteToFile {
@@ -918,7 +841,6 @@ final class DownloadManager: NSObject, ObservableObject {
         return text.contains("无法创建") || text.localizedCaseInsensitiveContains("could not create")
     }
     private func persist(wait: Bool = false) {
-        // storageError means the saved list could not be read; never overwrite it.
         guard storageError == nil, !loadingJobs, removingIDs.isEmpty else { return }
         let snapshot = currentJobs, save = saveJobs
         lastSave = Date()
@@ -936,8 +858,6 @@ final class DownloadManager: NSObject, ObservableObject {
     private func saveNewJobs(_ next: [DownloadJob]) throws {
         guard !loadingJobs, removingIDs.isEmpty else { throw ToolError.message(AppText.text("Saving the task list. Try again shortly.")) }
         let next = next.map { rowProgress[$0.id]?.applying(to: $0) ?? $0 }
-        // Commit the file before publishing a newly enqueued/imported/retried
-        // task; on the same queue, after any earlier pending save.
         try persistQueue.sync { try saveJobs(next) }
         jobs = next; lastSave = Date()
     }
@@ -954,14 +874,11 @@ final class DownloadManager: NSObject, ObservableObject {
         guard !restoring, deliveries.isEmpty, processingIDs.isEmpty, removingIDs.isEmpty else { return }
         guard let completion = backgroundCompletion else { return }
         backgroundCompletion = nil
-        // The app may be suspended right after this: finish pending saves first.
         persistQueue.sync {}
         completion()
     }
 }
 
-// Mac downloads are exported as original files. Never feed them to the IPA
-// parser or iOS system installer. Reject encrypted or truncated fake PKGs.
 enum MacPackageStorage {
     static func plausibleXARHeader(_ header: Data, fileSize: Int64) -> Bool {
         guard header.count >= 28, fileSize >= 29,
@@ -973,8 +890,6 @@ enum MacPackageStorage {
         let version = number(6, length: 2)
         let compressedTOC = number(8, length: 8)
         let uncompressedTOC = number(16, length: 8)
-        // Cheap header sanity check; XARValidator performs the full TOC and
-        // checksum verification afterwards.
         return headerSize >= 28 && headerSize <= 4096 && version == 1 &&
             compressedTOC > 0 && uncompressedTOC > 0 &&
             uncompressedTOC <= 32 * 1024 * 1024 &&
@@ -995,8 +910,6 @@ enum MacPackageStorage {
             try file.seek(toOffset: 0)
             let header = try file.read(upToCount: 28) ?? Data()
             guard plausibleXARHeader(header, fileSize: length) else { valid = false; break }
-            // Inflate the TOC and verify every checksum before export, so an
-            // encrypted or damaged package can never be offered as a PKG.
             _ = try XARValidator.validate(staging)
             valid = true
         case "zip": valid = prefix.starts(with: [0x50, 0x4B, 0x03, 0x04])
@@ -1042,14 +955,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
                 self.transferMetrics[id] = metric
             } else { self.transferMetrics[id] = TransferMetrics(bytes: totalBytesWritten, sampledAt: now) }
             self.progress(for: id).bytes = (totalBytesWritten, max(0, totalBytesExpectedToWrite))
-            // Resume data, not this count, is what a restart relies on.
             if Date().timeIntervalSince(self.lastSave) > 5 { self.persist() }
         }
     }
 
     nonisolated func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         if downloadTask.taskDescription == Self.backgroundProbeDescription {
-            // The service created the file; iPadn must also be able to read it.
             var unreadable = false
             do { _ = try Data(contentsOf: location) } catch { unreadable = Self.isPermissionError(error) }
             try? FileManager.default.removeItem(at: location)
@@ -1067,7 +978,6 @@ extension DownloadManager: URLSessionDownloadDelegate {
             if FileManager.default.fileExists(atPath: received.path) {
                 try? FileManager.default.removeItem(at: received)
             }
-            // Move synchronously: URLSession deletes its temporary file as soon as this delegate returns.
             do {
                 try FileManager.default.moveItem(at: location, to: received)
             } catch {
@@ -1082,8 +992,6 @@ extension DownloadManager: URLSessionDownloadDelegate {
                     self.updateBackgroundTask()
                     self.deliveries.end(); self.finishBackgroundIfReady()
                 }
-                // A transfer can finish while the app is not running; after a
-                // relaunch the job may already read paused or queued with no task.
                 guard let index = self.jobs.firstIndex(where: { $0.id == id }),
                       [.running, .pausing, .paused, .queued].contains(self.jobs[index].status),
                       self.accepts(downloadTask, id: id, restoredDelivery: restoredDelivery) else { return }
@@ -1131,15 +1039,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
             guard let job = self.jobs.first(where: { $0.id == id }), job.status != .completed && job.status != .processing else { return }
             guard self.accepts(task, id: id, restoredDelivery: restoredDelivery) else { return }
 
-            // Automatic fallback: if background nsurlsessiond failed to create file (-3000), retry in foreground process
             if error.domain == NSURLErrorDomain, error.code == NSURLErrorCannotCreateFile, self.fallBackToForeground(id) { return }
 
-            // Save resume data first: it is what lets a cancelled transfer continue.
             if let resume = resume { try? resume.write(to: LocalResources.resumeURL(id), options: .atomic) }
             if job.status == .pausing || job.status == .paused { return }
             if error.domain == NSURLErrorDomain, error.code == NSURLErrorCancelled, resume != nil,
                let index = self.jobs.firstIndex(where: { $0.id == id }) {
-                // Cancelled by the system (app quit, low storage): pause, keep progress.
                 self.tasks.removeValue(forKey: id)
                 self.progressPublishedAt.removeValue(forKey: id)
                 self.updateBackgroundTask()

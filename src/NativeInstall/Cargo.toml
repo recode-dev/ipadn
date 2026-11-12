@@ -10,7 +10,6 @@ name = "ipadn_native"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-# Pure-Rust TLS backend: no C toolchain or Apple SDK is needed to cross-compile.
 idevice = { version = "=0.1.68", default-features = false, features = [
   "rustcrypto",
   "afc",

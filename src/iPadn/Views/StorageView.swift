@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// How much space downloaded packages take, and a quick way to drop the
-/// older versions of apps that have a newer download.
 struct StorageView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var manager: DownloadManager
@@ -14,8 +12,6 @@ struct StorageView: View {
     @State private var deleting = false
 
     private var completed: [DownloadJob] { manager.jobs.filter { $0.status == .completed && manager.fileURL($0) != nil } }
-    /// Finished downloads of an app that also has a newer finished download
-    /// for the same platform.
     private var olderVersions: [DownloadJob] {
         var newest: [String: DownloadJob] = [:]
         for job in completed {

@@ -2,8 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ZIPFoundation
 
-/// 专业模式: the device identifier Apple sees and each account's sign-in
-/// token. Only reachable when 专业模式 is on.
 struct CredentialsView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -73,7 +71,6 @@ struct CredentialsView: View {
     }
 }
 
-/// One file or folder inside a package.
 struct PackageItem: Identifiable, Hashable, Sendable {
     var path: String
     var name: String
@@ -85,7 +82,6 @@ struct PackageItem: Identifiable, Hashable, Sendable {
 }
 
 enum PackageContents {
-    /// Everything in the archive, as paths without a trailing slash.
     static func items(_ file: URL) throws -> [PackageItem] {
         let archive = try Archive(url: file, accessMode: .read)
         var items: [PackageItem] = []
@@ -93,7 +89,6 @@ enum PackageContents {
         for entry in archive {
             let path = entry.path.hasSuffix("/") ? String(entry.path.dropLast()) : entry.path
             guard !path.isEmpty, PackageService.isSafeArchivePath(path) else { continue }
-            // Folders are often implied by their files rather than stored.
             var parent = (path as NSString).deletingLastPathComponent
             while !parent.isEmpty, folders.insert(parent).inserted { parent = (parent as NSString).deletingLastPathComponent }
             if entry.type == .directory { folders.insert(path); continue }
@@ -104,12 +99,10 @@ enum PackageContents {
         items += folders.map { PackageItem(path: $0, name: ($0 as NSString).lastPathComponent, isFolder: true, size: 0, compressedSize: 0) }
         return items
     }
-    /// The direct children of `folder` ("" for the top level), folders first.
     static func children(of folder: String, in items: [PackageItem]) -> [PackageItem] {
         items.filter { ($0.path as NSString).deletingLastPathComponent == folder }
             .sorted { $0.isFolder != $1.isFolder ? $0.isFolder : $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
-    /// Copies one file out of the package into a temporary folder.
     static func extract(_ path: String, from file: URL) throws -> URL {
         let archive = try Archive(url: file, accessMode: .read)
         guard PackageService.isSafeArchivePath(path), let entry = archive[path], entry.type == .file else {
@@ -128,11 +121,9 @@ enum PackageContents {
     }
 }
 
-/// Browse what's inside a downloaded package and take single files out.
 struct PackageContentsView: View {
     let file: URL
     var folder = ""
-    /// Shared by every level, so the archive is read once.
     var preloaded: [PackageItem]?
     @State private var items: [PackageItem]?
     @State private var failure: String?
@@ -190,8 +181,6 @@ struct PackageContentsView: View {
     }
 }
 
-/// One file: its details, a preview for text and images, and a way to take
-/// it out of the package.
 private struct PackageFileView: View {
     let file: URL
     let item: PackageItem
@@ -233,8 +222,6 @@ private struct PackageFileView: View {
         .task {
             guard previewsText || previewsImage, let url = await extract() else { return }
             let wantsImage = previewsImage
-            // Read and prepared off the main thread; long text is cut short so
-            // the page stays responsive.
             let preview = await Task.detached(priority: .userInitiated) { () -> (UIImage?, String?) in
                 guard let data = try? Data(contentsOf: url) else { return (nil, nil) }
                 if wantsImage {
@@ -263,7 +250,6 @@ private struct PackageFileView: View {
         guard text.count > limit else { return text }
         return String(text.prefix(limit)) + AppText.text("\n\n… (first \(limit) characters shown; extract the file for the full content)")
     }
-    /// Text as is; property lists (often binary) as XML.
     nonisolated static func readable(_ data: Data) -> String? {
         if let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
            let xml = try? PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0) {

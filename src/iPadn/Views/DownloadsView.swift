@@ -20,24 +20,18 @@ struct DownloadsView: View {
     @State private var pendingDelete: Set<UUID> = []
     @State private var confirmingDelete = false
     @State private var installing: DownloadJob?
-    /// The LiveContainer setup tip, once read, stays closed.
     @AppStorage("liveContainerTipDismissed") private var liveContainerTipDismissed = false
     @State private var inspecting: DownloadJob?
     @State private var selection = Set<UUID>()
     @State private var editMode: EditMode = .inactive
-    /// Drives the compact rows' staggered entrance in edit mode.
     @State private var editRowsShown = false
-    /// The same entrance for the cards when edit mode ends.
     @State private var cardsShown = true
-    /// A mode change is running; taps wait so two changes never overlap.
     @State private var switchingMode = false
     @State private var actionBusy = false
     private var filteredJobs: [DownloadJob] {
         manager.jobs.filter { filter.includes($0.status) && (term.isEmpty || $0.app.name.localizedCaseInsensitiveContains(term) || $0.app.bundleID.localizedCaseInsensitiveContains(term) || $0.app.version.localizedCaseInsensitiveContains(term)) }
     }
-    /// The newest finished download of each app with a newer store version.
     private var updateTargets: [UUID: StoreApp] {
-        // "New version alerts" off: no hints here either.
         guard store.settings.updateNotifications else { return [:] }
         var targets: [UUID: StoreApp] = [:]
         var seen = Set<String>()
@@ -48,11 +42,8 @@ struct DownloadsView: View {
         return targets
     }
     var body: some View {
-        // Filter once per render; rows and headers read this copy.
         let visible = filteredJobs
         let updates = updateTargets
-        // Both layouts stay alive and only their visibility swaps, so changing
-        // modes rebuilds nothing mid-animation; the rows do all the moving.
         ZStack {
             downloadList(edit: false, visible: visible, updates: updates)
                 .environment(\.editMode, .constant(.inactive))
@@ -79,9 +70,6 @@ struct DownloadsView: View {
                 .accessibilityIdentifier("downloads.edit")
                 if !manager.jobs.isEmpty {
                     Menu {
-                        // Buttons rather than a Picker: each menu item keeps its
-                        // own accessibility identifier, which a Picker does not
-                        // reliably carry through to the menu.
                         ForEach(DownloadFilter.allCases) { item in
                             Button {
                                 filter = item
@@ -124,10 +112,8 @@ struct DownloadsView: View {
         }
         .compatibleOnChange(of: editMode) { mode in
             if !mode.isEditing { selection.removeAll() }
-            // Cards are back on screen: pull them out one after another.
             if !mode.isEditing && !cardsShown { DispatchQueue.main.async { cardsShown = true } }
             if !mode.isEditing { editRowsShown = false }
-            // The edit list is already built; pull its rows out once it shows.
             if mode.isEditing { DispatchQueue.main.async { editRowsShown = true } }
         }
         .compatibleOnChange(of: filter) { _ in selection.removeAll() }
@@ -216,7 +202,6 @@ struct DownloadsView: View {
             Button("Cancel", role: .cancel) { }
         } message: { Text("Enter a download link for an IPA package.") }
         .actionConfirmation(isPresented: $confirmingDelete, title: "Delete \(pendingDelete.count) tasks?", message: "Downloaded packages are deleted too.", confirmTitle: "Delete tasks and files") {
-            // Recheck task states before the durable batch commit.
             let ids = pendingDelete
             pendingDelete.removeAll()
             perform {
@@ -231,7 +216,6 @@ struct DownloadsView: View {
         }
         .overlay { if actionBusy { HStack { ProgressView(); Text("Processing…").font(.subheadline) }.padding(22).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20)).allowsHitTesting(false) } }
     }
-    /// Row-header count: the active filter, then how many have updates.
     private func headerSummary(visible: [DownloadJob], updates: [UUID: StoreApp]) -> String {
         var text = filter == .all ? AppText.text("\(visible.count) items") : AppText.text("\(filter.title) · \(visible.count)")
         if !updates.isEmpty { text += AppText.text(" · \(updates.count) updates") }
@@ -251,7 +235,6 @@ struct DownloadsView: View {
         UX.feedback()
         perform { try await store.downloadAllUpdates(of: jobs); filter = .all; term = "" }
     }
-    /// One layout of the list: task cards, or the compact rows of edit mode.
     @ViewBuilder private func downloadList(edit: Bool, visible: [DownloadJob], updates: [UUID: StoreApp]) -> some View {
             List {
                 if !manager.jobs.isEmpty {
@@ -282,7 +265,6 @@ struct DownloadsView: View {
                     Section {
                         ForEach(Array(visible.enumerated()), id: \.element.id) { index, job in
                             editRow(job)
-                                // Rows settle in one after another, a few hundredths apart.
                                 .modifier(DrawerRow(shown: editRowsShown || reduceMotion, index: index, travel: 18))
                         }
                         .onMove(perform: filter == .all && term.isEmpty ? { manager.move(from: $0, to: $1) } : nil)
@@ -290,7 +272,6 @@ struct DownloadsView: View {
                         Text(headerSummary(visible: visible, updates: updates))
                     } footer: {
                         if filter == .all && term.isEmpty && visible.count > 1 {
-                            // Shown with the rows, not before them.
                             Text("Drag the handles to change the order. Waiting tasks download in this order.")
                                 .opacity(editRowsShown || reduceMotion ? 1 : 0)
                                 .animation(.easeOut(duration: 0.18).delay(0.08), value: editRowsShown)
@@ -299,8 +280,6 @@ struct DownloadsView: View {
                 } else {
                     ForEach(Array(visible.enumerated()), id: \.element.id) { index, job in
                         Section {
-                            // One row in both modes, so entering edit mode slides the
-                            // selection mark in and the share button out.
                             HStack(spacing: 12) {
                                 if edit {
                                     Image(systemName: selection.contains(job.id) ? "checkmark.circle.fill" : "circle")
@@ -358,14 +337,12 @@ struct DownloadsView: View {
                                     }
                                 }
                             }
-                            // Outside the card background, so the whole card slides.
                             .modifier(DrawerRow(shown: cardsShown || reduceMotion, index: index, travel: 28))
                         } header: {
                             if job.id == visible.first?.id {
                                 HStack(alignment: .firstTextBaseline) {
                                     Text(headerSummary(visible: visible, updates: updates))
                                     Spacer()
-                                    // One update has its own button on the row.
                                     if updates.count > 1, !edit {
                                         Button("Update All") { downloadAllUpdates() }
                                             .font(.body.weight(.semibold)).textCase(nil).buttonStyle(.borderless)
@@ -380,8 +357,6 @@ struct DownloadsView: View {
             }
     }
 
-    /// Like a drawer: the current rows slide up and in, the list swaps while
-    /// nothing is showing, then the other layout's rows slide down and out.
     private func toggleEditMode() {
         guard !switchingMode else { return }
         let entering = !editMode.isEditing
@@ -392,15 +367,12 @@ struct DownloadsView: View {
         switchingMode = true
         if entering { cardsShown = false } else { editRowsShown = false }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-            // The list itself swaps without a transition; this animation only
-            // moves the bottom bar and the toolbar title.
             if entering { editRowsShown = false } else { cardsShown = false }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { editMode = entering ? .active : .inactive }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { switchingMode = false }
         }
     }
 
-    /// A compact row for edit mode: selection mark, icon, name and state.
     private func editRow(_ job: DownloadJob) -> some View {
         let app = job.displayApp(packageIcon: manager.packageIconURL(job))
         let selected = selection.contains(job.id)
@@ -438,7 +410,6 @@ struct DownloadsView: View {
             for url in files {
                 do { try await manager.importFile(url); imported += 1 }
                 catch { failures.append(AppText.text("\(url.lastPathComponent): \(error.localizedDescription)")) }
-                // The picker hands over a private copy; don't leave a second copy of a large IPA behind.
                 if url.resolvingSymlinksInPath().path.hasPrefix(temporary) { try? FileManager.default.removeItem(at: url) }
             }
             if imported > 0 { filter = .all; term = ""; store.infoMessage = AppText.text("Imported \(imported) packages") }
@@ -486,11 +457,8 @@ struct DownloadTaskRow: View {
     let snapshot: DownloadJob
     @ObservedObject var progress: DownloadProgressState
     private var job: DownloadJob { progress.applying(to: snapshot) }
-    /// The store's newer version of this app, when there is one.
     var update: StoreApp? = nil
-    /// Kept at this version: no update reminders.
     var kept = false
-    /// In edit mode the share button steps aside to leave the row room.
     var editing = false
     var inspecting: () -> Void
     var primary: () -> Void
@@ -508,7 +476,6 @@ struct DownloadTaskRow: View {
         default: return "shippingbox"
         }
     }
-    /// Platform shown as its device glyph, like the App Store's compatibility icons.
     private var platformIcon: some View {
         Image(systemName: platformSymbol)
             .font(.footnote.weight(.medium)).foregroundStyle(.secondary)
@@ -524,7 +491,6 @@ struct DownloadTaskRow: View {
                 Text(displayedApp.name).font(.body.weight(.medium)).lineLimit(2)
                 HStack(spacing: 6) {
                     platformIcon
-                    // Version and size scroll once in place when the row is too narrow.
                     MarqueeText(text: [displayedApp.version.isEmpty ? "" : "v\(displayedApp.version)",
                                        displayedApp.size > 0 ? displayedApp.size.byteLabel : ""]
                                     .filter { !$0.isEmpty }.joined(separator: " · "))
@@ -539,8 +505,6 @@ struct DownloadTaskRow: View {
         }
         .contentShape(Rectangle())
     }
-    /// Identity of the status line and trailing control: a change swaps them
-    /// with the sequential transition below instead of a cross-fade.
     private var controlKey: String {
         "\(job.status.rawValue)-\(manager.cancelling.contains(job.id))"
     }
@@ -588,7 +552,6 @@ struct DownloadTaskRow: View {
             ProgressView().frame(width: 44, height: 44)
                 .accessibilityLabel("Cancelling")
         case .processing where job.protectedMacPackage == true:
-            // Mac packages can take minutes to process; let the user stop it.
             RowCapsule(title: "Cancel") { manager.cancelProcessing(job.id) }
                 .accessibilityLabel("Cancel processing")
         case .pausing, .processing:
@@ -637,7 +600,6 @@ struct DownloadTaskRow: View {
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     .accessibilityIdentifier("download.kept." + job.app.id)
             } else if job.status == .completed, let update {
-                // Its own button: the heading above is already one.
                 Button(action: updating) {
                     Label("Version \(update.version) is available. Tap to download.", systemImage: "arrow.down.circle.fill")
                         .font(.caption.weight(.semibold)).foregroundStyle(UX.tint).lineLimit(1)
@@ -662,8 +624,6 @@ struct DownloadTaskRow: View {
     }
 }
 
-/// Reads the platforms a downloaded IPA declares (UIDeviceFamily and
-/// CFBundleSupportedPlatforms) off the main thread.
 private struct PackagePlatformRow: View {
     let file: URL
     @State private var summary: String?
@@ -679,8 +639,6 @@ private struct PackagePlatformRow: View {
     }
 }
 
-/// Size rows of a task's details. Running and paused tasks read the live
-/// byte counter, which the stored task only catches up with on save.
 private struct TaskSizeRows: View {
     let job: DownloadJob
     @ObservedObject var progress: DownloadProgressState
@@ -701,9 +659,6 @@ private struct TaskSizeRows: View {
 
 
 
-/// A row that slides down out of the list's top edge a few hundredths of a
-/// second after the one above it, like a drawer pulled out; hidden again, all
-/// rows slide back up together.
 private struct DrawerRow: ViewModifier {
     let shown: Bool
     let index: Int

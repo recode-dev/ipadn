@@ -5,9 +5,6 @@ enum ApplePropertyListError: String, LocalizedError {
     var errorDescription: String? { AppText.text("Apple returned data in an unrecognized format. Try again later.") }
 }
 
-/// Apple also sends iTunes XML documents, not just standard XML/binary plists.
-/// Normalize only the known Document/Protocol envelopes. Never extract a plist
-/// from an arbitrary HTML page, resolve entities, or retain parser error text.
 enum ApplePropertyList {
     static func dictionary(_ data: Data) throws -> [String: Any] {
         guard !data.isEmpty else { throw ApplePropertyListError.empty }

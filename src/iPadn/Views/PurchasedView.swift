@@ -5,7 +5,6 @@ struct PurchasedView: View {
     @EnvironmentObject private var apple: AppleService
     @EnvironmentObject private var manager: DownloadManager
     @State private var term = ""
-    /// `term` after typing pauses: large purchase lists filter once, not per key.
     @State private var query = ""
     @State private var months = 0
     @State private var showLogin = false
@@ -14,7 +13,6 @@ struct PurchasedView: View {
     @State private var selecting = false
     @State private var selection = Set<String>()
     @State private var batchProgress: (done: Int, total: Int)?
-    /// Only purchases no longer on sale in the account's storefront.
     @State private var delistedOnly = false
     @State private var share: SharedFile?
     private var filtered: [OwnedApp] {
@@ -27,11 +25,8 @@ struct PurchasedView: View {
             (term.isEmpty || $0.id.contains(term) || $0.name.localizedCaseInsensitiveContains(term) || $0.bundleID.localizedCaseInsensitiveContains(term))
         }
     }
-    /// Download state per App ID: a newer store version first, then downloaded.
     private var downloadBadges: [String: (text: LocalizedStringKey, tint: Color)] {
         var badges: [String: (text: LocalizedStringKey, tint: Color)] = [:]
-        // Purchases are iPhone and iPad apps; a Mac or Apple TV download under
-        // a shared App ID is a different package.
         for job in manager.jobs where job.status == .completed && [AppPlatform.iOS, .iPadOS].contains(job.updatePlatform) {
             if let key = job.updateKey, let latest = store.availableUpdates[key] {
                 badges[job.app.id] = ("Version \(latest.version) is available", UX.tint)
@@ -64,7 +59,6 @@ struct PurchasedView: View {
         do { share = SharedFile(url: try store.exportOwned()) }
         catch { store.errorMessage = AppText.text("Export failed: \(error.localizedDescription)") }
     }
-    /// Adds the selected apps one after another; the list order is kept.
     private func downloadSelected() {
         download(store.owned.filter { selection.contains($0.id) }.map(\.storeApp))
     }
@@ -177,8 +171,6 @@ struct PurchasedView: View {
                             } else {
                                 NavigationLink { AppDetailView(app: storeApp(app)) } label: {
                                     AppRow(app: storeApp(app), subtitle: subtitle, badge: badges[app.id]) {
-                                        // The App Store's re-download glyph leaves room for the
-                                        // purchase date in longer languages.
                                         Image(systemName: "icloud.and.arrow.down")
                                             .font(.title3.weight(.medium)).foregroundStyle(UX.tint)
                                             .frame(width: 34, height: 44).contentShape(Rectangle())
@@ -229,7 +221,6 @@ struct PurchasedView: View {
         .task(id: "\(apple.activeID ?? "")|\(store.ownedRevision)") { await store.loadOwnedArtwork() }
         .refreshable { if apple.active != nil { await store.refreshOwned() } }
         .task(id: term) {
-            // Clearing is instant; typing waits for a short pause.
             if !term.isEmpty { try? await Task.sleep(for: .milliseconds(250)) }
             guard !Task.isCancelled else { return }
             query = term

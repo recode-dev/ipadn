@@ -1,6 +1,5 @@
 import Foundation
 
-/// Session-only samples: never persist a speed across pauses or app launches.
 struct TransferMetrics {
     private(set) var bytes: Int64
     private(set) var sampledAt: TimeInterval

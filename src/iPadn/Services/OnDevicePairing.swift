@@ -4,19 +4,12 @@ import Foundation
 import UIKit
 import UserNotifications
 
-/// Creates the pairing file on the device itself (iOS 27 and later): iPadn
-/// presents itself as a computer, the user picks it in Settings › Privacy &
-/// Security › Developer Mode and types the code iPadn shows. The steps and the
-/// code follow the user into Settings on the Lock Screen and Dynamic Island.
 @MainActor
 final class OnDevicePairing: ObservableObject {
     enum Phase: Equatable {
         case idle
-        /// Advertised; waiting for the user to pick iPadn in Settings.
         case waiting
-        /// The device connected and is starting the exchange.
         case connected
-        /// The code to type on the device.
         case code(String)
         case finished
         case failed(String)
@@ -27,12 +20,10 @@ final class OnDevicePairing: ObservableObject {
         if #available(iOS 27.0, *) { return NativeInstaller.pairingIsAvailable }
         return false
     }
-    /// The name Settings shows for iPadn.
     static let hostName = "iPadn"
     static let serviceType = "_remotepairing-pairable-host._tcp."
 
     private var service: NetService?
-    // ActivityKit is unavailable on iOS 16.0. Access the handle only in guarded methods.
     private var activity: Any?
     private let keepAlive = PairingKeepAlive()
     private var running = false
@@ -42,8 +33,6 @@ final class OnDevicePairing: ObservableObject {
         running = true
         phase = .waiting
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        // iPadn must keep answering while Settings is in front; a background
-        // task alone ends within seconds, which stops the pairing.
         keepAlive.start()
         startActivity()
         InstallLog.shared.add("on-device pairing started (live activity: \(activity == nil ? "off" : "on"))")
@@ -81,7 +70,6 @@ final class OnDevicePairing: ObservableObject {
         case .code(let code):
             phase = .code(code)
             update(step: 3, code: code)
-            // Also as a notification, for devices without Live Activities.
             notify(AppText.text("iPadn pairing code: \(code)"), body: AppText.text("Enter this code in Settings."))
         }
     }
@@ -108,11 +96,9 @@ final class OnDevicePairing: ObservableObject {
         }
     }
 
-    // MARK: Live Activity
 
     private func startActivity() {
         guard #available(iOS 16.2, *), ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        // A pairing left over from an earlier run is no longer true.
         for old in Activity<PairingActivityAttributes>.activities {
             Task { await old.end(nil, dismissalPolicy: .immediate) }
         }
@@ -124,7 +110,6 @@ final class OnDevicePairing: ObservableObject {
     private func update(step: Int, code: String? = nil) {
         guard #available(iOS 16.2, *), let activity = activity as? Activity<PairingActivityAttributes> else { return }
         let state = PairingActivityAttributes.ContentState(step: step, code: code)
-        // An alert expands the Dynamic Island when the code arrives.
         let alert = code.map { AlertConfiguration(title: "iPadn Pairing Code", body: "\($0)", sound: .default) }
         Task { await activity.update(ActivityContent(state: state, staleDate: nil), alertConfiguration: alert) }
     }
@@ -143,7 +128,6 @@ final class OnDevicePairing: ObservableObject {
     }
 
     private func notify(_ title: String, body: String) {
-        // Only useful while the user is away from iPadn.
         guard UIApplication.shared.applicationState != .active else { return }
         let content = UNMutableNotificationContent()
         content.title = title; content.body = body
@@ -152,8 +136,6 @@ final class OnDevicePairing: ObservableObject {
     }
 }
 
-/// Keeps iPadn running in the background while the user pairs in Settings,
-/// by playing silence mixed with other audio. Runs only during a pairing.
 @MainActor
 final class PairingKeepAlive {
     private var player: AVAudioPlayer?
@@ -165,7 +147,6 @@ final class PairingKeepAlive {
         }
         do {
             let session = AVAudioSession.sharedInstance()
-            // Mixing leaves the user's music alone and adds no Now Playing entry.
             try session.setCategory(.playback, options: [.mixWithOthers])
             try session.setActive(true)
             let player = try AVAudioPlayer(data: Self.silence)
@@ -188,7 +169,6 @@ final class PairingKeepAlive {
         if background != .invalid { UIApplication.shared.endBackgroundTask(background); background = .invalid }
     }
 
-    /// One second of 8 kHz, 16-bit mono silence as a WAV file.
     private static let silence: Data = {
         let rate: UInt32 = 8000, samples: UInt32 = 8000
         let bytes = samples * 2

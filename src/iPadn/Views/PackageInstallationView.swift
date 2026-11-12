@@ -7,24 +7,17 @@ struct PackageInstallationView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     let job: DownloadJob
-    /// Opened because the download just finished: start installing right away.
     var startsAutomatically = false
     @State private var busy = false
-    /// The link is open and the system is loading the install details: the
-    /// button keeps showing progress until its prompt actually appears.
     @State private var openingSystem = false
     @State private var message: String?
     @State private var issue: String?
     @State private var sharedFile: SharedFile?
-    /// The system took the install link; show how far it has got.
     @State private var started = false
     @State private var attempted = false
-    /// Which request the delayed connection check belongs to.
     @State private var attempt = 0
     private let proxied = LocalHostRecord.proxyOrVPNActive
-    /// How far a native installation has got; nil when none is running.
     @State private var nativePhase: NativeInstaller.Phase?
-    /// Native installation only: keep the App Store from offering updates.
     @State private var blockUpdates = false
     private var native: Bool { store.settings.usesNativeInstallation }
     var body: some View {
@@ -114,7 +107,6 @@ struct PackageInstallationView: View {
                 } message: { Text(issue ?? "") }
         }
     }
-    /// What this install method needs to succeed.
     private var installationHint: String {
         var text = store.settings.automaticInstallation ? AppText.text("Don't leave iPadn until the installation finishes.")
             : store.settings.localInstallation ? AppText.text("Create a certificate in Install method first, then install the profile and enable trust.")
@@ -126,14 +118,12 @@ struct PackageInstallationView: View {
         text += "\n" + AppText.text("Apps installed this way aren't recognized or updated by the App Store, and can't replace an App Store copy already on the device. For either, use Native Install or export to a computer.")
         return text
     }
-    /// Shown while a proxy or VPN is on: the address this method needs to reach directly.
     private var proxyHint: String {
         let host = store.settings.automaticInstallation ? "api.palera.in"
             : store.settings.localInstallation ? "ipadn.localtest.me" : nil
         guard let host else { return "" }
         return "\n" + AppText.text("Proxy detected: if installation fails, add a DIRECT rule for \(host).")
     }
-    /// Hands the package to the system installer and waits for it to finish.
     private func requestNativeInstallation() {
         guard !busy else { return }
         UX.feedback()
@@ -186,7 +176,6 @@ struct PackageInstallationView: View {
                                           + (accepted ? "accepted" : "refused"))
                     if accepted {
                         started = true
-                        // Until the prompt (or Safari) takes over the screen.
                         openingSystem = true
                         Task { @MainActor in
                             try? await Task.sleep(for: .seconds(12))
@@ -196,8 +185,6 @@ struct PackageInstallationView: View {
                     }
                     else { issue = AppText.text("Couldn't start the installation. Check the install method, or export the package."); store.installation.stopHosting() }
                     guard accepted, local else { return }
-                    // The system fetches the install details from iPadn right away;
-                    // if it never did, it could not connect.
                     Task { @MainActor in
                         try? await Task.sleep(for: .seconds(6))
                         if attempt == current, InstallLog.shared.manifestCount == served, !viaBrowser {
@@ -213,7 +200,6 @@ struct PackageInstallationView: View {
     }
 }
 
-/// The step a native installation is at.
 private struct NativeProgressRow: View {
     let phase: NativeInstaller.Phase
     var body: some View {
@@ -235,7 +221,6 @@ private struct NativeProgressRow: View {
     }
 }
 
-/// What the system is doing with the installation right now.
 private struct InstallProgressRow: View {
     let progress: InstallLog.Progress
     let note: String?

@@ -1,15 +1,3 @@
-//! Native installation for iPadn.
-//!
-//! Talks to this device's own installation service, the one desktop tools
-//! reach over USB, through a loopback VPN and a remote pairing file. Unlike a
-//! manifest (`itms-services`) install, the system keeps the package's App
-//! Store purchase record and replaces an App Store copy in place.
-//!
-//! On iOS 27 and later the pairing file itself can be made on the device; see
-//! [`pairing`].
-//!
-//! Every entry point takes a JSON request and returns a JSON reply the caller
-//! frees with `iPadnNativeFree`; nothing here aborts or unwinds into Swift.
 
 use std::ffi::{CStr, CString, c_char, c_void};
 use std::net::{IpAddr, SocketAddr};
@@ -51,7 +39,6 @@ struct Progress {
     callback: Option<ProgressCallback>,
     context: *mut c_void,
 }
-// The caller guarantees `context` outlives the call and may be used from any thread.
 unsafe impl Send for Progress {}
 unsafe impl Sync for Progress {}
 
@@ -65,25 +52,18 @@ impl Progress {
 
 #[derive(Deserialize)]
 pub(crate) struct Request {
-    /// Path of the remote pairing (RPPairing) file.
     pairing_file: String,
-    /// Address of this device through the loopback VPN, normally 10.7.0.1.
     host: String,
-    /// Port of `_remotepairing._tcp`, discovered by the caller.
     port: u16,
     bundle_id: String,
     #[serde(default)]
     ipa: Option<String>,
     #[serde(default)]
     hostname: Option<String>,
-    /// A replacement purchase record (iTunesMetadata.plist, base64). The
-    /// system keeps it instead of the package's own; iPadn uses it to mark
-    /// the installed version as the newest so the App Store offers no update.
     #[serde(default)]
     metadata: Option<String>,
 }
 
-/// A failure tagged with the step it happened in, so the app can explain it.
 pub(crate) struct Failure {
     stage: &'static str,
     message: String,
@@ -116,8 +96,6 @@ async fn connect(request: &Request) -> Result<Session, Failure> {
         .map_err(fail("connect"))?;
     let mut client = RemotePairingClient::new(RpPairingSocket::new(stream), hostname);
 
-    // Verify only. A rejected file must not start a new pairing: that would
-    // raise a trust prompt and silently replace the user's file.
     tokio::time::timeout(HANDSHAKE_TIMEOUT, async {
         client.attempt_pair_verify().await?;
         client.validate_pairing(&mut pairing).await
@@ -155,8 +133,6 @@ async fn open_tunnel(
     Ok(Session { adapter, handshake })
 }
 
-/// installation_proxy frames each plist with a big-endian length. The crate
-/// keeps its plist helpers private and its lookup cannot ask for attributes.
 async fn exchange(
     client: &mut InstallationProxyClient,
     message: &plist::Value,
@@ -203,7 +179,6 @@ async fn lookup(session: &mut Session, bundle_id: &str) -> Result<Json, IdeviceE
     if let Some(error) = reply.get("Error").and_then(|value| value.as_string()) {
         return Err(IdeviceError::UnexpectedResponse(error.to_string()));
     }
-    // An unreadable inventory must never be reported as "not installed".
     let Some(plist::Value::Dictionary(mut result)) = reply.remove("LookupResult") else {
         return Err(IdeviceError::UnexpectedResponse("missing LookupResult".into()));
     };
@@ -213,7 +188,6 @@ async fn lookup(session: &mut Session, bundle_id: &str) -> Result<Json, IdeviceE
     Ok(describe(&app))
 }
 
-/// What iPadn reports about one installed app.
 fn describe(app: &plist::Dictionary) -> Json {
     let text = |key: &str| app.get(key).and_then(|value| value.as_string()).map(str::to_string);
     let metadata = match app.get("iTunesMetadata") {
@@ -246,7 +220,6 @@ fn describe(app: &plist::Dictionary) -> Json {
     })
 }
 
-/// Every app the user installed, with the same details as `lookup`.
 async fn list(session: &mut Session) -> Result<Json, IdeviceError> {
     let mut client =
         InstallationProxyClient::connect_rsd(&mut session.adapter, &mut session.handshake).await?;
@@ -307,8 +280,6 @@ async fn upload(session: &mut Session, path: &str, progress: Progress) -> Result
     let (outcome, closed) = {
         let mut descriptor =
             afc.open(STAGED_PACKAGE, AfcFopenMode::WrOnly).await.map_err(fail("upload"))?;
-        // Streamed in chunks: reading a whole package into memory gets a phone
-        // app killed for packages of a few hundred megabytes.
         let outcome: Result<(), Failure> = loop {
             if CANCELLED.load(Ordering::SeqCst) {
                 break Err(failure("cancelled", "cancelled"));
@@ -324,7 +295,6 @@ async fn upload(session: &mut Session, path: &str, progress: Progress) -> Result
             sent += read as u64;
             progress.report(PHASE_UPLOAD, sent, total);
         };
-        // Close even after a failed write, or the device-side descriptor leaks.
         (outcome, descriptor.close().await.map_err(fail("upload")))
     };
     let complete = outcome.is_ok() && closed.is_ok() && sent == total;
@@ -373,8 +343,6 @@ async fn install(request: &Request, progress: Progress) -> Result<Json, Failure>
         return Err(failure("cancelled", "cancelled"));
     }
 
-    // Upgrade replaces an installed copy in place and keeps its data; the
-    // system reads the purchase record and licence from the package itself.
     let upgrade = before["installed"] == json!(true);
     let mut options = plist::Dictionary::new();
     options.insert("CFBundleIdentifier".into(), request.bundle_id.clone().into());
@@ -426,7 +394,6 @@ where
             .build()
             .map_err(fail("runtime"))?;
         let reply = runtime.block_on(work(request));
-        // Tunnel tasks hold sockets; do not wait on them indefinitely.
         runtime.shutdown_timeout(Duration::from_secs(2));
         reply
     })();
@@ -440,11 +407,6 @@ where
         .into_raw()
 }
 
-/// Installs or upgrades `ipa`. Blocks until the system finishes.
-///
-/// # Safety
-/// `request` must be a valid NUL-terminated string. `context` must stay valid
-/// for the whole call; `progress` may be invoked from another thread.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn iPadnNativeInstall(
     request: *const c_char,
@@ -456,10 +418,6 @@ pub unsafe extern "C" fn iPadnNativeInstall(
     run(request, |request: Request| async move { install(&request, progress).await })
 }
 
-/// Connects and reports what the system has installed for `bundle_id`.
-///
-/// # Safety
-/// `request` must be a valid NUL-terminated string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn iPadnNativeLookup(request: *const c_char) -> *mut c_char {
     run(request, |request: Request| async move {
@@ -469,10 +427,6 @@ pub unsafe extern "C" fn iPadnNativeLookup(request: *const c_char) -> *mut c_cha
     })
 }
 
-/// Connects and reports every app the user installed.
-///
-/// # Safety
-/// `request` must be a valid NUL-terminated string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn iPadnNativeList(request: *const c_char) -> *mut c_char {
     run(request, |request: Request| async move {
@@ -482,16 +436,6 @@ pub unsafe extern "C" fn iPadnNativeList(request: *const c_char) -> *mut c_char 
     })
 }
 
-/// Lets the device pair with this app as if it were a computer (iOS 27 and
-/// later). Blocks until pairing completes, fails, times out or is cancelled.
-///
-/// `events` receives, in order: ready (JSON with the port, the service
-/// identifier and the TXT records to advertise), connected, and the PIN the
-/// user types on the device. The reply carries the pairing file as base64.
-///
-/// # Safety
-/// `request` must be a valid NUL-terminated string. `context` must stay valid
-/// for the whole call; `events` may be invoked from another thread.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn iPadnNativePair(
     request: *const c_char,
@@ -502,22 +446,16 @@ pub unsafe extern "C" fn iPadnNativePair(
     run(request, |request: pairing::PairRequest| async move { pairing::pair(request, events).await })
 }
 
-/// Stops a pairing that is waiting for the device.
 #[unsafe(no_mangle)]
 pub extern "C" fn iPadnNativePairCancel() {
     pairing::cancel();
 }
 
-/// Stops an upload in progress. A started system install cannot be stopped.
 #[unsafe(no_mangle)]
 pub extern "C" fn iPadnNativeCancel() {
     CANCELLED.store(true, Ordering::SeqCst);
 }
 
-/// Frees a reply returned by this library.
-///
-/// # Safety
-/// `reply` must come from this library and not have been freed.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn iPadnNativeFree(reply: *mut c_char) {
     if !reply.is_null() {

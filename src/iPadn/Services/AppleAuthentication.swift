@@ -1,7 +1,5 @@
 import Foundation
 
-/// Authentication-specific response handling. Never retain bodies, arbitrary headers,
-/// URLs, or localized error descriptions: these can contain account credentials.
 enum AppleAuthentication {
     static let path = "/WebObjects/MZFinance.woa/wa/authenticate"
     static let nativePaths: Set<String> = [
@@ -181,8 +179,6 @@ enum AppleAuthentication {
             return nil
         }
         if url.host?.lowercased() != "auth.itunes.apple.com" {
-            // Apple's bare authenticate path on buy pods can return an unusable response.
-            // Keep the host and query; only normalize its trailing slash.
             parts.path = path + "/"
         }
         return parts.url
@@ -190,7 +186,6 @@ enum AppleAuthentication {
 
     static func endpoint(from data: Data) throws -> URL {
         let raw = try ApplePropertyList.dictionary(data)
-        // Apple currently returns a flat bag; older responses wrap it in urlBag.
         let bag = raw["urlBag"] as? [String: Any] ?? raw
         guard let address = bag["authenticateAccount"] as? String else { throw ConfigurationError.missingEndpoint }
         guard let url = URL(string: address), let endpoint = normalizedEndpoint(url) else {
@@ -231,7 +226,6 @@ enum AppleAuthentication {
         if let error = error as? ConfigurationError { return "error=configuration-" + error.rawValue }
         if let error = error as? HTTPStatusError { return "http=\(error.code)" }
         let ns = error as NSError
-        // Only known system domains. Custom NSError domains can contain arbitrary text.
         let domains = [NSURLErrorDomain, NSCocoaErrorDomain, "WebKitErrorDomain"]
         return "error=\(domains.contains(ns.domain) ? ns.domain : "application"); code=\(ns.code)"
     }
@@ -257,8 +251,6 @@ enum AppleAuthentication {
         pause: () async throws -> Void = { try await Task.sleep(for: .seconds(1)) },
         report: (String) -> Void) async throws -> ([String: Any], HTTPURLResponse) {
         guard isEndpoint(endpoint) else { throw ToolError.message(AppText.text("Apple's sign-in URL is invalid")) }
-        // A transport retry keeps exactly the same signed payload, including attempt.
-        // Never retry a decoded Apple credential error or a 2FA challenge.
         for attempt in 1...2 {
             try Task.checkCancellation()
             let requestHeaders = try await (makeHeaders?() ?? headers)

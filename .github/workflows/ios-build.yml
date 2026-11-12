@@ -185,8 +185,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "iPadn $RELEASE_TAG" \
             --notes-file release/notes.md --latest
       - name: Update the AltStore source
-        # Signing tools read altstore-source.json from main to offer the update.
-        # A failure here must not undo a published release.
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}

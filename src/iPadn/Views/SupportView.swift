@@ -2,16 +2,13 @@ import SwiftUI
 import UIKit
 import CoreImage.CIFilterBuiltins
 
-/// Ways to support iPadn. Everything here is optional: the app stays free.
 enum SupportLinks {
     static let afdian = URL(string: "https://afdian.com/a/mengangs")!
-    /// USDT on BNB Smart Chain (BEP20) only.
     static let usdtAddress = "0x5f0cff7587b9fc305f9fa626135789bd5100818e"
     static let repository = URL(string: "https://github.com/mengangs/ipadn")!
     static let issues = URL(string: "https://github.com/mengangs/ipadn/issues")!
 }
 
-/// The settings row that opens the support page: a heart on a soft pink tile.
 struct SupportRow: View {
     var body: some View {
         HStack(spacing: 14) {
@@ -106,7 +103,6 @@ struct SupportView: View {
     private var header: some View {
         VStack(spacing: 14) {
             ZStack {
-                // A few small hearts around the big one, like confetti.
                 ForEach(Self.confetti.indices, id: \.self) { index in
                     let item = Self.confetti[index]
                     Image(systemName: "heart.fill").font(.system(size: item.size))
@@ -160,7 +156,6 @@ struct SupportView: View {
         Confetti(x: 64, y: 44, size: 9, angle: -10, opacity: 0.3),
     ]
 
-    /// The address as a QR code, made on the device.
     private static let qrCode: UIImage? = {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(SupportLinks.usdtAddress.utf8)

@@ -9,8 +9,6 @@ enum PackageIconService {
             .appendingPathComponent(id.uuidString + ".png")
     }
 
-    /// `minimumPixels` rejects icons too small to look sharp (older packages
-    /// often ship only a 120 px PNG) when better store artwork exists.
     static func save(from ipa: URL, id: UUID, minimumPixels: Int = 0) throws -> Bool {
         guard let data = try png(from: ipa, minimumPixels: minimumPixels) else { return false }
         let url = cacheURL(id)
@@ -19,9 +17,6 @@ enum PackageIconService {
         return true
     }
 
-    // tvOS frequently ships its icons only inside Apple TV asset catalogs.
-    // iOS cannot reliably decode those renditions, so cache the public Apple
-    // Store artwork as a stable local fallback instead of showing a placeholder.
     static func pixelWidth(_ file: URL) -> Int {
         guard let source = CGImageSourceCreateWithURL(file as CFURL, nil),
               let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else { return 0 }
@@ -82,7 +77,6 @@ enum PackageIconService {
             let name = ($0.path as NSString).lastPathComponent.lowercased()
             return name.hasPrefix("appicon") || name.hasPrefix("icon.") || name.hasPrefix("icon@");
         }
-        // A declared primary icon wins over alternate icons, extensions and store artwork.
         var smallFallback: Data?
         for candidates in [primary, conventional] {
             var best: (pixels: Int, image: CGImage)?
@@ -106,11 +100,6 @@ enum PackageIconService {
                 smallFallback = smallFallback ?? data
             }
         }
-        // A package's compiled asset catalog (Assets.car) is never handed to
-        // UIImage(named:in:): a catalog it can't decode (NetEase Cloud Music's,
-        // for one) raises an Objective-C assertion that ends the app, and the
-        // downloads list scans icons on every launch. Packages without PNG
-        // icons show the store artwork instead.
         return minimumPixels > 0 ? nil : smallFallback
     }
 

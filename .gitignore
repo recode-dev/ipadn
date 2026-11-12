@@ -1,4 +1,3 @@
-# Local xtool (WSL) build setup — not part of the Xcode/CI build
 /.bsp/
 /.build/
 /xtool/
@@ -9,6 +8,4 @@
 /Config/
 /scripts/
 /iPadn-iOS/vendor/ZIPFoundation/
-
-# Local copy of build_native_install.sh with LF line endings for WSL
 /iPadn-iOS/scripts/.bni.sh

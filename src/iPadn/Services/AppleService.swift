@@ -19,7 +19,6 @@ final class AppleService: ObservableObject {
     nonisolated static func randomGUID() -> String {
         (0..<6).map { _ in String(format: "%02X", UInt8.random(in: 0...255)) }.joined()
     }
-    /// Replaces the identifier Apple sees for this device (专业模式).
     func setGUID(_ value: String) throws {
         let id = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard id.count == 12, id.allSatisfy({ $0.isASCII && $0.isHexDigit }) else {
@@ -36,12 +35,10 @@ final class AppleService: ObservableObject {
         if !accounts.contains(where: { $0.id == activeID }) { activeID = nil }
     }
 
-    /// Session cookies updated by store responses, by account, not yet saved.
     private var liveCookies: [String: String] = [:]
     private var cookiesSavedAt = Date.distantPast
 
     func login(email: String, password: String, code: String, useCache: Bool) async throws {
-        // Someone is waiting on sign-in; it goes ahead of background signing.
         try await SAPSigner.$userInitiated.withValue(true) {
             try await performLogin(email: email, password: password, code: code, useCache: useCache)
         }
@@ -187,10 +184,6 @@ final class AppleService: ObservableObject {
         accounts = updated
         if activeID == id { select(nil) }
     }
-    /// Apple sends a code to trusted devices only when it is asked to sign in
-    /// with the password and no code. Store requests that need verification
-    /// (claiming an app, a download) never send one, so the code page must ask
-    /// first. Returns false when Apple signed in without needing a code.
     func requestVerificationCode(expectedID: String, useCache: Bool) async throws -> Bool {
         try await SAPSigner.$userInitiated.withValue(true) { try await requestCode(expectedID: expectedID, useCache: useCache) }
     }
@@ -236,16 +229,12 @@ final class AppleService: ObservableObject {
         var targetVersion = versionID
         var tvListing: StoreApp?
         if store.platform == .tvOS {
-            // Always resolve the Apple TV offer in the authenticated account's
-            // storefront. The user's chosen search region may differ.
             var accountStore = store
             if let country = StoreService.country(forStorefront: account.storeFront) {
                 accountStore.country = country
             }
             tvListing = try? await StoreService.platformApp(appID, store: accountStore)
             if targetVersion == nil { targetVersion = tvListing?.externalVersionID }
-            // Delisted Apple TV purchases may have no public catalog offer.
-            // Such requests still undergo strict package validation below.
         }
         var asset: DownloadAsset
         do {
@@ -254,7 +243,6 @@ final class AppleService: ObservableObject {
                                          allowLicenseAcquisition: allowLicenseAcquisition)
         } catch let error as ToolError where targetVersion == nil && store.platform.usesIOSStore
                     && error.localizedDescription == Self.noOfferMessage {
-            // Apple Arcade games may need the current version named (ipatool).
             guard let country = StoreService.country(forStorefront: account.storeFront),
                   let latest = await StoreService.latestIOSVersionID(appID, bundleID: "", country: country, platform: store.platform)
             else { throw error }
@@ -266,9 +254,6 @@ final class AppleService: ObservableObject {
         if store.platform == .tvOS {
             let tvPlatforms = ["tvos", "appletvos", "appletv", "atv9"]
             if !reported.isEmpty && !tvPlatforms.contains(reported) {
-                // The standard dispatch can resolve a shared iOS App ID to its
-                // iPhone build. Try Apple's alternate version-aware endpoint once
-                // before reporting that no verified tvOS file is available.
                 if let alternate = try? await fetchAsset(appID: appID, versionID: targetVersion,
                     account: account, useCache: useCache, fallback: true,
                     refreshed: false, purchased: false,
@@ -279,11 +264,7 @@ final class AppleService: ObservableObject {
                     throw ToolError.message(AppText.text("This app has no downloadable Apple TV version"))
                 }
             }
-            // A missing platform field is not proof of tvOS compatibility.
-            // Final IPA validation still requires UIDeviceFamily to include Apple TV.
             asset.platform = "appletvos"
-            // The dispatch response carries the shared App ID's iPhone artwork;
-            // show the Apple TV icon instead.
             if let icon = tvListing?.iconURL { asset.app.iconURL = icon }
         } else {
             guard reported.isEmpty || ["ios", "iphoneos", "ipad"].contains(reported) else {
@@ -307,14 +288,12 @@ final class AppleService: ObservableObject {
         if !fallback {
             guard !account.dsid.isEmpty else { throw ToolError.message(AppText.text("Sign-in expired. Sign in again.")) }
             let kbsync = try await signer.kbsync(guid: guid, dsid: account.dsid, useCache: useCache)
-            // Node plist builder in the supplied source emits the returned Base64 as a string.
             payload["kbsync"] = kbsync
         }
         let (raw, _) = try await storePlist(URL(string: root + "?guid=" + guid)!,
             body: HTTPClient.encodePlist(payload), headers: authHeaders(account), guid: guid, useCache: useCache)
         let failure = plistString(raw["failureType"])
         if AppleAuthError.requiresReauthentication(raw) { throw AppleAuthError.reauthenticationRequired }
-        // Still expired right after a refresh: only signing in again can help.
         if ["2034", "2042"].contains(failure), refreshed { throw AppleAuthError.reauthenticationRequired }
         if ["2034", "2042"].contains(failure), !refreshed {
             let refreshedAccount: AppleAccount
@@ -322,7 +301,6 @@ final class AppleService: ObservableObject {
             catch {
                 if error is AppleLoginError || error is AppleAuthError || error is CancellationError
                     || (error as NSError).domain == NSURLErrorDomain { throw error }
-                // The saved password no longer works (changed or wrong): ask for it.
                 throw AppleAuthError.reauthenticationRequired
             }
             return try await fetchAsset(appID: appID, versionID: versionID, account: refreshedAccount,
@@ -331,16 +309,12 @@ final class AppleService: ObservableObject {
         }
         if Self.shouldAcquireLicense(failure: failure, purchased: purchased,
                                      allowLicenseAcquisition: allowLicenseAcquisition) {
-            // A missing license does not mean the login session is expired. Refreshing
-            // here always calls authenticate and can trigger an invisible 2FA prompt.
-            // Acquire the free license using the current valid account first.
             guard activeID == account.id else { throw ToolError.message(AppText.text("The account changed. Start the download again.")) }
             try await acquireFreeApp(appID, account: account, useCache: useCache)
             return try await fetchAsset(appID: appID, versionID: versionID, account: account,
                 useCache: useCache, fallback: fallback, refreshed: refreshed, purchased: true,
                 allowLicenseAcquisition: allowLicenseAcquisition)
         }
-        // Viewing a version list never claims a license; say what is missing.
         if failure == "9610" && !allowLicenseAcquisition { throw AppleLicenseError.notOwned }
         if let error = HTTPClient.appleFailure(raw) { throw error }
         guard let song = (raw["songList"] as? [[String: Any]])?.first else {
@@ -368,9 +342,6 @@ final class AppleService: ObservableObject {
             version: plistString(metadata["bundleShortVersionString"]), iconURL: StoreService.icon(plistString(defaultArt?["url"])),
             size: (assetInfo?["file-size"] as? NSNumber)?.int64Value ?? 0,
             minimumOS: plistString(metadata["minimumOSVersion"] ?? metadata["minimumOsVersion"]), externalVersionID: externalID)
-        // The server order is positional: SC_Info/Manifest.plist.SinfPaths
-        // uses the same order. Sorting by the opaque `id`, or compacting a
-        // missing item, assigns licenses to the wrong extension/framework.
         let sinfs = try Self.mobileSinfs(song["sinfs"] as? [[String: Any]] ?? [])
         let sinf = sinfs[0]
         let encodedMetadata: Data = try (try? PropertyListSerialization.data(fromPropertyList: metadata, format: .binary, options: 0))
@@ -380,9 +351,6 @@ final class AppleService: ObservableObject {
             platform: plistString(metadata["software-platform"]), account: account.id)
     }
 
-    /// Download ticket for one version, used only to read that version's
-    /// Info.plist. Unlike a download it never acquires a license or signs in
-    /// again, so browsing a version list cannot trigger a verification prompt.
     func versionTicket(appID: String, versionID: String, useCache: Bool) async throws -> URL {
         guard let account = active, !account.dsid.isEmpty else { throw AppleAuthError.reauthenticationRequired }
         guard let app = UInt64(appID), app > 0, UInt64(versionID).map({ $0 > 0 }) == true else {
@@ -424,7 +392,6 @@ final class AppleService: ObservableObject {
         result.reserveCapacity(records.count)
         for record in records {
             guard let data = bytes(record["sinf"]) else {
-                // Never shift later records into this record's path.
                 throw ToolError.message(AppText.text("The app's multi-component download license is incomplete. Download again."))
             }
             result.append(data)
@@ -432,10 +399,6 @@ final class AppleService: ObservableObject {
         return result
     }
 
-    /// The iTunesMetadata.plist Apple's own clients (iTunes, App Store) write.
-    /// installd records the purchaser from `com.apple.iTunesStore.downloadInfo`;
-    /// without it App Store does not recognize the installed app as its own,
-    /// shows a download button and never offers updates.
     nonisolated static func purchaseMetadata(_ source: [String: Any], account: AppleAccount, appID: String = "",
                                              purchaseDate: Date) -> [String: Any] {
         var metadata = source
@@ -476,8 +439,6 @@ final class AppleService: ObservableObject {
         failure == "9610" && !purchased && allowLicenseAcquisition
     }
 
-    /// `arcade` false first; an iOS app that Apple reports unavailable (2059)
-    /// is retried as an Apple Arcade game, as ipatool does.
     private func acquireFreeApp(_ id: String, account: AppleAccount, mac: Bool = false, arcade: Bool = false,
                                 useCache: Bool = true) async throws {
         let deviceID = guid
@@ -489,10 +450,7 @@ final class AppleService: ObservableObject {
         let (raw, _) = try await storePlist(
             URL(string: "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/buyProduct")!,
             body: HTTPClient.encodePlist(payload), headers: headers, guid: deviceID, useCache: useCache)
-        // A license acquisition can independently require a new trusted-device
-        // approval, even when the previous download token was accepted.
         if AppleAuthError.requiresReauthentication(raw) { throw AppleAuthError.reauthenticationRequired }
-        // The account already holds the license (ipatool): nothing to claim.
         if plistString(raw["failureType"]) == "5002" { return }
         if plistString(raw["customerMessage"]) == "Subscription Required" {
             throw ToolError.message(AppText.text("This app is part of Apple Arcade. The account needs an Apple Arcade subscription to download it."))
@@ -508,13 +466,6 @@ final class AppleService: ObservableObject {
         guard raw["jingleDocType"] != nil else { throw ToolError.message(AppText.text("Couldn't get the free app's license. Get it in the App Store first.")) }
     }
 
-    // Official Apple Mac App Store authorization preflight.
-    // This deliberately does NOT create a download task: Mac Store packages
-    // can require StoreAgent/dpInfo processing before they become valid XAR.
-    // Exposing the encrypted response as a .pkg would corrupt the export.
-    /// `versionID` nil asks for the latest version on the Mac product page.
-    /// A free app the account has never got is claimed first, as for iOS,
-    /// unless `allowLicenseAcquisition` is false (version lists).
     func macPackageOffer(_ app: StoreApp, versionID requested: String? = nil, useCache: Bool,
                          allowLicenseAcquisition: Bool = true, licenseAcquired: Bool = false) async throws -> MacPackageOffer {
         guard let account = active else { throw ToolError.message(AppText.text("Sign in to your Apple Account first")) }
@@ -528,8 +479,6 @@ final class AppleService: ObservableObject {
         if let requested, UInt64(requested).map({ $0 > 0 }) != true {
             throw ToolError.message(AppText.text("The version ID can only contain digits"))
         }
-        // nil when the app is delisted (no product page): the request then
-        // omits externalVersionId and the response must still be macOS.
         let versionID: String?
         if let requested { versionID = requested }
         else { versionID = try await MacStoreOfferService.latestVersionID(appID: app.id, bundleID: app.bundleID, country: country) }
@@ -540,9 +489,6 @@ final class AppleService: ObservableObject {
             throw ToolError.message(AppText.text("Sign-in expired. Sign in again."))
         }
         let sync = try await signer.kbsync(guid: deviceID, dsid: account.dsid, useCache: useCache)
-        // Same ent/download request as ipatool's Mac path: the serial number is
-        // derived from the GUID that also seeds kbsync and later the StoreAgent
-        // dpInfo session, so all three refer to one hardware identity.
         var payload: [String: Any] = [
             "guid": deviceID, "salableAdamId": String(appNumber),
             "serialNumber": serial, "creditDisplay": "", "kbsync": sync
@@ -604,7 +550,6 @@ final class AppleService: ObservableObject {
         guard activeID == account.id else { throw ToolError.message(AppText.text("The account changed. Reload purchases.")) }
         let (items, _) = try await HTTPClient.shared.request(URL(string: base + "/databases/\(revision)/items")!,
             method: "POST", body: body, headers: itemHeaders, appleRedirects: true)
-        // Large accounts return megabytes of tags: parse off the main thread.
         return try await Task.detached(priority: .userInitiated) {
             try DMAP.validate(items)
             return try DMAP.ownedApps(items)
@@ -634,9 +579,6 @@ final class AppleService: ObservableObject {
         return result
     }
 
-    /// Apple refreshes the session cookies on store responses. Keeping only
-    /// the ones from sign-in lets the session go stale, and Apple then asks
-    /// to verify the account again for every app claimed.
     private func absorbCookies(from response: HTTPURLResponse, dsid: String?) {
         guard let dsid, !dsid.isEmpty, let url = response.url,
               let account = accounts.first(where: { $0.dsid == dsid }) else { return }
@@ -647,15 +589,11 @@ final class AppleService: ObservableObject {
         let current = liveCookies[account.id] ?? account.cookie
         let merged = Self.mergedCookie(current, with: received)
         guard merged != current else { return }
-        // Requests use the in-memory value at once. Saving republishes the
-        // account list, so it is written at most once a minute.
         liveCookies[account.id] = merged
         guard Date().timeIntervalSince(cookiesSavedAt) > 60 else { return }
         saveLiveCookies()
     }
 
-    /// Writes the session cookies kept in memory to the saved accounts.
-    /// Best effort: requests already succeeded with them.
     func saveLiveCookies() {
         guard !liveCookies.isEmpty else { return }
         var updated = accounts
@@ -666,8 +604,6 @@ final class AppleService: ObservableObject {
         liveCookies.removeAll()
     }
 
-    /// `existing` with `received` applied: new values replace old ones by
-    /// name, expired or emptied cookies are dropped, order is kept.
     nonisolated static func mergedCookie(_ existing: String, with received: [HTTPCookie], now: Date = Date()) -> String {
         var names: [String] = []
         var values: [String: String] = [:]
@@ -726,23 +662,15 @@ final class AppleService: ObservableObject {
 }
 
 
-// Trusted metadata only. The URL is obtained from an authenticated Apple
-// response; passwords/tokens/dpInfo are never exposed to the UI or logged.
 struct MacPackageOffer {
     let downloadURL: URL
     let versionID: String
     let displayVersion: String
     let protectedByApple: Bool
-    /// Every version Apple lists for this app, oldest first.
     var externalVersionIDs: [String] = []
-    /// Account- and device-bound key material for StoreAgent. Kept in memory
-    /// only; never persisted with download jobs, logged or shown in the UI.
     var dpInfo: Data? = nil
-    /// The GUID whose kbsync authorized this offer; StoreAgent must use it too.
     var hardwareID = ""
 
-    /// ipatool's ent/download serial: a fixed prefix plus the last four bytes
-    /// of the six-byte GUID.
     static func serialNumber(guid: String) -> String? {
         guard guid.count == 12, guid.allSatisfy(\.isHexDigit) else { return nil }
         var bytes: [UInt8] = [0x54, 0xc8, 0xb0, 0xa9, 0x88]
@@ -756,8 +684,6 @@ struct MacPackageOffer {
         return Data(bytes).base64EncodedString()
     }
 
-    /// `versionID` nil accepts whichever version Apple returns (delisted
-    /// apps), still requiring macOS metadata and a numeric version ID.
     static func validate(_ raw: [String: Any], appID: String, bundleID: String,
                          versionID: String?) throws -> MacPackageOffer {
         guard let songs = raw["songList"] as? [[String: Any]], songs.count == 1,
@@ -770,8 +696,6 @@ struct MacPackageOffer {
         let actualBundleID = plistString(metadata["softwareVersionBundleId"])
         let platform = plistString(metadata["software-platform"]).lowercased()
         let type = plistString(metadata["product-type"]).lowercased()
-        // Universal app product-type can still be ios-app. Explicit macOS
-        // software-platform is authoritative, never trust the filename.
         guard itemID == appID,
               versionID.map({ actualVersionID == $0 }) ?? (UInt64(actualVersionID).map { $0 > 0 } ?? false),
               !actualBundleID.isEmpty,
@@ -794,8 +718,6 @@ struct MacPackageOffer {
         if let first = dpInfos.first, dpInfos.contains(where: { $0 != first }) {
             throw ToolError.message(AppText.text("Can't download the Mac package right now. Try again later."))
         }
-        // An iOS-style sinf without dpInfo is evidence of a mobile package,
-        // which contradicts the macOS metadata checked above (as in ipatool).
         guard !sinfs.contains(where: { bytes($0["sinf"]) != nil && bytes($0["dpInfo"]) == nil }) else {
             throw ToolError.message(AppText.text("This app has no downloadable Mac version"))
         }
@@ -840,9 +762,6 @@ enum AppleLoginResponse {
             "guid": guid, "password": password + code, "rmp": "0", "why": "signIn"])
     }
 
-    /// Phone-number Apple Accounts in mainland China and India sign in only
-    /// when the request names their store (ipatool). The Apple ID itself is
-    /// sent unchanged.
     static func phoneNumberStorefront(_ appleID: String) -> String? {
         var number = appleID.trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "-", with: "")
@@ -851,13 +770,10 @@ enum AppleLoginResponse {
         else if number.hasPrefix("00") { international = true; number.removeFirst(2) }
         guard !number.isEmpty, number.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
         let china = "143465", india = "143467"
-        // Check the full length before removing a country code: a local
-        // Indian number can itself start with 91.
         if number.count == 13 && number.hasPrefix("861") { return china }
         if number.count == 12 && number.hasPrefix("91") { number.removeFirst(2) }
         else if international { return nil }
         if number.count == 11 && number.hasPrefix("1") { return china }
-        // India also allows a trunk 0 in national numbers.
         if !international && number.count == 11 && number.hasPrefix("0") { number.removeFirst() }
         if number.count == 10, let first = number.first, ("6"..."9").contains(first) { return india }
         return nil

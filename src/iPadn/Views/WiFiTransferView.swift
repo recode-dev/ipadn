@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// Lets a computer on the same Wi-Fi download finished packages in a browser.
-/// The server runs only while this page is open and iPadn is in front.
 struct WiFiTransferView: View {
     @EnvironmentObject private var manager: DownloadManager
     @Environment(\.scenePhase) private var scenePhase
@@ -24,7 +22,6 @@ struct WiFiTransferView: View {
         }
     }
 
-    /// Stored packages start with the task's ID; the computer gets the readable rest.
     static func publicName(_ stored: String, id: UUID) -> String {
         let prefix = id.uuidString + "-"
         return stored.hasPrefix(prefix) ? String(stored.dropFirst(prefix.count)) : stored
@@ -89,7 +86,6 @@ struct WiFiTransferView: View {
         }
         .compatibleOnChange(of: items.map(\.id)) { _ in server?.update(items: items) }
         .task(id: address) {
-            // Stops after ten minutes without a download.
             while address != nil, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
                 if address != nil, Date().timeIntervalSince(lastActivity) > Self.idleLimit {

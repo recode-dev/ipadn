@@ -1,10 +1,6 @@
 import Foundation
 import CryptoKit
 
-// Structural and checksum validation of a XAR archive (the Mac .pkg format),
-// equivalent to ipatool's post-decryption check: inflate the table of
-// contents, verify its checksum, then verify every file's archived checksum
-// against the heap. A transport-encrypted or truncated download fails here.
 enum XARValidator {
     struct Report: Equatable {
         let files: Int
@@ -41,7 +37,6 @@ enum XARValidator {
         case 1: headerAlgorithm = "sha1"
         case 2: headerAlgorithm = "md5"
         case 3:
-            // Named algorithm, NUL-terminated, directly after the fixed header.
             let extra = try file.read(upToCount: Int(headerSize) - headerLength) ?? Data()
             headerAlgorithm = String(decoding: extra.prefix { $0 != 0 }, as: UTF8.self).lowercased()
         default: throw failure(AppText.text("Unsupported table of contents checksum"))
@@ -97,8 +92,6 @@ enum XARValidator {
         data[data.startIndex + offset ..< data.startIndex + offset + length].reduce(0) { ($0 << 8) | UInt64($1) }
     }
 
-    // XAR stores the TOC as a zlib stream (2-byte header, raw DEFLATE body,
-    // big-endian Adler-32 trailer); Foundation's .zlib handles the body only.
     static func inflateZlib(_ data: Data, expectedLength: Int) throws -> Data {
         guard data.count > 6 else { throw failure(AppText.text("The package's table of contents is incomplete")) }
         let cmf = data[data.startIndex], flags = data[data.startIndex + 1]
@@ -117,7 +110,6 @@ enum XARValidator {
     static func adler32(_ data: Data) -> UInt32 {
         var a: UInt32 = 1, b: UInt32 = 0
         data.withUnsafeBytes { buffer in
-            // 5552 is the largest block that cannot overflow before reduction.
             var index = 0
             while index < buffer.count {
                 let end = min(index + 5552, buffer.count)
@@ -181,7 +173,6 @@ enum XARValidator {
         private var checksumStyle: String?
         private var checksumOffset: UInt64?
         private var checksumSize: UInt64?
-        // Per <data> element of a file.
         private var inData = false
         private var dataOffset: UInt64?
         private var dataLength: UInt64?
@@ -231,8 +222,6 @@ enum XARValidator {
             } else if inData, parent == "data" {
                 switch name {
                 case "offset": dataOffset = UInt64(value)
-                // <length> is the archived byte count in the heap; <size> is
-                // the extracted size and does not describe heap bytes.
                 case "length": dataLength = UInt64(value)
                 case "archived-checksum": archivedChecksum = value
                 default: break

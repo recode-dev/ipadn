@@ -22,8 +22,6 @@ enum DMAP {
         guard [1, 4, 8].contains(data.count) else { throw ToolError.message(AppText.text("DMAP integer has an invalid length")) }
         return data.reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
     }
-    /// Walks tags without copying: payloads are slices of the original buffer
-    /// (purchase lists can be several megabytes with deep nesting).
     static func walk(_ data: Data, depth: Int = 0, visitor: (Tag) throws -> Void) throws {
         guard depth <= 16 else { throw ToolError.message(AppText.text("DMAP data is nested too deeply")) }
         var offset = data.startIndex
@@ -50,7 +48,7 @@ enum DMAP {
                 guard tag.name == name else { return }
                 let number = try integer(tag.payload)
                 guard number <= UInt32.max else { throw ToolError.message(AppText.text("DMAP value exceeds uint32")) }
-                throw Found(value: UInt32(number)) // stop at the first match
+                throw Found(value: UInt32(number))
             }
         } catch let found as Found { return found.value }
         return nil

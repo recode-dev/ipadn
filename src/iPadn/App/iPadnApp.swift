@@ -40,7 +40,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         if !LocalResources.isPreview { UpdateCheckScheduler.register() }
         #if DEBUG
-        // Device tests: open an iPadn link at launch, e.g. --open-url=ipadn://download?url=…
         if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--open-url=") }),
            let url = URL(string: String(argument.dropFirst("--open-url=".count))) {
             Task { @MainActor in try? await Task.sleep(for: .seconds(2)); AppContainer.shared.handleURL(url) }
@@ -93,7 +92,6 @@ struct iPadnApp: App {
                 .onAppear { configureLock(launching: true) }
                 .task { if !LocalResources.isPreview { await AppLock.shared.unlock() } }
                 .compatibleOnChange(of: lockSettings) { _ in configureLock(launching: false) }
-                // @Published sends before the value changes: look once it has.
                 .onReceive(store.downloads.$pendingAutoInstalls) { _ in AutoInstall.presentSoon(store) }
                 .onReceive(AppLock.shared.$locked) { locked in if !locked { AutoInstall.presentSoon(store) } }
                 .task {
@@ -105,9 +103,7 @@ struct iPadnApp: App {
             if !LocalResources.isPreview { AppLock.shared.sceneChanged(to: phase) }
             if phase == .active { AutoInstall.presentNext(store) }
             guard phase == .background, !LocalResources.isPreview else { return }
-            // Session cookies kept in memory must survive the app being closed.
             store.apple.saveLiveCookies()
-            // Only worth waking up for when there is something to check.
             if (store.settings.updateNotifications && store.downloads.jobs.contains(where: { $0.status == .completed && $0.updateKey != nil }))
                 || (store.settings.watchNotifications && !store.favorites.isEmpty) || store.settings.appUpdateCheck {
                 UpdateCheckScheduler.schedule()
@@ -119,8 +115,6 @@ struct iPadnApp: App {
 }
 
 #if DEBUG
-/// Public App Store apps used as screenshot data, so previews show real
-/// names and icons without any account's own records.
 enum PreviewData {
     static func icon(_ path: String) -> URL? {
         URL(string: "https://is1-ssl.mzstatic.com/image/thumb/" + path + "/512x512bb.jpg")
@@ -139,11 +133,9 @@ enum PreviewData {
                  iconURL: icon("Purple221/v4/d7/b3/67/d7b36785-baf0-d87b-7868-ea2170bc4ea6/AppIcon-0-0-1x_U007emarketing-0-8-0-0-0-85-220.png"),
                  category: "Entertainment", size: 325_474_304),
     ]
-    /// Finished downloads with real store IDs, for previews of update rows.
     static var updatable: [StoreApp] {
         zip(apps.prefix(3), ["363590051", "324684580", "1232780281"]).map { app, id in var app = app; app.id = id; return app }
     }
-    /// The followed app; UI tests find it by this identifier.
     static var favorite: StoreApp { var app = apps[0]; app.id = "preview-app"; return app }
     static var chinese: Bool { Locale.preferredLanguages.first?.hasPrefix("zh") == true }
 }

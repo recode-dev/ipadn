@@ -6,8 +6,6 @@ if ! command -v xcodebuild >/dev/null 2>&1; then
   exit 1
 fi
 python3 "$project_root/scripts/assemble_runtime.py"
-# Mac App Store PKG support needs the Go/TCI bridge. Set IPADN_REQUIRE_MACPKG=1
-# (CI does) to fail instead of building an IPA without it.
 macpkg_flags=""
 if bash "$project_root/scripts/build_mac_pkg_bridge.sh"; then
   macpkg_flags="$(cat "$project_root/build/macpkg/link-flags.txt")"
@@ -17,8 +15,6 @@ elif [ "${IPADN_REQUIRE_MACPKG:-0}" = "1" ]; then
 else
   echo 'warning: Mac PKG bridge not built; Mac App Store PKG downloads will be unavailable.' >&2
 fi
-# Native installation needs the Rust library. Set IPADN_REQUIRE_NATIVE=1 (CI
-# does) to fail instead of building an IPA without it.
 native_flags=""
 if bash "$project_root/scripts/build_native_install.sh"; then
   native_flags="$(cat "$project_root/build/native/link-flags.txt")"
@@ -40,12 +36,10 @@ if [ -d "$package_root/Payload/iPadn.app" ]; then
 fi
 cp -R "$project_root/build/DerivedData/Build/Products/Release-iphoneos/iPadn.app" "$package_root/Payload/"
 if [ -n "$macpkg_flags" ]; then
-  # GPL-2.0 Unicorn and MIT ipatool are linked into the executable.
   cp "$project_root/build/macpkg/Unicorn-GPL-2.0.txt" "$project_root/build/macpkg/ipatool-MIT.txt" \
     "$package_root/Payload/iPadn.app/"
 fi
 if [ -n "$native_flags" ]; then
-  # MIT idevice is linked into the executable.
   cp "$project_root/build/native/idevice-MIT.txt" "$package_root/Payload/iPadn.app/"
 fi
 ditto -c -k --keepParent "$package_root/Payload" "$project_root/build/iPadn-unsigned.ipa"

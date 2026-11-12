@@ -33,8 +33,6 @@ REPORT_DIRECTORY = Path(__file__).resolve().parents[3] / ".build/native-install-
 
 class NativeInstallError(ProbeError):
     def __init__(self, response: dict[str, Any]):
-        # Preserve the server's error name/domain/code when available, never
-        # log its entire response (which can include account material).
         self.details = {key: redacted(response[key]) for key in (
             "Error", "ErrorDescription", "ErrorDomain", "ErrorCode", "Status"
         ) if isinstance(response.get(key), (str, int))}
@@ -61,7 +59,6 @@ async def lookup(proxy: Any, bundle_id: str) -> dict[str, Any] | None:
         "BundleIDs": [bundle_id], "ApplicationType": "Any", "ReturnAttributes": ATTRIBUTES,
     })
     if not isinstance(response, dict):
-        # Unknown inventory must never be treated as "not installed".
         raise ProbeError("Device did not return a valid app inventory")
     app = response.get(bundle_id)
     if app is not None and not isinstance(app, dict):
@@ -83,7 +80,6 @@ async def execute(proxy: Any, ipa: AuditedIPA, command: str, expected_bundle: st
             raise ProbeError("IPA changed before upload; no installation attempted")
         report["upload_or_install_started"] = True
         try:
-            # Raw .ipa bytes; no directory conversion and no Developer override.
             await proxy.install_from_local(str(staged), cmd=command, options=options, developer=False)
             report["system_completed"] = True
         finally:
@@ -133,8 +129,6 @@ async def device_command(args: argparse.Namespace, report: dict[str, Any], ipa: 
                 if record_status(response, report):
                     return
 
-    # autopair=False permits existing trusted pairing only: no new trust prompt,
-    # device registration, developer mode change or Wi-Fi pairing modification.
     async with await create(serial=args.udid, connection_type="USB", autopair=False) as lockdown:
         report["device"] = {key: lockdown.all_values[key] for key in ("ProductVersion", "ProductType")
                             if isinstance(lockdown.all_values.get(key), str)}
@@ -175,7 +169,6 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     args = parse_args(argv)
-    # Third-party DEBUG logging can contain request plists and account metadata.
     logging.disable(logging.CRITICAL)
     report: dict[str, Any] = {"schema": 1, "command": args.command,
                               "started_at": datetime.now(timezone.utc).isoformat(), "success": False}
@@ -207,7 +200,6 @@ def main(argv: list[str] | None = None) -> int:
         if isinstance(error, TimeoutError):
             report["error"]["completion"] = "unknown if already dispatched; never auto-retry"
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
-    # Reports contain summaries, never raw metadata, SINF, pair records or UDIDs.
     output = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     destination = getattr(args, "report", None)
     if destination is None and args.command in ("lookup", "install", "upgrade"):

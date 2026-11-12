@@ -3,22 +3,11 @@ import CryptoKit
 import CommonCrypto
 import ZIPFoundation
 
-/// Offline FairPlay (DRM) decryptor for App Store binaries, fully on-device.
-///
-/// Takes the IPA's SINF license record and SUPF/SUPP page-key table plus the
-/// 16-byte per-account FairPlay credential, derives every per-page key locally
-/// and rewrites the archive with decrypted, cryptid-cleared binaries. No Mac,
-/// no PC and no jailbreak are involved in the decryption itself.
-///
-/// The algorithm mirrors the published fairplay-decrypt research (core.py /
-/// ipadecrypt), including the page-key fold that is pinned by a public
-/// known-answer test in the unit tests.
 enum FairPlayDecryptor {
 
     static let pageSize = 4096
     private static let maxBinaryBytes: Int = 1_500_000_000
 
-    // MARK: - Errors
 
     enum DecryptError: LocalizedError {
         case notMachO
@@ -42,7 +31,6 @@ enum FairPlayDecryptor {
         }
     }
 
-    // MARK: - Mach-O parsing
 
     struct EncryptedSlice {
         let base: Int
@@ -68,8 +56,6 @@ enum FairPlayDecryptor {
         let subtype: UInt32
     }
 
-    /// The slice the output is thinned to, following the same preference the
-    /// on-device flow uses: plain arm64, else arm64e, else arm64_32, else armv7.
     static func encryptedSlice(in data: [UInt8]) throws -> EncryptedSlice? {
         var candidates: [ARMCandidate] = []
         if data.count >= 4, data[0] == 0xCA, data[1] == 0xFE, data[2] == 0xBA, data[3] == 0xBE {
@@ -105,7 +91,6 @@ enum FairPlayDecryptor {
         if chosen.isEmpty { chosen = arm64e }
         if chosen.isEmpty { chosen = candidates.filter { $0.cpu == cpuTypeARM6432 } }
         if chosen.isEmpty { chosen = candidates.filter { $0.cpu == cpuTypeARM } }
-        // Fat 32-bit apps pair armv7 with armv7s/armv6; armv7 runs everywhere.
         if chosen.count > 1, chosen[0].cpu == cpuTypeARM {
             chosen = chosen.filter { $0.subtype & cpuSubtypeMask == cpuSubtypeARMV7 }
         }
@@ -166,7 +151,6 @@ enum FairPlayDecryptor {
                               cryptidOffset: cryptidOffset, subtype: subtype)
     }
 
-    // MARK: - SINF
 
     private struct Atom {
         let tag: [UInt8]
@@ -202,8 +186,6 @@ enum FairPlayDecryptor {
         return Array(sinf[match[0].start..<match[0].end])
     }
 
-    /// Unwraps the account credential against a SINF priv record to obtain the
-    /// per-app 16-byte work key.
     static func deriveWork16(credential: [UInt8], sinf: [UInt8]) throws -> [UInt8] {
         let nameField = try sinfField(sinf, "name")
         var name = nameField
@@ -234,15 +216,11 @@ enum FairPlayDecryptor {
         return Array(clear[24..<40])
     }
 
-    /// Whether this credential unwraps the given SINF (right account + kind).
     static func credentialDecodes(credential: [UInt8], sinf: [UInt8]) -> Bool {
         (try? deriveWork16(credential: credential, sinf: sinf)) != nil
     }
 
-    // MARK: - License page tables (SUPF v3/v5 and SUPP v01/v04)
 
-    /// Offset of the 32-byte key record for a page in a "pclass" SUPP table:
-    /// one record per 4 KB page of the whole file, indexed from offset 0.
     private static func suppPageKeyOffset(_ supp: [UInt8], absolutePage: Int) throws -> Int {
         guard supp.count >= 8, supp[0] == 1 || supp[0] == 4 else { throw DecryptError.badLicense("unsupported SUPP version") }
         var pos = 4
@@ -284,7 +262,6 @@ enum FairPlayDecryptor {
         throw DecryptError.badLicense("SUPF record missing for this architecture")
     }
 
-    // MARK: - Page-key derivation
 
     private static func sourceBlocks(wrapped: [UInt8], pageByteOffset: UInt64) -> ([UInt8], [UInt8], [UInt8]) {
         var pageOffset = [UInt8](repeating: 0, count: 8)
@@ -347,11 +324,7 @@ enum FairPlayDecryptor {
         return finish(xor16(step2, c))
     }
 
-    // MARK: - Binary decryption
 
-    /// Decrypts the encrypted arm64 slice of one Mach-O and clears cryptid.
-    /// The result is a thin Mach-O (the other fat slices are dropped, matching
-    /// what the device actually runs). `license` is SUPF or SUPP content.
     static func decryptBinary(_ source: [UInt8], sinf: [UInt8], license: [UInt8],
                               credential: [UInt8], verify: Bool = true) throws -> ([UInt8], Int) {
         guard let slice = try encryptedSlice(in: source) else { throw DecryptError.notEncrypted }
@@ -388,8 +361,6 @@ enum FairPlayDecryptor {
         return (result, slice.pages)
     }
 
-    /// Cheap sanity proof the crypt is actually gone: entropy must drop and
-    /// cryptid must read back as zero.
     static func verifyDecrypted(_ result: [UInt8], slice: EncryptedSlice) throws {
         let start = slice.cryptOff
         let span = min(pageSize * 4, slice.cryptSize)
@@ -416,7 +387,6 @@ enum FairPlayDecryptor {
         return e
     }
 
-    // MARK: - IPA-level
 
     struct BinaryReport {
         let path: String
@@ -429,7 +399,6 @@ enum FairPlayDecryptor {
         var pages: Int { binaries.reduce(0) { $0 + $1.pages } }
     }
 
-    /// Whether any licensed binary of an IPA carries an active cryptid.
     static func ipaEncryptionState(at url: URL) throws -> (encrypted: Bool, checked: Int) {
         let archive = try Archive(url: url, accessMode: .read)
         var encrypted = false, checked = 0
@@ -441,8 +410,6 @@ enum FairPlayDecryptor {
         return (encrypted, checked)
     }
 
-    /// Decrypts every licensed binary inside the IPA and writes the DRM-free
-    /// copy to `destination` (which must not exist yet).
     static func decryptIPA(at url: URL, credential: Data, destination: URL) throws -> IpaResult {
         guard !FileManager.default.fileExists(atPath: destination.path) else {
             throw ToolError.message(AppText.text("The output file already exists"))
@@ -473,8 +440,6 @@ enum FairPlayDecryptor {
             reports.append(BinaryReport(path: plan.binary.path, pages: pages))
         }
 
-        // Copy everything else through, including sinf/supp so the package
-        // stays a complete store-style bundle.
         for entry in archive where !handled.contains(entry.path) {
             guard entry.type == .file else { continue }
             let data = try readEntry(entry, archive: archive, limit: maxBinaryBytes)
@@ -484,7 +449,6 @@ enum FairPlayDecryptor {
         return IpaResult(destination: destination, binaries: reports)
     }
 
-    // MARK: - Archive plumbing
 
     struct BinaryPlan {
         let binary: Entry
@@ -492,8 +456,6 @@ enum FairPlayDecryptor {
         let license: Data?
     }
 
-    /// Matches Payload/<App>.app/<Executable> with its SC_Info license files
-    /// by basename stem, like the ipatool-family tools do.
     private static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
         var binaries: [Entry] = []
         for entry in archive {
@@ -520,7 +482,6 @@ enum FairPlayDecryptor {
                     license = try readEntry(entry, archive: archive)
                 }
             }
-            // Fallback: a bundle with exactly one license pair.
             if sinf == nil || license == nil {
                 var fallbackSinf: Data?
                 var fallbackLicense: Data?
@@ -554,8 +515,6 @@ enum FairPlayDecryptor {
     }
 
     private static func writeEntry(_ data: Data, to archive: Archive, path: String) throws {
-        // Same scratch-dir pattern PackageService uses: the entry's own path
-        // decides where the file must sit inside the scratch directory.
         let scratch = LocalResources.support.appendingPathComponent("decrypt-entry-\(UUID().uuidString)", isDirectory: true)
         let file = scratch.appendingPathComponent(path)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -564,7 +523,6 @@ enum FairPlayDecryptor {
         try archive.addEntry(with: path, relativeTo: scratch, compressionMethod: .deflate)
     }
 
-    // MARK: - Crypto primitives
 
     private static func aesECBEncrypt(key: [UInt8], block: [UInt8]) throws -> [UInt8] {
         guard block.count == 16 else { throw DecryptError.badLicense("ECB input must be 16 bytes") }
@@ -590,7 +548,6 @@ enum FairPlayDecryptor {
         return out
     }
 
-    // MARK: - Byte readers
 
     private static func be32(_ data: [UInt8], _ offset: Int) -> UInt32 {
         UInt32(data[offset]) << 24 | UInt32(data[offset + 1]) << 16 | UInt32(data[offset + 2]) << 8 | UInt32(data[offset + 3])

@@ -10,14 +10,11 @@ struct InstallationSettingsView: View {
     @State private var certificateData: Data?
     @State private var password = ""
     @State private var certificateName = Self.notImported
-    /// Stored value, not display text: the certificate is either present or not.
     private static let notImported = "Not imported"
     @State private var issue: String?
     @State private var busy = false
-    /// Which action is running, shown with a spinner on its own row.
     @State private var working: Action?
     private enum Action { case create, profile, check, connection }
-    /// What the file picker is importing.
     private enum ImportKind { case certificate, pairingFile }
     @State private var importKind = ImportKind.certificate
     @State private var hasPairingFile = NativeInstaller.hasPairingFile
@@ -32,7 +29,6 @@ struct InstallationSettingsView: View {
                 : store.settings.automaticInstallation ? .automatic
                 : store.settings.localInstallation ? .localCertificate : .proxy
         }, set: { value in
-            // The other choices are kept, so leaving native returns to them.
             store.settings.nativeInstallation = value == .native
             guard value != .native else { return }
             store.settings.automaticInstallation = value == .automatic
@@ -41,8 +37,6 @@ struct InstallationSettingsView: View {
     }
     var body: some View {
         Form {
-            // Segments use short names so four of them fit in every
-            // language; the section below each one gives the full name.
             Section {
                 Picker("Install method", selection: method) {
                     Text("One-tap").tag(Method.automatic)
@@ -123,7 +117,6 @@ struct InstallationSettingsView: View {
         }.toolPage().navigationTitle("Installation settings").navigationBarTitleDisplayMode(.inline)
             .task {
                 refreshCertificate()
-                // A pairing file dropped into iPadn's folder is picked up without asking.
                 if store.settings.usesNativeInstallation, !hasPairingFile, (try? NativeInstaller.importPairingFileFromDocuments()) == true {
                     hasPairingFile = NativeInstaller.hasPairingFile
                     store.infoMessage = AppText.text("Pairing file imported from the iPadn folder. Connect in LocalDevVPN, then tap “Check Connection”.")
@@ -141,7 +134,6 @@ struct InstallationSettingsView: View {
                     store.infoMessage = AppText.text("Paired. Connect in LocalDevVPN before installing; tap “Check Connection” to confirm.")
                 }
             }
-            // Pairing files come as .plist, .rppairing or no extension at all.
             .fileImporter(isPresented: $importing, allowedContentTypes: importKind == .pairingFile ? [.propertyList, .xml, .data, .item] : [.data], allowsMultipleSelection: false) { result in
                 do {
                     guard let url = try result.get().first else { return }
@@ -217,8 +209,6 @@ struct InstallationSettingsView: View {
         guard !busy else { return }; busy = true; working = .profile
         UX.feedback()
         Task {
-            // The spinner stays until Settings opens with the profile (the app
-            // leaves the screen) or a few seconds pass.
             defer { busy = false; Task { try? await Task.sleep(for: .seconds(8)); if working == .profile { working = nil } } }
             do {
                 guard let profile = try InstallationCertificate.localProfile() else { throw ToolError.message(AppText.text("Create a certificate first")) }
@@ -239,8 +229,6 @@ struct InstallationSettingsView: View {
             refreshCertificate(); store.infoMessage = AppText.text("Certificate imported.")
         } catch { issue = error.localizedDescription }
     }
-    /// Takes a pairing file from iPadn's own folder first; the system file
-    /// picker is the fallback for files kept elsewhere.
     private func importPairingFile() {
         do {
             if try NativeInstaller.importPairingFileFromDocuments() {
@@ -255,8 +243,6 @@ struct InstallationSettingsView: View {
         importKind = .pairingFile
         importing = true
     }
-    /// Goes through the VPN, the pairing and the tunnel, then asks the system
-    /// about iPadn itself: a full rehearsal without installing anything.
     private func checkConnection() {
         guard !busy else { return }; busy = true; working = .connection
         UX.feedback()
@@ -292,7 +278,6 @@ extension OnDevicePairing.Phase {
     }
 }
 
-/// Where on-device pairing is, with the code to type once there is one.
 private struct PairingStatusRow: View {
     let phase: OnDevicePairing.Phase
     let cancel: () -> Void
@@ -324,8 +309,6 @@ private struct PairingStatusRow: View {
     }
 }
 
-/// Shown as soon as pairing starts: what to do next, where pairing is, and
-/// the code once the device asks for it.
 private struct PairingGuideView: View {
     @ObservedObject var pairing: OnDevicePairing
     @Environment(\.dismiss) private var dismiss
@@ -349,7 +332,6 @@ private struct PairingGuideView: View {
                 } footer: {
                     Text("If Developer Mode isn't there, turn it on in that page and restart when asked. iPadn keeps running in the background while pairing and stops when done.")
                 }
-                // Nothing to show once pairing is cancelled; an empty card would remain.
                 if pairing.phase != .idle {
                     Section { PairingStatusRow(phase: pairing.phase) { pairing.cancel() } }
                 }
@@ -366,7 +348,6 @@ private struct PairingGuideView: View {
             }
         }
     }
-    // Keys, not Strings: Text(String) is shown verbatim and never translated.
     private func guideRow(_ number: Int, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
         let done = step > number && step != 0
         let current = step == number
@@ -384,7 +365,6 @@ private struct PairingGuideView: View {
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
     }
-    /// The Developer Mode page when the system allows it, else Settings.
     private func openSettings() {
         let candidates = ["App-prefs:Privacy&path=DEVELOPER_MODE", "App-prefs:Privacy", UIApplication.openSettingsURLString]
         func attempt(_ index: Int) {

@@ -37,7 +37,6 @@ def make_ipa(folder, *, bundle="example.probe.app", build="20", multi=False,
         archive.writestr(root + "_CodeSignature/CodeResources", b"preserved-original-code-resources")
         if multi:
             component = "PlugIns/Widget.appex/SC_Info/Widget.sinf"
-            # Main SINF deliberately is not the first manifest entry.
             manifest = {"SinfPaths": [component, "SC_Info/MainBinary.sinf"]}
             archive.writestr(root + "SC_Info/Manifest.plist", plistlib.dumps(manifest))
             if not missing_component:
@@ -245,7 +244,7 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
 class BackendTests(unittest.TestCase):
     def test_installed_backend_api_without_device_access(self):
         try:
-            import pymobiledevice3  # noqa: F401
+            import pymobiledevice3
         except ImportError:
             self.skipTest("optional backend not installed; offline checks still run")
         with patch("pymobiledevice3.lockdown.create_using_usbmux", side_effect=AssertionError("device access")):
@@ -262,7 +261,6 @@ class BackendTests(unittest.TestCase):
         class Wire:
             sent = None
             async def send_plist(self, value):
-                # Round-trip through a real binary plist, as the transport does.
                 self.sent = plistlib.loads(plistlib.dumps(value, fmt=plistlib.FMT_BINARY))
             async def recv_plist(self):
                 return {"Status": "Complete"}

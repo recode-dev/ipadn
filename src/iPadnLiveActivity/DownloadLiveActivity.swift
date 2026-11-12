@@ -15,8 +15,6 @@ private extension DownloadActivityAttributes.ContentState {
         guard expected > 0 else { return phase == 2 ? 1 : 0 }
         return min(1, max(0, Double(written) / Double(expected)))
     }
-    /// The bar's interval: it shows `fraction` at `updated` and reaches the
-    /// end at `estimatedEnd`, so it moves on its own between updates.
     var interval: ClosedRange<Date>? {
         guard phase == 0, let end = estimatedEnd, end > updated, fraction < 1 else { return nil }
         let start = end.addingTimeInterval(-end.timeIntervalSince(updated) / (1 - fraction))
@@ -64,7 +62,6 @@ private struct DownloadRing: View {
     }
 }
 
-/// Time left while downloading, otherwise the state in a word or two.
 private struct DownloadTrailing: View {
     let state: DownloadActivityAttributes.ContentState
     var body: some View {

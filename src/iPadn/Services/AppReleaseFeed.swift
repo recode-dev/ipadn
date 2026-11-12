@@ -1,8 +1,5 @@
 import Foundation
 
-/// GitHub's public Atom feed remains usable when its anonymous API is rate limited.
-/// Accept stable tags and links only for this repository. IPA names follow the
-/// release workflow's naming contract; the feed does not supply asset sizes.
 enum AppReleaseFeed {
     static func parse(_ data: Data) -> AppRelease? {
         guard !data.isEmpty, data.count <= 2 * 1024 * 1024 else { return nil }

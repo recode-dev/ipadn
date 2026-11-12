@@ -8,8 +8,6 @@ enum StoreService {
         return url
     }
 
-    // Apple sends storefront identifiers such as "143441-1,29" or "143465,34".
-    // The selected search region can differ from the account's purchase region.
     static func storefrontIdentifier(_ storefront: String) -> String {
         String(storefront.split(whereSeparator: { $0 == "-" || $0 == "," }).first ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -20,7 +18,6 @@ enum StoreService {
         return storefrontCountries[identifier]
     }
 
-    // Storefront ID -> ISO country, from ipatool's storefront table (MIT).
     private static let storefrontCountries: [String: String] = [
         "143441": "US", "143442": "FR", "143443": "DE", "143444": "GB", "143445": "AT", "143446": "BE",
         "143447": "FI", "143448": "GR", "143449": "IE", "143450": "IT", "143451": "LU", "143452": "NL",
@@ -57,8 +54,6 @@ enum StoreService {
     static func mergeResults(_ primary: [StoreApp], _ account: [StoreApp], limit: Int) -> [StoreApp] {
         var merged: [StoreApp] = []
         var indices: [String: Int] = [:]
-        // Two selected-region results followed by one account-region result
-        // keeps the secondary store visible even if the primary fills the limit.
         let regionalIDs = Set(primary.map(\.id))
         let accountOnly = account.filter { !regionalIDs.contains($0.id) }
         var candidates: [StoreApp] = []
@@ -72,11 +67,9 @@ enum StoreService {
                 candidates.append(accountOnly[accountIndex]); accountIndex += 1
             }
         }
-        // Also inspect overlapping results to fill missing artwork.
         candidates.append(contentsOf: account)
         for app in candidates where !app.id.isEmpty {
             if let index = indices[app.id] {
-                // An app found in both stores may have missing artwork in one.
                 if merged[index].iconURL == nil { merged[index].iconURL = app.iconURL }
             } else {
                 indices[app.id] = merged.count
@@ -86,8 +79,6 @@ enum StoreService {
         return Array(merged.prefix(max(0, limit)))
     }
 
-    /// Storefronts tried, in order, when an App ID is not listed in the
-    /// selected or account region (apps are often region-limited).
     static let fallbackCountries = ["US", "CN", "HK", "TW", "JP", "GB", "SG", "CA", "AU", "KR", "DE", "FR"]
 
     static func search(_ query: SearchQuery, store: StoreContext, limit: Int,
@@ -108,12 +99,9 @@ enum StoreService {
                 } catch is CancellationError { throw CancellationError() }
                 catch {
                     if firstError == nil { firstError = error }
-                    // Offline: every other region would fail the same way, slowly.
                     if (error as NSError).domain == NSURLErrorDomain { break }
                 }
             }
-            // "Not found anywhere" only when the stores actually answered;
-            // otherwise report the error instead of calling the app delisted.
             if !answered, let firstError { throw firstError }
             return []
         }
@@ -126,7 +114,6 @@ enum StoreService {
             let alternate = try await searchInCountry(query, store: accountStore, limit: limit)
             return mergeResults(primary, alternate, limit: limit)
         } catch {
-            // A secondary regional lookup must not hide otherwise valid results.
             return primary
         }
     }
@@ -144,28 +131,20 @@ enum StoreService {
                 return data?["results"] as? [[String: Any]] ?? []
             }
             if store.platform == .macOS {
-                // macSoftware is the native Mac App Store catalog. Exclude
-                // unrelated mobile-only results before showing Mac installers.
                 return try await searchEntities(store.platform.searchEntity)
                     .filter(Self.supportsNativeMac).map(mapLookup)
             }
             guard store.platform == .tvOS else {
                 return try await searchEntities(store.platform.searchEntity).map(mapLookup)
             }
-            // Apple TV has a distinct store offer. Search the combined catalogs,
-            // then require explicit AppleTV device metadata rather than labeling
-            // every iPhone match as an Apple TV result.
             var rows: [[String: Any]] = []
             do { rows = try await searchEntities("software,tvSoftware") }
             catch {
-                // The tvSoftware entity is unreliable on some storefronts.
                 rows = (try? await searchEntities("software")) ?? []
             }
             return await withAppleTVListings(rows.filter(Self.supportsAppleTV).map(mapLookup), store: store)
         case .appID(let id, _):
             if store.platform == .tvOS { return try await platformApp(id, store: store).map { [$0] } ?? [] }
-            // No "entity" here: on an ID lookup it requests *related* items
-            // (and is rejected for some catalogs), which broke App ID search.
             let url = try endpoint("https://itunes.apple.com/lookup", items: [
                 URLQueryItem(name: "id", value: id), URLQueryItem(name: "country", value: store.country)
             ])
@@ -176,9 +155,6 @@ enum StoreService {
         }
     }
 
-    /// The iTunes search API describes a shared (universal purchase) App ID
-    /// with its iPhone artwork, size and version. Replace those with the
-    /// Apple TV offer so tvOS results show what will actually be downloaded.
     static func withAppleTVListings(_ apps: [StoreApp], store: StoreContext) async -> [StoreApp] {
         let listings = await withTaskGroup(of: (String, StoreApp?).self) { group in
             for app in apps.prefix(20) {
@@ -228,9 +204,6 @@ enum StoreService {
                         developerURL: MacInstallerService.safeWebsite(plistString(raw["sellerUrl"] ?? raw["websiteUrl"])))
     }
 
-    /// The current iPhone or iPad version ID (ipatool): the MDM catalogs
-    /// first, then the App Store catalog API, which also lists Apple Arcade
-    /// games that no MDM catalog carries.
     static func latestIOSVersionID(_ id: String, bundleID: String, country: String, platform: AppPlatform) async -> String? {
         guard UInt64(id).map({ $0 > 0 }) == true else { return nil }
         for catalog in ["enterprisestore", "iphone", "ipad"] {
@@ -294,8 +267,6 @@ enum StoreService {
 
     static func artworkCountries(selected: String, accountCountry: String?) -> [String] {
         var countries = searchCountries(selected: accountCountry ?? selected, accountCountry: selected)
-        // Artwork is public: look in other storefronts when the app is not
-        // listed in the account's or selected region.
         for country in fallbackCountries where !countries.contains(country) { countries.append(country) }
         return countries
     }
@@ -326,14 +297,11 @@ enum StoreService {
         return icons
     }
 
-    /// Current listings for many App IDs at once: the lookup API takes a list.
-    /// `nativeMac` names the IDs whose listing is a Mac app.
     static func lookup(ids: [String], country: String) async throws -> (apps: [String: StoreApp], nativeMac: Set<String>) {
         let ids = ids.filter { UInt64($0).map { $0 > 0 } == true }
         let chunks = stride(from: 0, to: ids.count, by: 100).map { Array(ids[$0..<min($0 + 100, ids.count)]) }
         var found: [String: StoreApp] = [:]
         var nativeMac = Set<String>()
-        // Large purchase lists: a few chunks at a time instead of one after another.
         try await withThrowingTaskGroup(of: [(app: StoreApp, mac: Bool)].self) { group in
             var pending = chunks.makeIterator()
             for _ in 0..<4 {
@@ -364,13 +332,10 @@ enum StoreService {
 
     struct Screenshot: Hashable, Identifiable {
         var url: URL
-        /// Width over height, from the size in the file name.
         var aspect: Double
         var id: URL { url }
     }
 
-    /// Store page extras the detail page shows: screenshots for the chosen
-    /// platform and the developer behind the app.
     struct ListingExtras {
         var screenshots: [Screenshot] = []
         var developerID: String?
@@ -389,9 +354,6 @@ enum StoreService {
 
     static func listingExtras(_ row: [String: Any], platform: AppPlatform) -> ListingExtras {
         func shots(_ key: String) -> [String] { row[key] as? [String] ?? [] }
-        // Only the chosen device's own screenshots: never stand in another
-        // device's. A Mac listing's screenshots are Mac screenshots only when
-        // the row is the Mac app itself, not a shared iPhone App ID.
         let preferred: [String]
         switch platform {
         case .iOS: preferred = shots("screenshotUrls")
@@ -405,7 +367,6 @@ enum StoreService {
                              developer: plistString(row["artistName"] ?? row["sellerName"]))
     }
 
-    /// Other apps from the same developer for the chosen platform.
     static func developerApps(_ developerID: String, excluding id: String, country: String,
                               platform: AppPlatform) async throws -> [StoreApp] {
         guard UInt64(developerID).map({ $0 > 0 }) == true else { return [] }
@@ -419,7 +380,6 @@ enum StoreService {
     }
 
     static func developerApps(_ rows: [[String: Any]], excluding id: String, platform: AppPlatform) -> [StoreApp] {
-        // The first row describes the developer, not an app.
         var seen = Set([id])
         return rows.filter { plistString($0["wrapperType"]) == "software" }
             .filter { platform != .tvOS || supportsAppleTV($0) }
@@ -429,10 +389,6 @@ enum StoreService {
             .prefix(20).map { $0 }
     }
 
-    /// Lookup screenshots link a small rendition such as `392x696bb.jpg`:
-    /// a box the image is fitted into, whatever its orientation. Ask for a
-    /// square box twice as large so portrait and landscape shots both come
-    /// back sharp; the real orientation is read from the loaded image.
     static func screenshot(_ value: String) -> Screenshot? {
         guard let url = URL(string: value), url.scheme == "https", url.host != nil else { return nil }
         let name = url.lastPathComponent
@@ -463,7 +419,6 @@ enum StoreService {
                  developerURL: MacInstallerService.safeWebsite(plistString(raw["sellerUrl"])))
     }
 
-    /// The lookup APIs return English genre names in every storefront.
     static func localizedGenre(_ name: String) -> String {
         let names = [
             "Books": "Books", "Business": "Business", "Developer Tools": "Developer Tools", "Education": "Education",
@@ -475,8 +430,6 @@ enum StoreService {
             "Travel": "Travel", "Utilities": "Utilities", "Weather": "Weather", "Stickers": "Stickers",
             "Video": "Video", "Graphics and Design": "Graphics & Design"
         ]
-        // Apple's name is already right for English. Otherwise the Chinese name
-        // is the catalog key, translated into the interface language there.
         guard AppText.locale.language.languageCode?.identifier != "en", let key = names[name] else { return name }
         return AppText.text(String.LocalizationValue(key))
     }
@@ -488,8 +441,6 @@ enum StoreService {
         return sharpArtwork(url)
     }
 
-    /// Apple's CDN serves any size from the same path; some responses (the
-    /// download dispatch, older lookups) link a 100 px rendition. Ask for 512 px.
     static func sharpArtwork(_ url: URL) -> URL {
         guard let host = url.host?.lowercased(), host.hasSuffix(".mzstatic.com"),
               url.path.contains("/image/thumb/") else { return url }
@@ -500,8 +451,6 @@ enum StoreService {
     }
 }
 
-// Only direct download links published on a developer website supplied by
-// Apple's catalog are offered. Mac App Store does not publish DMG/PKG URLs.
 enum MacInstallerService {
     struct Installer: Identifiable, Hashable {
         let url: URL
@@ -558,10 +507,6 @@ enum MacInstallerService {
     }
 }
 
-// Preflight for native Mac App Store packages. Apple's iOS MDM catalog may
-// return the iOS offer for a universal app even if the requested platform is
-// macOS. This parser only resolves a Mac *offer*, not a downloadable .pkg.
-// Store packages require a separate, device-compatible processing pipeline.
 enum MacStoreOfferService {
     static func versionID(fromHTML html: String, appID: String, bundleID: String) -> String? {
         let markers = ["id=\"serialized-server-data\"", "id='serialized-server-data'"]
@@ -608,8 +553,6 @@ enum MacStoreOfferService {
         let url = URL(string: "https://apps.apple.com/\(country.lowercased())/app/id\(appNumber)?platform=mac")!
         let data: Data, response: HTTPURLResponse
         do { (data, response) = try await HTTPClient.shared.request(url) }
-        // A delisted app has no product page; the caller then lets Apple
-        // pick the latest Mac version the account is entitled to.
         catch let error as HTTPStatusError where error.code == 404 { return nil }
         guard data.count <= 3 * 1024 * 1024,
               response.mimeType?.lowercased().contains("html") == true,
@@ -631,8 +574,6 @@ actor VersionService {
         let key = appID + "|" + sourceKey
         if !force, let entry = cache[key], Date().timeIntervalSince(entry.savedAt) < 24 * 3600 { return entry.versions }
         let revision = cacheRevision
-        // Complete every enabled query. Taking the first provider to respond
-        // makes the version list depend on network timing and hides unique IDs.
         let sourceResults = await withTaskGroup(
             of: (Int, Result<[AppVersion], Error>).self,
             returning: [[AppVersion]].self
@@ -652,8 +593,6 @@ actor VersionService {
         try Task.checkCancellation()
         let versions = Self.mergeSourceResults(sourceResults)
         guard !versions.isEmpty else {
-            // The previous successful records remain useful if both third-party
-            // services are temporarily unavailable. Label them as cached.
             if let old = cache[key], Date().timeIntervalSince(old.savedAt) < 7 * 86400 {
                 return old.versions.map {
                     var item = $0
@@ -666,12 +605,10 @@ actor VersionService {
         if revision == cacheRevision {
             cache = cache.filter { Date().timeIntervalSince($0.value.savedAt) < 7 * 86400 }
             if cache.count >= 200 {
-                // Also shrink oversized caches created by earlier versions in one pass.
                 cache = Dictionary(uniqueKeysWithValues: cache.sorted { $0.value.savedAt > $1.value.savedAt }
                     .prefix(199).map { ($0.key, $0.value) })
             }
             cache[key] = Cache(savedAt: Date(), versions: versions)
-            // A disposable cache write failure must not hide a valid server result.
             try? LocalResources.save(cache, filename: LocalResources.versionsFilename)
         }
         return versions
@@ -680,8 +617,6 @@ actor VersionService {
     static func mergeSourceResults(_ sources: [[AppVersion]]) -> [AppVersion] {
         var result: [AppVersion] = []
         var indices: [String: Int] = [:]
-        // Preserve the configured source priority and the order returned by
-        // each source. The API does not provide comparable release timestamps.
         for source in sources {
             for version in source where !version.id.isEmpty {
                 if let index = indices[version.id] {
@@ -700,14 +635,11 @@ actor VersionService {
         return Array(result.prefix(2000))
     }
 
-    /// The result of checking one source against a well-known app.
     struct SourceCheck: Equatable, Sendable {
         let versions: Int
         let seconds: Double
     }
-    /// An app every source tracks, so an empty answer means the source is broken.
     static let probeAppID = "414478124"
-    /// Asks `source` for a well-known app's history, as a real lookup would.
     static func check(_ source: VersionSource) async throws -> SourceCheck {
         let start = Date()
         let versions = try await fetch(probeAppID, source: source)

@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// iPadn's app icon, so the Lock Screen and Dynamic Island show what started
-/// the pairing. Embedded as data: the extension has no asset catalog.
 enum AppMark {
     static let image: UIImage? = Data(base64Encoded: [
         "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAqQUlEQVR42pV9ebgU1Zn3+57aq5cLiIImgsZRdCYwUWNERU0UcEk+",
@@ -153,7 +151,6 @@ enum AppMark {
     ].joined()).flatMap(UIImage.init(data:))
 }
 
-/// The app icon with the system's rounded corners.
 struct AppMarkView: View {
     var size: CGFloat
     var body: some View {

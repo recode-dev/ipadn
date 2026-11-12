@@ -1,11 +1,5 @@
-// Adapted from Telegram-iOS, commit 24638bc69bd083981b178dd1e7f921eebbf7fc46.
-// Source: submodules/ItemListUI/Sources/ItemListRevealMotion.swift
-// Copyright Telegram contributors. GPL-2.0-or-later; see repository LICENSE.
-// The motion model is kept independent of SwiftUI/UIKit for deterministic tests.
 import Foundation
 
-// Public-API model ported from Revealer/Swipe. Response/damping are the measured
-// oscillator parameters, not the unrelated CA animation duration/metadata.
 struct ItemListRevealSpring {
     var value: Double = 0
     var velocity: Double = 0
@@ -85,7 +79,6 @@ struct ItemListRevealMotionParameters {
 }
 
 struct ItemListRevealButtonGeometry {
-    // Distance of the center from the outside edge; index zero is the primary.
     var center: Double
     var width: Double
     var scale: Double
@@ -103,8 +96,6 @@ struct ItemListRevealButtonGeometry {
             var width = p.buttonWidth
             var center = outside + width / 2
             if index == 0 {
-                // Keep the same geometry on both sides of openDistance. The
-                // expansion spring may still be unwinding during a fast retreat.
                 let stretchedWidth = width + max(0, distance - p.openDistance)
                 let expandedWidth = max(width, distance - p.sideInset - 2 * p.edgeInset)
                 width = stretchedWidth + (expandedWidth - stretchedWidth) * consolidation
@@ -155,8 +146,6 @@ struct ItemListRevealMotion {
     var isExpanded: Bool { return self.isArmed || self.state == .filling }
 
     var buttonGeometry: [ItemListRevealButtonGeometry] {
-        // Readiness changes the target immediately, but the primary's width and
-        // content placement follow the same spring in both directions.
         return ItemListRevealButtonGeometry.calculate(reveal: self.body.value, expansion: self.expansion.value, parameters: self.parameters)
     }
 
@@ -177,9 +166,6 @@ struct ItemListRevealMotion {
             settling = false
         }
         self.continuingSpring = settling
-        // Body and expansion share the same spring. Remove the animated advance
-        // before inverting resistance, so regrabbing cannot count it as finger
-        // travel and immediately arm the action again. Fill has its own target.
         let advance = self.state == .filling ? 0 : self.parameters.armedDistance - self.parameters.confirmationDistance
         let trackingPosition = self.body.value - advance * self.expansion.value
         let trackingTarget = self.body.target - advance * self.expansion.target
@@ -189,8 +175,6 @@ struct ItemListRevealMotion {
         self.isArmed = false
         self.state = .dragging
         self.surface.target = 1
-        // A held row may already have a touch highlight. Preserve its opacity
-        // while its previously square background starts rounding independently.
         if highlightAlpha > self.surfaceOpacity.value { self.surfaceOpacity.snap(to: highlightAlpha) }
         self.surfaceOpacity.target = 1
     }
@@ -209,12 +193,8 @@ struct ItemListRevealMotion {
         }
         self.isArmed = armed
         if armed && !reduceMotion {
-            // Once the spring takes over, keep it for the remainder of this
-            // touch. Disarming must preserve its current position and velocity.
             self.continuingSpring = true
         }
-        // Readiness advances the entire row, with further finger travel resisted
-        // from that new resting position. The trigger distance stays unchanged.
         let target = self.parameters.resisted(proposed) + (armed ? self.parameters.armedDistance - confirmation : 0)
         if (armed || self.continuingSpring) && !reduceMotion {
             self.body.target = target
@@ -225,8 +205,6 @@ struct ItemListRevealMotion {
         if reduceMotion { self.snapToTargets() }
     }
 
-    // Action policy belongs to the host. A commit first resolves to open, then
-    // the synchronous handler may close, fill, or retain the open actions.
     @discardableResult mutating func end(translation: Double, velocity: Double, cancelled: Bool, animated: Bool = true) -> Bool {
         guard self.state == .dragging else { return false }
         let commit = !cancelled && self.isArmed

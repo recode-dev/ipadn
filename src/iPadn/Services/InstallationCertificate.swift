@@ -1,10 +1,8 @@
 import Foundation
 import Security
 
-/// Installation TLS material is separate from Apple accounts and never stored in preferences.
 enum InstallationCertificate {
     private struct Stored: Codable { let data: Data; let password: String; var localRoot: Data?; var localIdentifier: UUID? }
-    // Security identities/certificates are immutable here; each validation creates its own trust object.
     struct Identity: @unchecked Sendable {
         let identity: SecIdentity
         let certificates: [SecCertificate]
@@ -26,11 +24,8 @@ enum InstallationCertificate {
             }
         }
     }
-    /// Why the system would refuse the certificate.
     enum CheckFailure: LocalizedError {
-        /// Doesn't name the service address, or has expired: a new one is needed.
         case outdated
-        /// Its CA isn't trusted on this device (yet).
         case untrusted
         var errorDescription: String? {
             switch self {
@@ -61,8 +56,6 @@ enum InstallationCertificate {
         return Identity(identity: identity, certificates: chain, name: SecCertificateCopySubjectSummary(certificate) as String? ?? AppText.text("Local installation certificate"))
     }
     #if DEBUG
-    // Visual preview / UI tests run unsigned, where the simulator keychain
-    // is unavailable (errSecMissingEntitlement). Keep their data in memory.
     private static var previewStorage: Data?
     #endif
     private static func stored() throws -> Stored? {

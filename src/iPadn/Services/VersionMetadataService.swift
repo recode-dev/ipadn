@@ -1,28 +1,21 @@
 import Foundation
 
-/// The version number and date of one App Store version, read from the
-/// package itself (ipatool's get-version-metadata).
 struct VersionMetadata: Codable, Hashable, Sendable {
     var version: String
     var released: Date?
 }
 
-/// Reads byte ranges of a remote file.
 protocol RangeReader: Sendable {
-    /// The last `count` bytes and the size of the whole file.
     func tail(_ count: Int) async throws -> (data: Data, size: Int64)
     func read(offset: Int64, count: Int) async throws -> Data
 }
 
 struct HTTPRangeReader: RangeReader {
     let url: URL
-    /// Largest single range: big enough for the central directory of large
-    /// games, small enough that a misbehaving server cannot exhaust memory.
     static let limit = 32 * 1024 * 1024
 
     func tail(_ count: Int) async throws -> (data: Data, size: Int64) {
         let (data, contentRange) = try await HTTPClient.shared.range(url, "-\(count)", limit: count)
-        // "bytes 100-199/200"
         guard let total = contentRange.split(separator: "/").last.flatMap({ Int64($0) }), total > 0 else {
             throw RemoteZip.Failure.unreadable
         }
@@ -37,8 +30,6 @@ struct HTTPRangeReader: RangeReader {
     }
 }
 
-/// Reads one file out of a remote ZIP (an IPA) with a few range requests
-/// instead of downloading the whole package.
 enum RemoteZip {
     enum Failure: Error { case unreadable, notFound }
 
@@ -51,8 +42,6 @@ enum RemoteZip {
         var modified: Date?
     }
 
-    /// The main app's Info.plist: version number and, as ipatool does, the
-    /// release date it records or else the file's timestamp in the archive.
     static func versionMetadata(_ reader: RangeReader) async throws -> VersionMetadata {
         let (entries, size) = try await centralDirectory(reader)
         guard let entry = entries.first(where: { isMainInfoPlist($0.name) }) else { throw Failure.notFound }
@@ -89,7 +78,6 @@ enum RemoteZip {
     }
 
     static func centralDirectory(_ reader: RangeReader) async throws -> (entries: [Entry], size: Int64) {
-        // End record (22 bytes) plus the longest possible comment.
         let (fetched, size) = try await reader.tail(22 + 65_535)
         let tail = Data(fetched)
         let tailStart = size - Int64(tail.count)
@@ -98,7 +86,6 @@ enum RemoteZip {
         var directorySize = Int64(tail.le32(end + 12))
         var directoryOffset = Int64(tail.le32(end + 16))
         if count == 0xFFFF || directorySize == 0xFFFF_FFFF || directoryOffset == 0xFFFF_FFFF {
-            // ZIP64: the locator sits right before the end record.
             let locator = end - 20
             guard locator >= 0, tail.le32(locator) == 0x0706_4b50 else { throw Failure.unreadable }
             let recordOffset = Int64(tail.le64(locator + 8))
@@ -152,7 +139,6 @@ enum RemoteZip {
                 let body = extra + 4
                 guard body + length <= extraStart + extraLength else { break }
                 if id == 0x0001 {
-                    // ZIP64 sizes and offset, present only for fields set to 0xFFFFFFFF.
                     var field = body
                     if size == 0xFFFF_FFFF, field + 8 <= body + length { size = Int64(data.le64(field)); field += 8 }
                     if compressed == 0xFFFF_FFFF, field + 8 <= body + length { compressed = Int64(data.le64(field)); field += 8 }
@@ -170,12 +156,9 @@ enum RemoteZip {
     }
 
     static func contents(of entry: Entry, fileSize: Int64, reader: RangeReader) async throws -> Data {
-        // Info.plist is a few kilobytes; refuse anything implausible.
         guard entry.compressedSize >= 0, entry.compressedSize <= 4 * 1024 * 1024,
               entry.size >= 0, entry.size <= 16 * 1024 * 1024,
               entry.localOffset >= 0, entry.localOffset < fileSize else { throw Failure.unreadable }
-        // Header, name and some room for its extra field; never past the end
-        // of the file (the entry may be the last one).
         let guess = Int64(30 + entry.name.utf8.count + 256) + entry.compressedSize
         var data = try await reader.read(offset: entry.localOffset, count: Int(min(guess, fileSize - entry.localOffset)))
         guard data.count >= 30, data.le32(0) == 0x0403_4b50 else { throw Failure.unreadable }
@@ -189,7 +172,6 @@ enum RemoteZip {
         switch entry.method {
         case 0: return body
         case 8:
-            // Apple's zlib codec is raw DEFLATE, as ZIP stores it.
             let inflated = try (body as NSData).decompressed(using: .zlib) as Data
             guard inflated.count == entry.size else { throw Failure.unreadable }
             return inflated
@@ -206,7 +188,6 @@ enum RemoteZip {
         return nil
     }
 
-    /// DOS date and time, read as UTC like ipatool (Go's archive/zip).
     private static func dosDateTime(date: UInt16, time: UInt16) -> Date? {
         guard date != 0 else { return nil }
         var parts = DateComponents()
@@ -231,8 +212,6 @@ private extension Data {
     }
 }
 
-/// Version metadata never changes, so lookups are kept on disk. Lookups
-/// run one at a time: each one asks Apple for a download ticket.
 actor VersionMetadataStore {
     static let filename = "version-metadata.json"
     private var cache = LocalResources.load([String: VersionMetadata].self, filename: VersionMetadataStore.filename) ?? [:]
@@ -254,7 +233,6 @@ actor VersionMetadataStore {
         if let value = cache[key] { return value }
         await acquire()
         defer { release() }
-        // A row scrolled away while waiting: skip its request.
         try Task.checkCancellation()
         if let value = cache[key] { return value }
         let value = try await fetch()

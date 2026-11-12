@@ -2,9 +2,6 @@ import NaturalLanguage
 import SwiftUI
 import Translation
 
-/// Opens the system translation sheet (iOS 17.4 or later) for text written in
-/// another language. Choosing “Replace with Translation” there hands the
-/// translation to the caller, which shows it until “Show Original”.
 struct TranslateButton: View {
     let text: String
     @Binding var translation: String?
@@ -15,7 +12,6 @@ struct TranslateButton: View {
         return false
     }
 
-    /// Whether the text is mostly in a language other than the app's.
     static func isForeign(_ text: String) -> Bool {
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(String(text.prefix(600)))
@@ -24,7 +20,6 @@ struct TranslateButton: View {
         return !found.hasPrefix(mine)
     }
 
-    /// Whether to show the button at all for this text.
     static func offered(for text: String, translation: String?) -> Bool {
         translation != nil || (available && isForeign(text))
     }

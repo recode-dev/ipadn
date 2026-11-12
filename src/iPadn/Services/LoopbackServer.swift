@@ -22,17 +22,10 @@ struct HTTPByteRange: Equatable {
     }
 }
 
-/// Only binds loopback. A random path capability protects runtime, proxy, and registered files.
-// Listener/startup state is confined to queue; the URL and file registries use lock.
-/// What the installation servers saw, for diagnostics: connections that
-/// failed (with the TLS error) and which resources were served. No tokens,
-/// file names or account data.
 final class InstallLog: @unchecked Sendable {
     static let shared = InstallLog()
-    /// LiveContainer runs apps inside its own process and sets this.
     static let insideLiveContainer: Bool = {
         #if DEBUG
-        // Screenshots of the LiveContainer hints without LiveContainer.
         if ProcessInfo.processInfo.arguments.contains("--livecontainer") { return true }
         #endif
         return ProcessInfo.processInfo.environment["LC_HOME_PATH"] != nil
@@ -48,8 +41,6 @@ final class InstallLog: @unchecked Sendable {
     }
     func servedManifest() { lock.lock(); manifestServed += 1; progress.readManifest = true; lock.unlock() }
     var manifestCount: Int { lock.lock(); defer { lock.unlock() }; return manifestServed }
-    /// How far the system has got with the current installation, as seen by
-    /// the servers that hand it the install details and the package.
     struct Progress: Equatable {
         var readManifest = false
         var sent: UInt64 = 0
@@ -61,8 +52,6 @@ final class InstallLog: @unchecked Sendable {
     private var progress = Progress()
     var currentProgress: Progress { lock.lock(); defer { lock.unlock() }; return progress }
     func beginInstallation() { lock.lock(); progress = Progress(); lock.unlock() }
-    /// A request for the package starting at byte `start`; one from the
-    /// beginning is the system starting over.
     func packageRequested(size: UInt64, from start: UInt64 = 0) {
         lock.lock(); progress.total = size; progress.sent = start == 0 ? 0 : max(progress.sent, start); lock.unlock()
     }
@@ -85,8 +74,6 @@ final class LoopbackServer: @unchecked Sendable {
     private let compatibilityMode: Bool
     private let token = UUID().uuidString
     private var readyURL: URL?
-    // Last read/write per connection; confined to queue. Idle connections are
-    // closed, while an actively streaming multi-GB IPA is never cut off.
     private var lastActivity: [ObjectIdentifier: DispatchTime] = [:]
     private let idleTimeout: UInt64 = 120
     var baseURL: URL? {
@@ -104,10 +91,6 @@ final class LoopbackServer: @unchecked Sendable {
         self.identity = identity; self.chain = certificates; self.publicHost = publicHost
     }
 
-    /// Starts the listener, or checks the running one still accepts
-    /// connections. iOS reclaims listening sockets of suspended apps without
-    /// telling NWListener, which left every later request failing with
-    /// "could not connect to the server" until the app was relaunched.
     func start() async throws {
         if let url = baseURL, let port = url.port.flatMap({ UInt16(exactly: $0) }) {
             if await Self.isListening(port: port) { return }
@@ -115,7 +98,6 @@ final class LoopbackServer: @unchecked Sendable {
             await reset()
             do { try await startListener() }
             catch {
-                // A fixed port can take a moment to be released.
                 guard self.port != nil else { throw error }
                 try await Task.sleep(nanoseconds: 500_000_000)
                 try await startListener()
@@ -138,7 +120,6 @@ final class LoopbackServer: @unchecked Sendable {
         }
     }
 
-    /// Whether something accepts TCP connections on the loopback port.
     static func isListening(port: UInt16, timeout: TimeInterval = 1.5) async -> Bool {
         guard let endpointPort = NWEndpoint.Port(rawValue: port) else { return false }
         final class Probe: @unchecked Sendable {
@@ -180,8 +161,6 @@ final class LoopbackServer: @unchecked Sendable {
                 do {
                     let parameters: NWParameters
                     if let identity = self.identity {
-                        // Send intermediates too: iOS does not fetch a missing
-                        // issuer for the installer's TLS connection.
                         let created = self.chain.count > 1
                             ? sec_identity_create_with_certificates(identity, self.chain as CFArray)
                             : sec_identity_create(identity)
@@ -192,7 +171,6 @@ final class LoopbackServer: @unchecked Sendable {
                         parameters = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
                     } else { parameters = .tcp }
                     parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: self.port.flatMap(NWEndpoint.Port.init(rawValue:)) ?? .any)
-                    // A fixed port may still be in TIME_WAIT from the last session.
                     if self.port != nil { parameters.allowLocalEndpointReuse = true }
                     let listener = try NWListener(using: parameters, on: .any)
                     self.listener = listener
@@ -221,8 +199,6 @@ final class LoopbackServer: @unchecked Sendable {
                             self.listener = nil
                             self.finishStart(.failure(ToolError.message(AppText.text("Installation was interrupted. Try again."))))
                         case .waiting(let error):
-                            // The port can't be bound right now: fail instead of
-                            // leaving every caller of start() waiting forever.
                             self.lock.lock(); self.readyURL = nil; self.lock.unlock()
                             self.listener = nil
                             self.finishStart(.failure(error))

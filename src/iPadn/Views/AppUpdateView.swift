@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// A newer iPadn release: what changed, and its installation package.
 struct AppUpdateView: View {
     @EnvironmentObject private var store: ToolStore
     let release: AppRelease
@@ -82,7 +81,6 @@ struct AppUpdateView: View {
             defer { downloading = nil }
             do {
                 let file = try await AppUpdateService.download(release) { value in
-                    // A late report must not bring back a finished download's bar.
                     Task { @MainActor in if progress != nil { progress = value } }
                 }
                 progress = nil
@@ -96,8 +94,6 @@ struct AppUpdateView: View {
     }
 }
 
-/// Release notes from Markdown: section headings, bullets and paragraphs,
-/// with inline links and emphasis.
 private struct ReleaseNotesText: View {
     let blocks: [AppUpdateService.NoteBlock]
 

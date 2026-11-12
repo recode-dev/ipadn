@@ -1,6 +1,5 @@
 import Foundation
 
-/// A value used from several threads, one at a time (formatters aren't thread-safe).
 final class NSLockedValue<Value>: @unchecked Sendable {
     private let lock = NSLock()
     private var value: Value
@@ -8,7 +7,6 @@ final class NSLockedValue<Value>: @unchecked Sendable {
     func withLock<T>(_ body: (inout Value) -> T) -> T { lock.lock(); defer { lock.unlock() }; return body(&value) }
 }
 
-/// App Store storefronts, for price comparison.
 enum StoreRegions {
     static let codes = """
     AE AG AI AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BJ BM BN BO BR BS BT BW BY BZ CA CD CG CH CI CL CM CN CO \
@@ -19,9 +17,7 @@ enum StoreRegions {
     """.split(separator: " ").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     static let defaultComparison = ["CN", "HK", "US", "JP", "KR", "TR", "NG"]
 
-    /// A storefront's name in the interface language, cached per language.
     static func name(_ code: String, locale: Locale = AppText.locale) -> String { names(locale)[code] ?? code }
-    /// All storefronts in the order of their names in the interface language.
     static func byName(_ locale: Locale = AppText.locale) -> [String] {
         codes.sorted { name($0, locale: locale).localizedStandardCompare(name($1, locale: locale)) == .orderedAscending }
     }
@@ -39,19 +35,15 @@ enum StoreRegions {
     static func flag(_ code: String) -> String {
         code.uppercased().unicodeScalars.compactMap { UnicodeScalar(127_397 + $0.value) }.map(String.init).joined()
     }
-    /// Storefronts whose prices leave out sales tax, which is added at checkout.
     static let taxExcluded: Set<String> = ["US", "CA"]
 }
 
-/// Daily reference rates (mid-market, before card fees).
 struct ExchangeRates: Codable, Equatable {
     var base: String
-    /// Units of each currency per one unit of `base`.
     var rates: [String: Double]
     var updated: Date
     var fetched: Date
 
-    /// `amount` in `currency`, expressed in the base currency.
     func convert(_ amount: Double, from currency: String) -> Double? {
         if currency == base { return amount }
         guard let rate = rates[currency], rate > 0 else { return nil }
@@ -70,7 +62,6 @@ struct ExchangeRates: Codable, Equatable {
     }
 
     private static let cacheFile = "exchange-rates.json"
-    /// Cached rates when recent, else fresh ones; stale cached rates when offline.
     static func load(base: String) async -> ExchangeRates? {
         let stored = try? LocalResources.loadChecked(ExchangeRates.self, filename: cacheFile)
         let cached = stored?.base == base ? stored : nil
@@ -84,7 +75,6 @@ struct ExchangeRates: Codable, Equatable {
     }
 }
 
-/// One storefront's price for an app.
 struct RegionPrice: Identifiable, Equatable {
     var country: String
     var listing: StoreApp?
@@ -94,7 +84,6 @@ struct RegionPrice: Identifiable, Equatable {
 }
 
 enum PriceComparison {
-    /// The app's listing in each storefront, a few at a time.
     static func regionPrices(appID: String, countries: [String]) async -> [RegionPrice] {
         var results: [String: RegionPrice] = [:]
         await withTaskGroup(of: RegionPrice?.self) { group in
@@ -110,14 +99,11 @@ enum PriceComparison {
         return countries.compactMap { results[$0] }
     }
 
-    /// Nil when the request failed, rather than showing "not listed".
     private static func regionPrice(appID: String, country: String) async -> RegionPrice? {
         guard let found = try? await StoreService.lookup(ids: [appID], country: country) else { return nil }
         return RegionPrice(country: country, listing: found.apps[appID])
     }
 
-    /// Cheapest first in the base currency; unconvertible prices after
-    /// those, then storefronts that don't list the app.
     static func sorted(_ prices: [RegionPrice], rates: ExchangeRates?) -> [RegionPrice] {
         func key(_ item: RegionPrice) -> (Int, Double) {
             guard let price = item.price else { return (2, 0) }
@@ -131,17 +117,12 @@ enum PriceComparison {
     }
 }
 
-/// An in-app purchase as an App Store product page lists it.
 struct InAppPrice: Hashable {
     var name: String
-    /// The page's text, e.g. "$4.99" or "199,99 TL".
     var text: String
     var price: Double?
 }
 
-/// The same in-app purchase across storefronts. Items share a name when the
-/// app sells several tiers (monthly, yearly): those are told apart by price
-/// order, cheapest first.
 struct InAppGroup: Identifiable, Equatable {
     struct Entry: Equatable {
         var country: String
@@ -156,12 +137,9 @@ struct InAppGroup: Identifiable, Equatable {
 }
 
 enum InAppPriceService {
-    /// The in-app purchases a product page lists (Apple shows up to ten),
-    /// [] when it lists none, nil when the page could not be read.
     static func fetch(appID: String, country: String) async -> [InAppPrice]? {
         var outcome = await page(appID: appID, country: country)
         if case .failure(let reason) = outcome, !reason.isRedirect {
-            // One retry: a busy storefront page often answers the second time.
             try? await Task.sleep(for: .seconds(1))
             outcome = await page(appID: appID, country: country)
         }
@@ -179,14 +157,8 @@ enum InAppPriceService {
         case network, status(Int), noData, notJSON, redirected
         var isRedirect: Bool { if case .redirected = self { return true }; return false }
     }
-    /// Storefront pages this network is sent away from (appID|COUNTRY).
-    /// From mainland China, apps.apple.com redirects other storefronts'
-    /// product pages to the China store's Today page.
     @MainActor static var redirected: Set<String> = []
 
-    /// The product page as a desktop browser gets it, following redirects.
-    /// Pages are read in English by default (Apple picks its closest English
-    /// page in every storefront), so the same purchase has the same name everywhere.
     static func page(appID: String, country: String, language: String = "en-US") async -> Result<[InAppPrice], PageFailure> {
         switch await fetchPage(appID: appID, country: country, language: language) {
         case .failure(let reason): return .failure(reason)
@@ -196,8 +168,6 @@ enum InAppPriceService {
         }
     }
 
-    /// A storefront's product page in `language`, as long as the network
-    /// isn't sent to another storefront and the page carries its data.
     static func fetchPage(appID: String, country: String, language: String) async -> Result<String, PageFailure> {
         guard let url = URL(string: "https://apps.apple.com/\(country.lowercased())/app/id\(appID)?l=\(language)") else { return .failure(.status(0)) }
         var request = URLRequest(url: url, timeoutInterval: 30)
@@ -226,7 +196,6 @@ enum InAppPriceService {
         config.httpCookieStorage = nil
         return URLSession(configuration: config)
     }()
-    /// Several storefronts, a few pages at a time, kept for an hour.
     @MainActor
     static func fetch(appID: String, countries: [String]) async -> [String: [InAppPrice]] {
         var results: [String: [InAppPrice]] = [:]
@@ -250,17 +219,12 @@ enum InAppPriceService {
     }
     @MainActor private static var cache: [String: (date: Date, items: [InAppPrice])] = [:]
 
-    /// Names in the system language for the English names in `english`, read
-    /// from one storefront's page in that language. Empty when the system
-    /// language is English or no page could be matched.
     @MainActor
     static func localizedNames(appID: String, english: [String: [InAppPrice]],
                                language: String = Locale.preferredLanguages.first ?? "en") async -> [String: String] {
         guard !language.lowercased().hasPrefix("en") else { return [:] }
         let key = appID + "|" + language
         if let cached = nameCache[key], Date().timeIntervalSince(cached.date) < 3600 { return cached.names }
-        // Storefronts that list names in the language first, then the other
-        // storefronts that were read.
         var candidates: [String] = []
         for code in nameRegions(language: language) + [Locale.current.region?.identifier.uppercased()].compactMap({ $0 }) + english.keys.sorted()
         where !candidates.contains(code) && english[code]?.isEmpty == false {
@@ -279,9 +243,6 @@ enum InAppPriceService {
     }
     @MainActor private static var nameCache: [String: (date: Date, names: [String: String])] = [:]
 
-    /// Storefronts whose pages are written in a language, first the one in
-    /// the language tag's region when it is one of them (PT for pt-PT), then
-    /// the language's main storefront (JP for ja, even on a ja-CN device).
     static func nameRegions(language: String) -> [String] {
         let tag = language.lowercased()
         let tagRegion = Locale(identifier: language).region?.identifier.uppercased()
@@ -303,9 +264,6 @@ enum InAppPriceService {
         return native
     }
 
-    /// One storefront lists its purchases in the same order and at the same
-    /// prices in every language, so its two lists pair up item by item. Any
-    /// difference means the lists can't be paired: no names then.
     static func nameMap(english: [InAppPrice], localized: [InAppPrice]) -> [String: String] {
         guard english.count == localized.count, !english.isEmpty else { return [:] }
         var names: [String: String] = [:]
@@ -313,11 +271,9 @@ enum InAppPriceService {
             guard en.price == local.price else { return [:] }
             if names[en.name] == nil { names[en.name] = local.name }
         }
-        // Nothing to show if the "localized" page came back in English too.
         return names.contains { $0.key != $0.value } ? names : [:]
     }
 
-    // The desktop page carries the information section with in-app purchases.
     static let browserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
 
     static func serializedData(_ html: String) -> Any? {
@@ -330,9 +286,6 @@ enum InAppPriceService {
 
     static func items(fromPage html: String) -> [InAppPrice]? {
         guard let json = serializedData(html) else { return nil }
-        // The information section is a list of annotations; the in-app
-        // purchase one pairs item names with prices. Its title depends on the
-        // page language, so it is recognised by its contents.
         var best: [InAppPrice] = []
         func visit(_ value: Any, depth: Int) {
             guard depth < 40 else { return }
@@ -352,12 +305,10 @@ enum InAppPriceService {
             }
         }
         visit(json, depth: 0)
-        // Some apps list the same purchase twice (one per platform).
         var seen = Set<InAppPrice>()
         return best.filter { seen.insert($0).inserted }
     }
 
-    /// A short amount with at most a currency sign or code around it.
     static func looksLikePrice(_ text: String) -> Bool {
         guard text.count <= 24, text.contains(where: \.isNumber) else { return false }
         let ignored: Set<Character> = [".", ",", "'", " ", "\u{00A0}", "\u{202F}"]
@@ -365,8 +316,6 @@ enum InAppPriceService {
         return rest.count <= 4
     }
 
-    /// The number in a formatted price, whatever the separators:
-    /// "$1,099" → 1099, "1.299,99 €" → 1299.99, "Rp 15.000" → 15000.
     static func price(_ text: String) -> Double? {
         let digits = text.filter { $0.isNumber || $0 == "." || $0 == "," }
         guard !digits.isEmpty else { return nil }
@@ -384,8 +333,6 @@ enum InAppPriceService {
         return Double(normalized)
     }
 
-    /// Groups each storefront's items into comparable purchases, in the order
-    /// the first storefront lists them, cheapest storefront first in each.
     static func groups(_ regions: [(country: String, currency: String, items: [InAppPrice])],
                        rates: ExchangeRates?) -> [InAppGroup] {
         var order: [String] = []
@@ -422,7 +369,6 @@ enum InAppPriceService {
     }
 }
 
-/// One version's entry in a product page's version history.
 struct ReleaseNote: Equatable {
     var version: String
     var date: Date?
@@ -430,9 +376,6 @@ struct ReleaseNote: Equatable {
 }
 
 enum ReleaseNotesService {
-    /// The version history a product page carries, by version number, in
-    /// the system language where the storefront offers it. Tries the
-    /// storefronts in order; empty when none could be read.
     @MainActor
     static func notes(appID: String, countries: [String],
                       language: String = Locale.preferredLanguages.first ?? "en-US") async -> [String: ReleaseNote] {
@@ -441,12 +384,10 @@ enum ReleaseNotesService {
             if let cached = cache[key] {
                 let age = Date().timeIntervalSince(cached.date)
                 if !cached.notes.isEmpty && age < 6 * 3600 { return cached.notes }
-                // A page that couldn't be read (or was redirected) isn't fetched again for a while.
                 if cached.notes.isEmpty && age < 30 * 60 { continue }
             }
             var notes: [String: ReleaseNote] = [:]
             if case .success(let html) = await InAppPriceService.fetchPage(appID: appID, country: country, language: language) {
-                // The page's data runs to megabytes: read it off the main thread.
                 notes = await Task.detached(priority: .utility) { parse(html) }.value
             }
             guard !Task.isCancelled else { return [:] }
@@ -457,8 +398,6 @@ enum ReleaseNotesService {
     }
     @MainActor private static var cache: [String: (date: Date, notes: [String: ReleaseNote])] = [:]
 
-    /// Version history entries: TitledParagraph items whose subtitles hold
-    /// "Version 1.2.3" (localized) and the release date.
     static func parse(_ html: String) -> [String: ReleaseNote] {
         guard let json = InAppPriceService.serializedData(html) else { return [:] }
         var notes: [String: ReleaseNote] = [:]
@@ -467,7 +406,6 @@ enum ReleaseNotesService {
             if let dict = value as? [String: Any] {
                 if dict["$kind"] as? String == "TitledParagraph", let text = dict["text"] as? String,
                    let subtitle = dict["primarySubtitle"] as? String, let number = version(in: subtitle) {
-                    // The latest version appears twice (What's New and the history); keep any date either gives.
                     let released = (dict["secondarySubtitle"] as? String).flatMap(date)
                     if var known = notes[number] {
                         if known.date == nil { known.date = released; notes[number] = known }
@@ -485,14 +423,12 @@ enum ReleaseNotesService {
         return notes
     }
 
-    /// "Version 1.2.3", "版本 1.2.3" → "1.2.3".
     static func version(in subtitle: String) -> String? {
         let token = subtitle.split(whereSeparator: { $0.isWhitespace }).last.map(String.init) ?? subtitle
         let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789.").inverted)
         return trimmed.first?.isNumber == true ? trimmed : nil
     }
 
-    /// "Tue Oct 06 2026 18:07:01 GMT+0000 (Coordinated Universal Time)".
     static func date(_ text: String) -> Date? {
         let core = text.components(separatedBy: " (").first ?? text
         return dateFormatter.withLock { $0.date(from: core) }

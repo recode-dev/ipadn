@@ -1,11 +1,3 @@
-//! On-device pairing (iOS 27 and later).
-//!
-//! iPadn presents itself as a computer the device can pair with. The app
-//! advertises `_remotepairing-pairable-host._tcp` with the TXT records this
-//! module hands back; the user picks iPadn in Settings › Privacy & Security ›
-//! Developer Mode and types the code shown. The device then connects here and
-//! runs the pairing, which yields the same remote pairing file a computer
-//! would create.
 
 use std::ffi::{CString, c_char, c_void};
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
@@ -25,9 +17,7 @@ pub const EVENT_READY: i32 = 0;
 pub const EVENT_CONNECTED: i32 = 1;
 pub const EVENT_PIN: i32 = 2;
 
-/// How long iPadn waits for the user to finish in Settings.
 const PAIRING_TIMEOUT: Duration = Duration::from_secs(300);
-/// Settings shows this as the computer's model; iOS only pairs with computers.
 const HOST_MODEL: &str = "Mac17,7";
 
 pub type EventCallback = extern "C" fn(context: *mut c_void, kind: i32, payload: *const c_char);
@@ -37,7 +27,6 @@ pub struct Events {
     pub callback: Option<EventCallback>,
     pub context: *mut c_void,
 }
-// The caller guarantees `context` outlives the call and may be used from any thread.
 unsafe impl Send for Events {}
 unsafe impl Sync for Events {}
 
@@ -51,22 +40,17 @@ impl Events {
 
 #[derive(Deserialize)]
 pub struct PairRequest {
-    /// The name Settings shows, e.g. "iPadn".
     pub name: String,
 }
 
-/// The pairing in progress, so another thread can stop it.
 static CURRENT: Mutex<Option<Arc<Notify>>> = Mutex::new(None);
 
 pub fn cancel() {
     if let Some(stop) = CURRENT.lock().ok().and_then(|current| current.clone()) {
-        // Stores a permit when nothing waits yet, so an early cancel is kept.
         stop.notify_one();
     }
 }
 
-/// Listens on both address families on one port: the device may reach this
-/// app over IPv4 or IPv6 loopback depending on how it resolved the service.
 async fn listen() -> Result<(Option<TcpListener>, Option<TcpListener>, u16), Failure> {
     let v6 = TcpListener::bind(SocketAddr::from((Ipv6Addr::UNSPECIFIED, 0))).await.ok();
     let port = match &v6 {
@@ -96,7 +80,6 @@ pub async fn pair(request: PairRequest, events: Events) -> Result<Json, Failure>
     let (v6, v4, port) = listen().await?;
     let mut pairing = RpPairingFile::generate(&request.name);
     let host = PairableHostInfo::generate(&request.name, HOST_MODEL);
-    // The service instance name must be the identifier sent during pairing.
     let identifier = pairing.identifier.clone();
     let txt: serde_json::Map<String, Json> = host
         .mdns_txt_records(&identifier)

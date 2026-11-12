@@ -3,14 +3,7 @@ import Network
 import UIKit
 import ZIPFoundation
 
-// Swift side of NativeInstall (Rust + idevice). It reaches this device's own
-// installation service, the one desktop tools use over USB, through a loopback
-// VPN and a remote pairing file. Unlike an install link, the system keeps the
-// package's App Store purchase record and replaces an App Store copy in place.
-// Symbols are resolved at runtime: simulator builds and builds made without
-// scripts/build_native_install.sh report the feature unavailable.
 enum NativeInstaller {
-    /// What the system has installed for one bundle ID.
     struct InstalledApp: Decodable, Equatable {
         var installed = false
         var bundleID: String?
@@ -22,7 +15,6 @@ enum NativeInstaller {
         var storeItemID: String?
         var storeVersionID: String?
         var hasPurchaseRecord: Bool?
-        /// Installed from an install link, which the App Store does not recognise.
         var manifestInstall: Bool?
         private enum CodingKeys: String, CodingKey {
             case installed, version, build, signer, placeholder, name
@@ -30,9 +22,7 @@ enum NativeInstaller {
             case storeItemID = "store_item_id", storeVersionID = "store_version_id"
             case hasPurchaseRecord = "has_purchase_record", manifestInstall = "manifest_install"
         }
-        /// The App Store can show "Open" and offer updates for this copy.
         var recognisedByAppStore: Bool { installed && storeItemID != nil && hasPurchaseRecord == true && manifestInstall != true }
-        /// Installed with "Block App Store Updates".
         var updatesBlocked: Bool { storeVersionID == String(NativeInstaller.blockedVersionID) }
     }
     struct Outcome: Equatable {
@@ -44,16 +34,13 @@ enum NativeInstaller {
         case uploading(Double)
         case installing(Double)
     }
-    /// A failure with the step it happened in, so the message can say what to fix.
     struct Failure: LocalizedError, Equatable {
         let stage: String
         let detail: String
         var errorDescription: String? { NativeInstaller.message(stage: stage, detail: detail) }
     }
 
-    /// This device, as seen through the loopback VPN.
     static let deviceAddress = "10.7.0.1"
-    /// Where the system listens when discovery finds nothing.
     static let fallbackPort: UInt16 = 49152
 
     private typealias ProgressFunction = @convention(c) (UnsafeMutableRawPointer?, Int32, UInt64, UInt64) -> Void
@@ -76,17 +63,14 @@ enum NativeInstaller {
     private static let listFunction = symbol("iPadnNativeList", as: LookupFunction.self)
     private static let pairCancelFunction = symbol("iPadnNativePairCancel", as: CancelFunction.self)
 
-    /// This build can list the apps installed on the device.
     static var listingIsAvailable: Bool { isAvailable && listFunction != nil }
 
-    /// This build can create a pairing file on the device.
     static var pairingIsAvailable: Bool { isAvailable && pairFunction != nil && pairCancelFunction != nil }
 
     static var isAvailable: Bool {
         installFunction != nil && lookupFunction != nil && cancelFunction != nil && freeFunction != nil
     }
 
-    // MARK: Pairing file
 
     private static var directory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -95,8 +79,6 @@ enum NativeInstaller {
     static var pairingFileURL: URL { directory.appendingPathComponent("pairing.plist") }
     static var hasPairingFile: Bool { FileManager.default.fileExists(atPath: pairingFileURL.path) }
 
-    /// A remote pairing file holds two 32-byte keys and the host identifier.
-    /// A lockdown pairing file (older systems) has certificates instead.
     static func validatePairingFile(_ data: Data) throws {
         guard data.count <= 64 * 1024,
               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
@@ -114,18 +96,12 @@ enum NativeInstaller {
     static func importPairingFile(_ data: Data) throws {
         try validatePairingFile(data)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        // The file is a credential for this device: keep it out of backups
-        // and unreadable while the device is locked.
         try data.write(to: pairingFileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         var url = pairingFileURL
         try? url.setResourceValues(values)
     }
 
-    /// Imports a pairing file placed in iPadn's folder in the Files app
-    /// (copied there from a computer or another app). The first valid one
-    /// wins and is removed from that folder once imported.
-    /// Returns whether one was found.
     @discardableResult
     static func importPairingFileFromDocuments() throws -> Bool {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -154,9 +130,7 @@ enum NativeInstaller {
         try FileManager.default.removeItem(at: pairingFileURL)
     }
 
-    // MARK: Requests
 
-    /// One operation at a time: the library keeps one cancellation flag.
     private static let gate = NSLock()
     private static var running = false
     private static func begin() throws {
@@ -166,13 +140,8 @@ enum NativeInstaller {
     }
     private static func end() { gate.lock(); running = false; gate.unlock() }
 
-    /// The App Store compares this version ID in the installed purchase record
-    /// with the newest release; one above every real ID reads as up to date.
     static let blockedVersionID = 2_000_000_000
 
-    /// The package's purchase record with the version ID raised, for the
-    /// system to keep instead of the package's own (issue #46). nil when the
-    /// package has none.
     static func blockedMetadata(of package: URL) throws -> Data? {
         let archive = try Archive(url: package, accessMode: .read)
         guard let entry = archive["iTunesMetadata.plist"], entry.uncompressedSize < 4 * 1024 * 1024 else { return nil }
@@ -218,7 +187,6 @@ enum NativeInstaller {
         }
         return reply
     }
-    /// The parsed result of a lookup reply. Internal so tests can cover it.
     static func lookupResult(from data: Data) throws -> InstalledApp {
         guard let app = try parse(data).app else { throw Failure(stage: "reply", detail: "missing app") }
         return app
@@ -228,8 +196,6 @@ enum NativeInstaller {
         return Outcome(upgraded: reply.upgraded ?? false, after: reply.after)
     }
 
-    /// Reports what the system has installed for `bundleID`. Also the
-    /// connection check: it goes through the VPN, the pairing and the tunnel.
     static func lookup(bundleID: String) async throws -> InstalledApp {
         try begin(); defer { end() }
         let port = await RemotePairingPort.resolve()
@@ -243,7 +209,6 @@ enum NativeInstaller {
         }.value
     }
 
-    /// Every app the user installed on this device. Reads only; nothing changes.
     static func installedApps() async throws -> [InstalledApp] {
         try begin(); defer { end() }
         let port = await RemotePairingPort.resolve()
@@ -256,7 +221,6 @@ enum NativeInstaller {
             return apps
         }.value
     }
-    /// The parsed result of a list reply. Internal so tests can cover it.
     static func listResult(from data: Data) throws -> [InstalledApp] {
         guard let apps = try parse(data).apps else { throw Failure(stage: "reply", detail: "missing apps") }
         return apps
@@ -267,8 +231,6 @@ enum NativeInstaller {
         init(_ handler: @escaping @Sendable (Phase) -> Void) { self.handler = handler }
     }
 
-    /// Installs `package`, replacing an installed copy in place. The package
-    /// stays on this device; it is handed to the system installer directly.
     static func install(package: URL, bundleID: String, blockUpdates: Bool = false,
                         progress: @escaping @Sendable (Phase) -> Void) async throws -> Outcome {
         try begin(); defer { end() }
@@ -282,7 +244,6 @@ enum NativeInstaller {
         }
         let body = try request(bundleID: bundleID, package: package, port: port, metadata: metadata)
         InstallLog.shared.add("native install started (port \(port))")
-        // Sending the package takes a while; keep running if the user leaves.
         let background = await UIApplication.shared.beginBackgroundTask(withName: "iPadn native installation") { cancel() }
         defer { Task { @MainActor in UIApplication.shared.endBackgroundTask(background) } }
         do {
@@ -311,13 +272,10 @@ enum NativeInstaller {
         }
     }
 
-    /// Stops sending the package. An install the system already started continues.
     static func cancel() { cancelFunction?() }
 
-    // MARK: On-device pairing
 
     enum PairingEvent: Equatable {
-        /// Listening; advertise this port, service name and TXT record.
         case ready(port: Int, identifier: String, txt: [String: String])
         case connected
         case code(String)
@@ -326,7 +284,6 @@ enum NativeInstaller {
         let handler: @Sendable (PairingEvent) -> Void
         init(_ handler: @escaping @Sendable (PairingEvent) -> Void) { self.handler = handler }
     }
-    /// Parses the ready event. Internal so tests can cover it.
     static func readyEvent(from data: Data) -> PairingEvent? {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let port = object["port"] as? Int, (1...65535).contains(port),
@@ -334,7 +291,6 @@ enum NativeInstaller {
               let txt = object["txt"] as? [String: String] else { return nil }
         return .ready(port: port, identifier: identifier, txt: txt)
     }
-    /// The pairing file in a successful pair reply. Internal so tests can cover it.
     static func pairingFile(fromReply data: Data) throws -> Data {
         _ = try parse(data)
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -344,8 +300,6 @@ enum NativeInstaller {
         return file
     }
 
-    /// Waits for the device to pair with iPadn and returns the new pairing
-    /// file. Blocks until the user finishes in Settings, gives up or cancels.
     static func pair(name: String, events: @escaping @Sendable (PairingEvent) -> Void) async throws -> Data {
         guard pairingIsAvailable else { throw ToolError.message(AppText.text("This build doesn't include the on-device pairing component.")) }
         try begin(); defer { end() }
@@ -375,7 +329,6 @@ enum NativeInstaller {
 
     static func cancelPairing() { pairCancelFunction?() }
 
-    // MARK: Messages
 
     static func message(stage: String, detail: String) -> String {
         let lowered = detail.lowercased()
@@ -416,7 +369,6 @@ enum NativeInstaller {
 }
 
 extension ToolSettings {
-    /// Native installation is chosen and this build can do it.
     var usesNativeInstallation: Bool { nativeInstallation && NativeInstaller.isAvailable }
     var installationMethodTitle: String {
         usesNativeInstallation ? AppText.text("Native Install") : automaticInstallation ? AppText.text("One-tap install")
@@ -424,8 +376,6 @@ extension ToolSettings {
     }
 }
 
-/// Finds the port of this device's remote pairing service. The system picks it
-/// at boot and advertises it over Bonjour; it is not fixed.
 enum RemotePairingPort {
     private final class Search: @unchecked Sendable {
         private let queue = DispatchQueue(label: "app.local.iPadn.remote-pairing-port")
@@ -450,8 +400,6 @@ enum RemotePairingPort {
             self.browser = browser
             browser.browseResultsChangedHandler = { [weak self] results, _ in
                 guard let self, self.continuation != nil else { return }
-                // Other devices on the network advertise the same service;
-                // this device's own record is the one seen on loopback.
                 let services = results.filter { if case .service = $0.endpoint { return true }; return false }
                 let own = services.first { $0.interfaces.contains { $0.type == .loopback || $0.name.hasPrefix("lo") } }
                 guard let chosen = own ?? (services.count == 1 ? services.first : nil),

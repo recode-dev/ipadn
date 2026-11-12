@@ -94,8 +94,6 @@ class AuditedIPA:
             raise ProbeError("Unknown options mode")
         result: dict[str, Any] = {"CFBundleIdentifier": self.bundle_id}
         if mode == "store":
-            # These are plist DATA values, not parsed dictionaries/base64 strings.
-            # Preserve the exact bytes from the IPA. Never set PackageType=Developer.
             result.update(iTunesMetadata=self.metadata, ApplicationSINF=self.main_sinf)
         return result
 
@@ -134,7 +132,7 @@ def inspect_ipa(path: Path) -> AuditedIPA:
                     raise ProbeError("Required regular IPA entry is missing: " + name)
                 if entry.file_size > maximum:
                     raise ProbeError("IPA metadata exceeds inspection limit")
-                return archive.read(entry)  # ZipFile checks the entry CRC.
+                return archive.read(entry)
 
             infos = [name for name in entries if len(name.split("/")) == 3
                      and name.startswith("Payload/") and name.split("/")[1].endswith(".app")

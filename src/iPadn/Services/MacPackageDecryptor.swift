@@ -1,9 +1,6 @@
 import Foundation
 import Security
 
-// Swift side of MacPKGBridge (Go + ipatool StoreAgent on the no-JIT Unicorn
-// interpreter). Symbols are resolved at runtime: simulator builds and builds
-// made without scripts/build_mac_pkg_bridge.sh report the feature unavailable.
 enum MacPackageDecryptor {
     enum Stage: Int32 {
         case idle = 0, components, starting, decrypting
@@ -33,8 +30,6 @@ enum MacPackageDecryptor {
 
     static var isAvailable: Bool { decryptFunction != nil && statusFunction != nil && cancelFunction != nil }
 
-    /// Blocking; call from a background task. One package is processed at a
-    /// time; concurrent calls wait inside the bridge.
     static func decrypt(hardwareID: String, dpInfo: Data, from source: URL, to destination: URL) throws {
         guard let decryptFunction else {
             throw ToolError.message(AppText.text("This version can't download this Mac package"))
@@ -67,24 +62,17 @@ enum MacPackageDecryptor {
         return (stage, bytes)
     }
 
-    // The bridge processes one package at a time and reports one global
-    // status. Jobs therefore queue here, on a dedicated thread (the call
-    // blocks for minutes and must not hold a Swift concurrency thread), and
-    // the status belongs only to the job recorded as current.
     private static let queue = DispatchQueue(label: "iPadn.mac-package", qos: .userInitiated)
     private static let lock = NSLock()
     private static var current: UUID?
     private static var cancelled = Set<UUID>()
-    // Resolves the running job's caller early when it is cancelled.
     private static var finishCurrent: ((Error?) -> Void)?
-    // Callers still waiting for their turn, so a cancel releases them at once.
     private static var waiting: [UUID: Once] = [:]
 
     private final class Once: @unchecked Sendable {
         private let lock = NSLock()
         private var continuation: CheckedContinuation<Void, Error>?
         init(_ continuation: CheckedContinuation<Void, Error>) { self.continuation = continuation }
-        /// Returns false if the caller was already resolved (abandoned).
         @discardableResult func finish(_ error: Error?) -> Bool {
             lock.lock(); let pending = continuation; continuation = nil; lock.unlock()
             guard let pending else { return false }
@@ -93,11 +81,8 @@ enum MacPackageDecryptor {
         }
     }
 
-    /// The job whose package is being processed right now, if any.
     static var currentJob: UUID? { lock.lock(); defer { lock.unlock() }; return current }
 
-    /// Queues the job and waits for its turn; throws CancellationError if it
-    /// is cancelled while waiting or while being processed.
     static func process(job: UUID, hardwareID: String, dpInfo: Data, from source: URL, to destination: URL) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let once = Once(continuation)
@@ -112,19 +97,12 @@ enum MacPackageDecryptor {
                 var result: Error?
                 do { try decrypt(hardwareID: hardwareID, dpInfo: dpInfo, from: source, to: destination) }
                 catch { result = error }
-                // Publish idle before waking the caller. A resumed task may
-                // immediately inspect currentJob or enqueue its next package.
                 lock.lock(); current = nil; finishCurrent = nil; cancelled.remove(job); lock.unlock()
-                // A cancelled caller has already moved on: discard any output.
                 if !once.finish(result) { try? FileManager.default.removeItem(at: destination) }
             }
         }
     }
 
-    /// Cancels a job that is waiting or being processed.
-    /// The task is released at once even while Apple's component is still
-    /// starting up (it cannot be interrupted at every step); the bridge stops
-    /// as soon as it can and its result is discarded.
     static func cancel(job: UUID) {
         lock.lock()
         let running = current == job
@@ -132,9 +110,6 @@ enum MacPackageDecryptor {
         let queued = running ? nil : waiting.removeValue(forKey: job)
         if !running { cancelled.insert(job) }
         lock.unlock()
-        // Release the caller first. Calling into the bridge can block until its
-        // current step (Apple's component starting up) returns, so it must
-        // never run on the caller's thread, which is usually the main thread.
         finish?(CancellationError())
         queued?.finish(CancellationError())
         if running, let cancelFunction {
@@ -143,9 +118,6 @@ enum MacPackageDecryptor {
     }
 }
 
-// dpInfo is account- and device-bound key material for one download. It is
-// kept in the keychain (this device only) between the authorized request and
-// local processing, never in the download task file, and deleted afterwards.
 enum MacPackageSecrets {
     struct Entry: Codable, Equatable {
         let hardwareID: String

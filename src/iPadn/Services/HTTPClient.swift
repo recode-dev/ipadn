@@ -1,7 +1,5 @@
 import Foundation
 
-/// Recent failed requests for diagnostics: time, host, endpoint name and
-/// status only. No query strings, headers, bodies or account details.
 enum RequestFailureLog {
     private static let entries = NSLockedValue<[String]>([])
     static func record(_ url: URL?, status: Int? = nil, error: Error? = nil, stage: String? = nil) {
@@ -15,8 +13,6 @@ enum RequestFailureLog {
         let line = parts.joined(separator: "; ")
         entries.withLock { list in list.append(line); if list.count > 20 { list.removeFirst(list.count - 20) } }
     }
-    /// Apple endpoint names (buyProduct, volumeStoreDownloadProduct); never
-    /// file names or tokens.
     static func endpointName(_ value: String) -> Bool {
         !value.isEmpty && value.count <= 40 && value.allSatisfy { $0.isLetter && $0.isASCII }
     }
@@ -46,9 +42,6 @@ final class HTTPClient: Sendable {
         }
     }
 
-    /// Failures that say nothing about the request itself: a busy Apple
-    /// server or a pooled connection the system dropped while the app was
-    /// in the background. Worth one or two quiet retries.
     static func isTransient(_ error: Error) -> Bool {
         if let status = error as? HTTPStatusError { return [408, 429, 500, 502, 503, 504].contains(status.code) }
         let ns = error as NSError
@@ -150,9 +143,6 @@ final class HTTPClient: Sendable {
         throw ToolError.message(AppText.text("The server returned an unexpected response. Try again later."))
     }
 
-    /// One byte range (`"0-99"` or `"-100"`) and its Content-Range. The body
-    /// is streamed so a server that ignores Range is dropped before the whole
-    /// package is read.
     func range(_ url: URL, _ value: String, limit: Int) async throws -> (Data, String) {
         guard url.scheme == "https", url.host != nil, url.user == nil, url.password == nil else { throw ToolError.message(AppText.text("Invalid link")) }
         var current = url
@@ -167,7 +157,6 @@ final class HTTPClient: Sendable {
             }
             if [301, 302, 303, 307, 308].contains(response.statusCode) {
                 bytes.task.cancel()
-                // Package downloads may hop between Apple's own CDN hosts.
                 guard let location = response.value(forHTTPHeaderField: "Location"),
                       let next = URL(string: location, relativeTo: current)?.absoluteURL,
                       next.scheme == "https", let host = next.host?.lowercased(), next.user == nil, next.password == nil,
@@ -233,8 +222,6 @@ final class HTTPClient: Sendable {
             "2019": AppText.text("Buy paid apps through the App Store first."),
             "9610": AppText.text("This account doesn't have a license for the app. Get it in the App Store first.")
         ]
-        // Raw customerMessage often contains internal localization keys,
-        // response codes, or English diagnostic text; never show it in the UI.
         return .message(messages[code] ?? AppText.text("Apple couldn't complete the operation. Try again later."))
     }
 }

@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// Apps installed on this device, read through the native installation
-/// connection: which have a newer store version, which the App Store doesn't
-/// recognise (installed from a link, shown with a cloud) and where the rest
-/// came from.
 struct InstalledAppsView: View {
     @EnvironmentObject private var store: ToolStore
     @Environment(\.scenePhase) private var scenePhase
@@ -15,7 +11,6 @@ struct InstalledAppsView: View {
     @State private var term = ""
     @State private var updating = false
 
-    /// The system can list apps for iPadn from iOS 17.4, like native installation.
     static var isSupported: Bool {
         NativeInstaller.listingIsAvailable
             && ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion: 17, minorVersion: 4, patchVersion: 0))
@@ -25,22 +20,17 @@ struct InstalledAppsView: View {
         case update, link, store, other
     }
 
-    /// Previews show sample data without a pairing file.
     private var paired: Bool { NativeInstaller.hasPairingFile || LocalResources.isPreview }
 
     private func listing(_ app: NativeInstaller.InstalledApp) -> StoreApp? { app.storeItemID.flatMap { listings[$0] } }
 
     func group(of app: NativeInstaller.InstalledApp) -> Group {
         if app.manifestInstall == true { return .link }
-        // Blocked on purpose: the App Store offers nothing, so neither does this list.
         if !app.updatesBlocked, let latest = listing(app), let installed = app.version,
            Self.isUpdate(latest, installed: installed, versionID: app.storeVersionID) { return .update }
         return app.storeItemID != nil ? .store : .other
     }
 
-    /// Whether the store has a newer version than the installed one. The same
-    /// store version ID, or a store version that only adds a build number to
-    /// the installed one ("10.0.10" against "10.0.10.105"), is the same release.
     static func isUpdate(_ latest: StoreApp, installed: String, versionID: String?) -> Bool {
         if let versionID, let current = latest.externalVersionID, versionID == current { return false }
         if latest.version.hasPrefix(installed + ".") { return false }
@@ -96,15 +86,12 @@ struct InstalledAppsView: View {
         .toolPage().navigationTitle("Apps on This Device").navigationBarTitleDisplayMode(.inline)
         .refreshable { await load() }
         .task { if !loaded { await load() } }
-        // Back from LocalDevVPN: try again without asking.
         .compatibleOnChange(of: scenePhase) { phase in
             if phase == .active, issue != nil, apps.isEmpty { Task { await load() } }
         }
         .overlay { if updating { ProgressView().padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
     }
 
-    /// What this page needs, shown like a feature that waits for its setup
-    /// rather than an error.
     @ViewBuilder private func requirement(title: LocalizedStringKey, message: LocalizedStringKey, retry: Bool, detail: String? = nil) -> some View {
         Section {
             VStack(spacing: 10) {
@@ -213,7 +200,6 @@ struct InstalledAppsView: View {
     }
 
     #if DEBUG
-    /// Screenshot data: one app per group.
     static var previewApps: [NativeInstaller.InstalledApp] {
         let apps = PreviewData.updatable
         func make(_ app: StoreApp, version: String, link: Bool = false) -> NativeInstaller.InstalledApp {
@@ -237,6 +223,5 @@ struct InstalledAppsView: View {
 }
 
 extension NativeInstaller.InstalledApp {
-    /// Stable row identity: the bundle ID, unique on a device.
     var identity: String { bundleID ?? storeItemID ?? UUID().uuidString }
 }

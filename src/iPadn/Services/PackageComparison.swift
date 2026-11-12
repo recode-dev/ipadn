@@ -1,6 +1,5 @@
 import Foundation
 
-/// What changed between two packages of the same app (Pro mode).
 struct PackageComparison: Equatable {
     struct Change: Equatable, Identifiable {
         var title: String
@@ -44,7 +43,6 @@ struct PackageComparison: Equatable {
         basic(AppText.text("Build"), old.build, new.build)
         basic(AppText.text("Requires"), old.minimumOS.isEmpty ? "" : "iOS " + old.minimumOS, new.minimumOS.isEmpty ? "" : "iOS " + new.minimumOS)
         basic(AppText.text("Supported devices"), old.devices, new.devices)
-        // Only a difference the reader can see: a few bytes print the same.
         if old.packageSize > 0, new.packageSize > 0, old.packageSize.byteLabel != new.packageSize.byteLabel {
             result.basics.append(Change(title: AppText.text("Package Size"), old: old.packageSize.byteLabel, new: new.packageSize.byteLabel))
         }

@@ -1,7 +1,5 @@
 name: Clean up old workflow runs
 
-# Run by hand from the Actions tab to delete old build records and, if
-# chosen, branches whose pull requests are closed.
 on:
   workflow_dispatch:
     inputs:
@@ -30,7 +28,6 @@ jobs:
           KEEP: ${{ inputs.keep }}
         run: |
           set -euo pipefail
-          # Newest first; skip this run and anything still queued or running.
           gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" \
             --jq '.workflow_runs[] | select(.status == "completed") | .id' > runs.txt
           total=$(wc -l < runs.txt)

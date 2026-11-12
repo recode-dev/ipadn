@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// Everything a downloaded package declares, on one page.
 struct PackageInfoView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var manager: DownloadManager
     let file: URL
-    /// The download it belongs to; other downloads of the same app can then
-    /// be compared with it in Pro mode.
     var job: DownloadJob? = nil
     @State private var info: PackageInfo?
     @State private var issue: String?
@@ -106,7 +103,6 @@ struct PackageInfoView: View {
         }
     }
 
-    /// Other finished downloads of the same app.
     private func otherVersions(of job: DownloadJob) -> [DownloadJob] {
         manager.jobs.filter {
             $0.id != job.id && $0.status == .completed && $0.rawFormat == nil
@@ -114,7 +110,6 @@ struct PackageInfoView: View {
         }
     }
 
-    /// Older on the left, newer on the right.
     @ViewBuilder private func compare(_ job: DownloadJob, _ other: DownloadJob) -> some View {
         if let otherFile = manager.fileURL(other) {
             let mine = (version: job.app.version, file: file), theirs = (version: other.app.version, file: otherFile)

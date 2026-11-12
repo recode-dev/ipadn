@@ -4,8 +4,6 @@ import UniformTypeIdentifiers
 import UserNotifications
 
 struct SettingsView: View {
-    /// Settings are grouped into pages, like the system's Settings app, so
-    /// the first screen stays short.
     enum Page {
         case root, downloads, follow, appearance, lock, sources, maintenance
         var title: LocalizedStringKey {
@@ -28,15 +26,12 @@ struct SettingsView: View {
     @State private var iconIssue: String?
     @State private var addingSource = false
     @State private var editingSourceID: UUID?
-    /// Results of the last "check all sources", by source.
     @State private var sourceChecks: [UUID: SourceCheckState] = [:]
     @State private var share: SharedFile?
     @State private var resetSettings = false
     @State private var importingBackup = false
     @State private var pendingBackup: Data?
     @State private var clearCache = false
-    /// The appearance the home screen icon has: fixed by the icon theme, or the
-    /// system's (not iPadn's own appearance setting) when following the system.
     private var iconScheme: ColorScheme {
         switch icons.theme {
         case .light: return .light
@@ -158,7 +153,6 @@ struct SettingsView: View {
                         }
                     } label: {
                         HStack(spacing: 14) {
-                            // The preview shows the chosen theme (or the current one when following the system).
                             Image(choice.preview).resizable().scaledToFit().frame(width: 48, height: 48)
                                 .clipShape(RoundedRectangle(cornerRadius: 11)).accessibilityHidden(true)
                                 .environment(\.colorScheme, iconScheme)
@@ -281,8 +275,6 @@ struct SettingsView: View {
             }
             if page == .root {
             Section {
-                // One compact row: the icon as chosen in 应用图标 (in the appearance
-                // it currently shows), with the name, version and description beside it.
                 HStack(alignment: .center, spacing: 14) {
                     Image(icons.selected.preview).resizable().scaledToFit().frame(width: 52, height: 52)
                         .clipShape(RoundedRectangle(cornerRadius: 52 * UX.iconCorner, style: .continuous))
@@ -369,8 +361,6 @@ struct SettingsView: View {
 }
 
 extension SettingsView {
-    /// Checks every source at once, enabled or not, and shows each result
-    /// under its row as it arrives.
     private func checkSources() {
         let sources = store.settings.versionSources
         UX.feedback()
@@ -394,7 +384,6 @@ enum SourceCheckState: Equatable {
     case unavailable(String)
 }
 
-/// One line under a version source: whether it answered, and how.
 struct SourceCheckLabel: View {
     let state: SourceCheckState
     var body: some View {

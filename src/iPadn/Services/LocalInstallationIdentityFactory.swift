@@ -3,8 +3,6 @@ import Security
 import CryptoKit
 import CommonCrypto
 
-/// Creates a private device-local CA and server identity. Only the public CA is exported.
-/// DER encoding follows X.509 / PKCS#12; server keys are kept in the installation keychain.
 enum LocalInstallationIdentityFactory {
     struct Material {
         let pkcs12: Data
@@ -35,7 +33,6 @@ enum LocalInstallationIdentityFactory {
         let issuer = name("iPadn Local CA " + String(identifier.uuidString.prefix(8)))
         let subject = name("iPadn Local Installation")
         let now = Date()
-        // A small backdating allowance handles clocks changing during setup.
         let caCertificate = try certificate(publicKey: caPublic, signingKey: ca, issuer: issuer, subject: issuer,
             from: now.addingTimeInterval(-300), until: now.addingTimeInterval(3650 * 86400), ca: true,
             authorityKey: caPublic)
@@ -45,13 +42,9 @@ enum LocalInstallationIdentityFactory {
         let password = UUID().uuidString
         let keyInfo = DER.sequence([DER.integer(Data([0])), rsaAlgorithm, DER.value(0x04, try externalBytes(server))])
         let pfx = try pkcs12(privateKeyInfo: keyInfo, certificates: [serverCertificate, caCertificate], password: password)
-        // Check the exact format through Apple's importer before saving anything.
         _ = try InstallationCertificate.importPKCS12(pfx, password: password)
         return Material(pkcs12: pfx, password: password, rootCertificate: caCertificate, identifier: identifier)
     }
-    /// PKCS#12 with the PKCS#8 key in a pkcs8ShroudedKeyBag
-    /// (pbeWithSHAAnd3-KeyTripleDES-CBC; iOS 26 ignores unencrypted keyBags)
-    /// and the certificates in plain cert bags, leaf first.
     static func pkcs12(privateKeyInfo keyInfo: Data, certificates: [Data], password: String) throws -> Data {
         guard let leaf = certificates.first else { throw ToolError.message(AppText.text("The certificate chain is empty")) }
         let keyID = Data(Insecure.SHA1.hash(data: leaf))
@@ -144,8 +137,6 @@ enum LocalInstallationIdentityFactory {
         }
         return DER.sequence([tbs, signatureAlgorithm, DER.value(0x03, Data([0]) + signature)])
     }
-    /// RFC 7292 Appendix B.2 key derivation with SHA-1 or SHA-256 (v = 64);
-    /// id 1 = encryption key, 2 = IV, 3 = MAC key.
     static func pkcs12KDF(sha256: Bool, id: UInt8, password: String, salt: Data,
                           iterations: Int, length: Int) -> Data {
         let v = 64
@@ -166,7 +157,6 @@ enum LocalInstallationIdentityFactory {
             for _ in 1..<iterations { block = digest(block) }
             output += block
             if output.count >= length { return Data(output.prefix(length)) }
-            // I_j = (I_j + B + 1) mod 2^(8v), with B = block repeated to v bytes.
             let bytes = Array(block)
             for start in stride(from: 0, to: input.count, by: v) {
                 var carry = 1

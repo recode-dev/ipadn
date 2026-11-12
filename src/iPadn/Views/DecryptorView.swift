@@ -1,12 +1,5 @@
 import SwiftUI
 
-/// One-click FairPlay removal: lists the apps installed on this device and
-/// strips cryptid=1 from their store packages, fully on-device. Needs the
-/// account's 16-byte FairPlay credential once (imported in the first card);
-/// afterwards every decryption is a single tap — the package is downloaded
-/// with the signed-in account if it is not on the device yet, decrypted with
-/// the SINF/SUPF license the store ships, and can be reinstalled DRM-free
-/// through the native installation connection.
 struct DecryptorView: View {
     @EnvironmentObject private var store: ToolStore
     @EnvironmentObject private var apple: AppleService
@@ -79,7 +72,6 @@ struct DecryptorView: View {
         }
     }
 
-    // MARK: - Apps
 
     @ViewBuilder private var appsSection: some View {
         if !apps.isEmpty {
@@ -144,7 +136,6 @@ struct DecryptorView: View {
         return nil
     }
 
-    // MARK: - Data loading
 
     private func load() async {
         guard paired, !loading else { return }
@@ -175,8 +166,6 @@ struct DecryptorView: View {
         } catch { issue = error.localizedDescription }
     }
 
-    /// Marks which installed apps already have a downloaded, still-encrypted
-    /// store package on the device.
     private func probeEncryption() async {
         let completed = store.downloads.jobs.filter { $0.status == .completed && $0.rawFormat == nil }
         var flags: [String: Bool] = [:]
@@ -190,7 +179,6 @@ struct DecryptorView: View {
         encryptedFlag = flags
     }
 
-    // MARK: - Decrypt pipeline
 
 
     private func decrypt(_ app: NativeInstaller.InstalledApp, bundleID: String) async {
@@ -229,8 +217,6 @@ struct DecryptorView: View {
         }
     }
 
-    /// The encrypted store package for an installed app: the already
-    /// downloaded one, else a fresh authorized download for the same version.
     private func resolvePackage(_ app: NativeInstaller.InstalledApp, bundleID: String) async throws -> URL {
         if let job = store.downloads.jobs.first(where: { $0.status == .completed && $0.rawFormat == nil && $0.app.bundleID == bundleID }),
            let filename = job.localFilename, let url = LocalResources.packageURL(filename) {
@@ -286,7 +272,6 @@ struct DecryptorView: View {
         }
     }
 
-    /// Native-install progress shown while the DRM-free package is installed.
     private var phaseText: String {
         switch installPhase {
         case .connecting: return AppText.text("Connecting…")
