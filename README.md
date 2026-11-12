@@ -4,300 +4,300 @@
 
 # iPadn
 
-**在 iPhone 和 iPad 上搜索、下载、安装你拥有的 App。**
-支持 iPhone、iPad、Apple TV 与 Mac 应用，包括历史版本与已下架应用。
+**Search, download and install the apps you own, on iPhone and iPad.**
+Works with iPhone, iPad, Apple TV and Mac apps, including older versions and apps removed from sale.
 
-[![最新版本](https://img.shields.io/github/v/release/mengangs/ipadn?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=111111)](https://github.com/mengangs/ipadn/releases/latest)
-[![下载量](https://img.shields.io/github/downloads/mengangs/ipadn/total?label=%E4%B8%8B%E8%BD%BD%E9%87%8F&color=111111)](https://github.com/mengangs/ipadn/releases)
-![系统要求](https://img.shields.io/badge/iOS%20%2F%20iPadOS-16%2B-111111)
-[![许可证](https://img.shields.io/github/license/mengangs/ipadn?label=%E8%AE%B8%E5%8F%AF%E8%AF%81&color=111111)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/mengangs/ipadn?label=latest&color=111111)](https://github.com/mengangs/ipadn/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mengangs/ipadn/total?label=downloads&color=111111)](https://github.com/mengangs/ipadn/releases)
+![Requires](https://img.shields.io/badge/iOS%20%2F%20iPadOS-16%2B-111111)
+[![License](https://img.shields.io/github/license/mengangs/ipadn?label=license&color=111111)](LICENSE)
 
-**简体中文** · [English](README_EN.md)
+[简体中文](README.md) · **English**
 
-[下载](https://github.com/mengangs/ipadn/releases/latest) · [安装下载的应用](#安装下载的应用) · [常见问题](#常见问题) · [反馈问题](https://github.com/mengangs/ipadn/issues) · [支持 iPadn](#支持-ipadn)
+[Download](https://github.com/mengangs/ipadn/releases/latest) · [Install a download](#installing-a-downloaded-app) · [FAQ](#frequently-asked-questions) · [Report a problem](https://github.com/mengangs/ipadn/issues) · [Support iPadn](#support-ipadn)
 
 </div>
 
 <p align="center">
-  <img src="docs/images/zh/01-search.jpg" width="24%" alt="搜索应用">
-  <img src="docs/images/zh/02-detail.jpg" width="24%" alt="应用详情">
-  <img src="docs/images/zh/03-versions.jpg" width="24%" alt="历史版本与更新说明">
-  <img src="docs/images/zh/04-prices.jpg" width="24%" alt="多地区比价">
+  <img src="docs/images/en/01-search.jpg" width="24%" alt="Search">
+  <img src="docs/images/en/02-detail.jpg" width="24%" alt="App details">
+  <img src="docs/images/en/03-versions.jpg" width="24%" alt="Version history and release notes">
+  <img src="docs/images/en/04-prices.jpg" width="24%" alt="Regional price comparison">
 </p>
 
 <p align="center">
-  <img src="docs/images/zh/05-downloads.jpg" width="24%" alt="下载管理">
-  <img src="docs/images/zh/06-purchased.jpg" width="24%" alt="已购项目">
-  <img src="docs/images/zh/07-native-install.jpg" width="24%" alt="原生安装">
-  <img src="docs/images/zh/08-languages.jpg" width="24%" alt="阿拉伯语界面">
+  <img src="docs/images/en/05-downloads.jpg" width="24%" alt="Downloads">
+  <img src="docs/images/en/06-purchased.jpg" width="24%" alt="Purchases">
+  <img src="docs/images/en/07-native-install.jpg" width="24%" alt="Native Install">
+  <img src="docs/images/en/08-languages.jpg" width="24%" alt="Arabic interface">
 </p>
 
 ---
 
-## 能做什么
+## What it does
 
 | | |
 | --- | --- |
-| 🔍 **搜索** | 输入应用名称、App ID 或 App Store 链接，切换商店地区和平台（iPhone / iPad / Apple TV / Mac）。详情页有截图预览和同一开发者的其他应用。 |
-| 🕘 **历史版本** | 查看每个版本的版本号、日期和更新说明并下载旧版本，也可以直接输入版本 ID。已下载的应用可以「保留此版本」，不再提醒更新。 |
-| ⬇️ **下载管理** | 后台下载，随时暂停、继续、重试，实时显示速度与剩余时间。 |
-| 🔔 **更新提醒** | 已下载的应用有新版本时在列表里提示，后台检查后还会发送通知。 |
-| ⬆️ **iPadn 自动更新提醒** | 有新版本时在「设置」中提示并发送通知，可以直接在 App 内查看更新内容、下载新安装包，交给你的签名工具安装。 |
-| 👀 **关注应用** | 关注感兴趣的应用，有新版本、降价、限免或下架时提醒你，并记录价格走势。 |
-| 🌏 **多地区比价** | 对比应用和内购项目（含订阅）在各个国家或地区的价格，按你选的货币换算后从低到高排列，对比的地区可以自己选。 |
-| 📲 **一键安装** | 下载完成后点「安装」即可，无需描述文件或证书，并实时显示安装进度。 |
-| 🧩 **原生安装** | 通过系统自带的安装服务安装，效果与用电脑安装相同：App Store 能识别并更新，可以直接覆盖 App Store 已装的版本并保留数据。iOS 27 起可在手机上完成配对，不需要电脑。 |
-| 💻 **Mac 应用** | 下载 Mac App Store 应用的 PKG 安装包，传到 Mac 上安装。 |
-| 🛍️ **已购项目** | 同步你获取过的所有应用，按名称或时间查找，可多选批量下载；一键找出已下架但仍可下载的应用并全部备份，已购清单可以导出成表格。 |
-| 📦 **已下架应用** | 只要你曾经获取过，下架应用也能通过 App ID 找到并下载。 |
-| 👥 **多个账号** | 保存多个 Apple 账号（邮箱或手机号），一键切换。 |
-| 🎮 **Apple Arcade** | 订阅了 Apple Arcade 的账号可以下载 Arcade 游戏。 |
-| 🧰 **专业模式** | 浏览安装包内的文件并提取，查看账号令牌和设备标识（默认关闭）。 |
+| 🔍 **Search** | Search by app name, App ID or App Store link, and switch storefront region and platform (iPhone / iPad / Apple TV / Mac). App pages show screenshots and other apps by the same developer. |
+| 🕘 **Older versions** | See each version's number, date and release notes and download older versions, or enter a version ID directly. Downloaded apps can “Keep this version” to stop update reminders. |
+| ⬇️ **Downloads** | Background downloads you can pause, resume and retry, with live speed and time remaining. |
+| 🔔 **Update alerts** | Downloaded apps with a newer version are marked in the list, and background checks send a notification. |
+| ⬆️ **iPadn updates** | New iPadn releases appear in Settings with a notification; read what's new, download the new package and hand it to your signing tool. |
+| 👀 **Follow apps** | Get notified about new versions, price drops, free promotions or removals, with a price history. |
+| 🌏 **Regional prices** | Compare app and in-app purchase prices (including subscriptions) across regions, converted to your chosen currency and sorted from lowest. You pick the regions. |
+| 📲 **One-tap install** | Tap “Install” when a download finishes. No profile or certificate needed, with live progress. |
+| 🧩 **Native install** | Installs through the system's own installation service, with the same result as installing from a computer: the App Store recognizes and updates the app, and an App Store copy can be replaced in place with its data kept. From iOS 27, pairing is done on the device without a computer. |
+| 💻 **Mac apps** | Download PKG installers of Mac App Store apps and install them on a Mac. |
+| 🛍️ **Purchases** | Sync every app you've acquired, find them by name or date, and download several at once. Find removed apps that can still be downloaded and back them all up; export the list as a spreadsheet. |
+| 📦 **Removed apps** | If you acquired an app once, you can find it by App ID and download it even after it's removed from sale. |
+| 👥 **Multiple accounts** | Save several Apple Accounts (email or phone number) and switch with one tap. |
+| 🎮 **Apple Arcade** | Accounts subscribed to Apple Arcade can download Arcade games. |
+| 🧰 **Pro mode** | Browse and extract files inside a package, and view account tokens and the device identifier (off by default). |
 
-界面参考 App Store 设计，外观默认跟随系统、图标默认深色（都可在设置中更改），支持动态字体和 iPad 侧栏，还可以在设置中更换应用图标。
+The interface follows the App Store's design. Appearance follows the system and the icon is dark by default (both can be changed in Settings), with Dynamic Type, the iPad sidebar and alternate app icons.
 
-**界面语言**：简体中文、繁體中文、English、日本語、한국어、Русский、Español、Français、Deutsch、Português (Brasil)、العربية，阿拉伯语使用从右到左的排版。iPadn 跟随系统语言，也可以在「设置 › iPadn › 语言」中单独设置。英文由社区贡献者完善，其他语言为机器辅助翻译，欢迎在 [Issues](https://github.com/mengangs/ipadn/issues) 或 Pull Request 中纠错。
+**Languages:** English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Russian, Spanish, French, German, Portuguese (Brazil) and Arabic, with a right-to-left layout for Arabic. iPadn follows the system language; to choose a different one for iPadn only, use Settings › iPadn › Language. English was refined by a community contributor and the other languages are machine-assisted translations; corrections are welcome in [Issues](https://github.com/mengangs/ipadn/issues) or a pull request.
 
-## 开始使用
+## Getting started
 
-> 需要 **iOS / iPadOS 16** 或更新版本。
+> Requires **iOS / iPadOS 16** or later.
 
-1. 在 [Releases](https://github.com/mengangs/ipadn/releases/latest) 下载最新的 `iPadn-版本号-unsigned.ipa`。
-2. 用你常用的签名工具签名后安装到设备上。
-3. 打开 iPadn，在「账号」中登录 Apple 账号。需要双重认证时，输入受信任设备上显示的 6 位验证码。
+1. Download the latest `iPadn-<version>-unsigned.ipa` from [Releases](https://github.com/mengangs/ipadn/releases/latest).
+2. Sign it with your usual signing tool and install it on your device.
+3. Open iPadn and sign in to your Apple Account under Account. If two-factor authentication is on, enter the 6-digit code shown on your trusted device.
 
-> iPadn 不在 App Store 上架，发布的安装包未签名，需要自行签名。
+> iPadn isn't on the App Store. Releases are unsigned, so you need to sign them yourself.
 
-### 在签名工具中添加源
+### Add the source to your signing tool
 
-SideStore、AltStore、Feather 等支持 AltStore 源的签名工具，可以添加下面的地址。添加后在工具里就能安装 iPadn，有新版本时也能直接在工具里更新，不用再手动下载安装包。
+SideStore, AltStore, Feather and other tools that support AltStore sources can add the address below. You can then install iPadn from the tool and update it there when a new version is out, without downloading the package by hand.
 
 ```
 https://raw.githubusercontent.com/mengangs/ipadn/main/altstore-source.json
 ```
 
-源文件在每次发布后自动更新，只列出本仓库 Releases 中的安装包。
+The source is updated automatically after every release and only lists packages from this repository's Releases.
 
-## 下载一个应用
+## Downloading an app
 
-1. 在 **搜索** 中输入应用名称、App ID 或 App Store 链接。
-2. 点「获取」直接下载最新版本；或打开应用详情，在 **版本历史** 中选择旧版本。
-3. 在 **下载** 中查看进度，完成后点「安装」或分享按钮。
+1. In **Search**, enter an app name, App ID or App Store link.
+2. Tap “Get” to download the latest version, or open the app page and choose an older version under **Version history**.
+3. Follow the progress in **Downloads**, then tap “Install” or the share button.
 
-**小技巧**
+**Tips**
 
-- 想下载 Apple TV 或 iPad 版本：在搜索框下方把平台切换为对应设备。
-- 找不到已下架的应用：直接搜索它的 App ID。
-- 登录后详情页默认从 Apple 获取完整版本列表；账号没获取过的应用会显示公开的版本资料。
-- 长按下载卡片可以查看详情、导出文件或删除任务。
-- 想一次下载多个已购应用：在「已购」点「选择」，勾选后点「下载所选」。
-- 安装包太占空间：在「账号 › 设置 › 存储空间」一键删除旧版本安装包。
-- 历史版本查不全：在「账号 › 设置」的版本来源列表中点「检测全部来源」，查看每个来源是否可用；接口地址里用 `{id}` 或 `{appId}` 代表 App ID。
+- For Apple TV or iPad versions, switch the platform below the search field.
+- Can't find a removed app? Search for its App ID.
+- When signed in, app pages load the full version list from Apple; apps your account hasn't acquired show the public version details.
+- Touch and hold a download card to see details, export the file or delete the task.
+- To download several purchases at once, tap “Select” in Purchased, tick them and tap “Download selected”.
+- Packages taking too much space? Delete older versions in one go under Account › Settings › Storage.
+- Version history incomplete? In the version source list under Account › Settings, tap “Check All Sources” to see whether each source works. In an endpoint URL, `{id}` or `{appId}` stands for the App ID.
 
-## 安装下载的应用
+## Installing a downloaded app
 
-点下载卡片上的「安装」，在系统弹窗中确认即可。安装完成前请不要退出 iPadn。
+Tap “Install” on the download card and confirm in the system prompt. Don't leave iPadn until the installation finishes.
 
-在「账号 › 设置 › 安装设置」中可以选择安装方式：
+Choose the install method under Account › Settings › Installation settings:
 
-| 方式 | 适合谁 | 需要准备 |
+| Method | For | What you need |
 | --- | --- | --- |
-| **一键安装**（推荐） | 所有人 | 无需任何设置，安装时联网即可 |
-| **原生安装** | 希望 App Store 能识别、更新安装的应用，或要覆盖 App Store 已装版本 | LocalDevVPN 和一次配对，见下文 |
-| **本机证书** | 一键安装没有弹出安装窗口时（例如在 LiveContainer 中运行） | 在安装设置中创建证书，安装描述文件，并在「设置 › 通用 › 关于本机 › 证书信任设置」中开启信任 |
-| **代理服务** | 已在使用 Surge、Loon 等工具 | 自己的清单服务地址与代理规则 |
+| **One-tap install** (recommended) | Everyone | Nothing to set up; a network connection while installing |
+| **Native install** | Getting App Store recognition and updates, or replacing an App Store copy | LocalDevVPN and a one-time pairing, see below |
+| **Local certificate** | When one-tap install shows no prompt (for example inside LiveContainer) | Create a certificate in Installation settings, install its profile, and enable trust under Settings › General › About › Certificate Trust Settings |
+| **Proxy service** | People already using Surge, Loon and similar tools | Your own manifest service address and proxy rules |
 
-使用本机证书安装时，系统会提示「ipadn.localtest.me 想要安装…」，这是 iPadn 在本机提供的安装服务。使用 Surge、Loon、Shadowrocket 等代理工具时，不用关闭代理，只需添加直连（DIRECT）规则：一键安装为 `api.palera.in`，本机证书为 `ipadn.localtest.me`。
+With a local certificate, the system asks “ipadn.localtest.me would like to install…”: that's the installation service iPadn runs on your device. With Surge, Loon, Shadowrocket or another proxy, you don't need to turn it off; add a DIRECT rule instead: `api.palera.in` for one-tap install, `ipadn.localtest.me` for a local certificate.
 
-安装时会显示进度：系统开始安装、安装包传输百分比和传输完成。如果点「安装」后没有出现系统安装窗口，可以点「在 Safari 中安装」，在 Safari 中确认后回到 iPadn 等待完成。
+Installation shows its progress: the system starting, the package transfer percentage, and the transfer finishing. If no system prompt appears after tapping “Install”, tap “Install in Safari”, confirm there, then return to iPadn and wait.
 
-一键安装、本机证书和代理服务使用的系统网页安装通道不能覆盖 App Store 已装的同一应用，需要覆盖时请用「原生安装」。
+One-tap install, local certificate and proxy service use the system's web installation channel, which can't replace an App Store copy of the same app. Use native install for that.
 
-### 原生安装
+### Native install
 
-一键安装、本机证书和代理服务都通过系统的网页安装通道完成。这样装的应用，App Store 不会显示为已安装，也不能更新；爱思助手等工具会显示为「共享正版」；也不能覆盖 App Store 已装的同一应用。原生安装改用电脑安装软件所用的系统安装服务，安装结果与用电脑安装相同：App Store 能识别和更新，可以直接覆盖 App Store 版本并保留数据。安装包不会离开这台设备。
+One-tap install, local certificate and proxy service all go through the system's web installation channel. Apps installed that way aren't shown as installed in the App Store and can't be updated there; desktop tools such as 3uTools list them as “shared”; and they can't replace an App Store copy of the same app. Native install uses the installation service desktop tools use instead, with the same result as installing from a computer: the App Store recognizes and updates the app, and an App Store copy is replaced in place with its data kept. Packages never leave your device.
 
-**1. 安装 LocalDevVPN**
+**1. Install LocalDevVPN**
 
-从 App Store 安装 [LocalDevVPN](https://apps.apple.com/app/localdevvpn/id6755608044)。它只在本机内部转发连接，不经过外部服务器。每次原生安装前先在 LocalDevVPN 中点按连接。
+Get [LocalDevVPN](https://apps.apple.com/app/localdevvpn/id6755608044) from the App Store. It only forwards connections inside your device and doesn't go through any outside server. Tap Connect in it before each native install.
 
-**2. 配对（只需一次）**
+**2. Pair (once)**
 
-- **iOS / iPadOS 27 及更新版本，不需要电脑**：在「安装设置 › 原生安装」中点按「在本机配对」，iPadn 会打开引导页。按提示打开「设置 › 隐私与安全性 › 开发者模式」，点按「与 iPadn 配对」，输入 iPadn 显示的配对码。配对码同时显示在灵动岛、锁屏和通知中，不用切回 iPadn。需要先开启开发者模式；看不到这个开关时，说明设备上还没有用开发者证书签名的应用，用企业证书签名时可能不会出现。
-- **iOS 17.4 – 26**：在电脑上用 [idevice_pair](https://github.com/jkcoxson/idevice_pair) 连接设备，生成「远程配对（RPPairing）」文件，放进「文件 › 我的 iPhone › iPadn」，在「原生安装」页 iPadn 会自动导入；也可以点「导入配对文件」从其他位置选取。电脑只需要用这一次，之后安装都不再需要电脑。
+- **iOS / iPadOS 27 or later, no computer:** In Installation settings › Native install, tap “Pair on This Device”. iPadn opens a guide. Open Settings › Privacy & Security › Developer Mode, tap “Pair with iPadn” and enter the code iPadn shows. The code also appears in the Dynamic Island, on the Lock Screen and in a notification, so you don't need to switch back. Developer Mode must be on; if the switch isn't there, the device has no developer-signed app yet, and it may not appear with enterprise signing.
+- **iOS 17.4 – 26:** On a computer, connect the device with [idevice_pair](https://github.com/jkcoxson/idevice_pair) and create a remote pairing (RPPairing) file. Put it in Files › On My iPhone › iPadn and open the Native install page: iPadn imports it automatically. You can also tap “Import Pairing File” to pick it from elsewhere. You only need the computer this once; later installs don't need it.
 
-**3. 检查连接**
+**3. Check the connection**
 
-在 LocalDevVPN 中连接后，回到 iPadn 点「检查连接」，显示连接正常即可安装。
+Connect in LocalDevVPN, return to iPadn and tap “Check Connection”. Once it says connected, you can install.
 
-修改锁屏密码、系统还原或在电脑上取消信任后，配对会失效，需要重新配对。配对文件相当于这台设备的连接凭据，不要分享给他人。
+Pairing stops working after changing the passcode, restoring the device or untrusting the computer; pair again then. The pairing file is a connection credential for your device, so never share it.
 
-也可以点分享按钮，把安装包交给其他安装工具。
+You can also tap the share button to hand the package to another installation tool.
 
-## Mac 应用
+## Mac apps
 
-1. 在搜索框下方把平台切换为 **Mac**。
-2. 打开应用详情，点「获取 PKG」。
-3. 下载完成后点分享按钮，通过隔空投送或「文件」传到 Mac 上安装。
+1. Switch the platform below the search field to **Mac**.
+2. Open the app page and tap “Get PKG”.
+3. When the download finishes, tap the share button and send it to your Mac with AirDrop or Files to install it.
 
-第一次下载 Mac 应用时，iPadn 会额外下载约 47 MB 的组件，之后会重复使用。开发者在官网提供的 DMG / PKG / ZIP 也可以在详情页直接下载。
+The first Mac download fetches about 47 MB of extra components, which are reused afterwards. DMG / PKG / ZIP installers the developer offers on their website can also be downloaded from the app page.
 
-## 专业模式
+## Pro mode
 
-在「账号 › 设置」中打开「专业模式」后：
+After turning on Pro mode under Account › Settings:
 
-- 下载任务详情中可以「浏览安装包内容」，查看任意文件并提取分享，文本和图片可直接预览。
-- 设置中会出现「账号与设备标识」，可以查看账号令牌和修改设备标识。令牌可以直接访问你的 Apple 账号，请勿分享给任何人；修改设备标识后账号可能需要重新登录。
+- Download task details offer “Browse package contents”, where you can view and extract any file and preview text and images.
+- Settings shows “Account & device identifier”, with account tokens and the option to change the device identifier. Tokens give direct access to your Apple Account, so never share them; after changing the device identifier, accounts may need to sign in again.
 
-## 你的数据
+## Your data
 
-- 账号信息只保存在你的设备上，验证码不会被保存。
-- 下载的安装包只保存在本机，不会上传到任何地方。
-- 比价时会从 open.er-api.com 获取参考汇率，请求中不包含你的账号信息。
-- 移除账号不会删除已下载的安装包；删除下载任务时会一并删除对应文件，操作前会再次确认。
+- Account details are stored only on your device; verification codes are never saved.
+- Downloaded packages stay on your device and are never uploaded anywhere.
+- Price comparison fetches reference exchange rates from open.er-api.com; requests contain no account information.
+- Removing an account doesn't delete downloaded packages. Deleting a download task also deletes its file, after a confirmation.
 
-## 常见问题
+## Frequently asked questions
 
 <details>
-<summary><b>为什么某个应用或版本无法下载？</b></summary>
+<summary><b>Why can't I download a certain app or version?</b></summary>
 
-Apple 只允许下载你的账号拥有许可的应用。版本也可能已经下架或不在当前地区提供。可以换一个版本、切换商店地区，或切换到拥有该应用的账号。
+Apple only lets you download apps your account holds a license for. A version may also have been removed or not be offered in the current region. Try another version, switch storefront region, or switch to an account that owns the app.
 </details>
 
 <details>
-<summary><b>点「安装」后没有反应？</b></summary>
+<summary><b>Nothing happens after tapping “Install”?</b></summary>
 
-请确认设备已联网，并在系统弹窗中点「安装」。没有出现系统弹窗时，可以点「在 Safari 中安装」，或在安装设置中改用「本机证书」（在 LiveContainer 中运行时尤其需要）。仍不行的话，可以分享安装包给其他安装工具，或在「设置 › 维护」中导出诊断信息反馈给我们。
+Make sure the device is online, and tap “Install” in the system prompt. If no prompt appears, tap “Install in Safari”, or switch to “Local certificate” in Installation settings (especially inside LiveContainer). If it still doesn't work, share the package with another installation tool, or export diagnostics under Settings › Maintenance and send them to us.
 </details>
 
 <details>
-<summary><b>安装时提示「已经安装，请删除后重试」？</b></summary>
+<summary><b>“Already installed, delete it and try again”?</b></summary>
 
-一键安装、本机证书和代理服务走的是系统的网页安装通道，系统不允许它覆盖 App Store 安装的同一应用，这是 iOS 的限制。请改用「原生安装」，可以直接覆盖并保留数据。原生安装仍会被拒绝的情况：要装的版本比设备上的旧（系统不允许降级），或设备上的应用来自 TestFlight、其他签名工具等不同渠道。
+One-tap install, local certificate and proxy service use the system's web installation channel, and iOS doesn't let that channel replace an App Store copy of the same app. Use native install instead: it replaces the app directly and keeps its data. Native install is still refused when the version you're installing is older than the installed one (iOS doesn't allow downgrades), or when the installed copy came from TestFlight or another signing tool.
 </details>
 
 <details>
-<summary><b>为什么 App Store 里显示云朵、不能更新，爱思助手显示「共享正版」？</b></summary>
+<summary><b>Why does the App Store show a cloud icon and no update, and desktop tools list the app as “shared”?</b></summary>
 
-这是用一键安装、本机证书或代理服务安装的应用。系统网页安装通道会去掉安装包里的购买记录，App Store 和电脑工具因此认不出它。用「原生安装」重新覆盖安装一次即可恢复，数据会保留。
+The app was installed with one-tap install, local certificate or proxy service. The system's web installation channel drops the purchase record inside the package, so the App Store and desktop tools don't recognize it. Install it once more with native install to fix it; its data is kept.
 </details>
 
 <details>
-<summary><b>为什么 iOS 27 以下要用电脑才能配对？用一次就行吗？</b></summary>
+<summary><b>Why does pairing need a computer below iOS 27? Is it only once?</b></summary>
 
-原生安装使用的是系统自带的安装服务，和电脑装 App 用的是同一个，它只接受已经配对、受信任的连接。iOS 27 之前，苹果只允许电脑通过数据线发起这种配对（手机上点「信任此电脑」并输入密码），手机上的 App 无法自己发起，所以需要先在电脑上生成配对文件。iOS 27 在「开发者模式」中加入了在手机上配对的入口，因此可以直接用「在本机配对」。
+Native install uses the system's own installation service, the same one a computer uses to install apps, and it only accepts paired, trusted connections. Before iOS 27, Apple only lets a computer start that pairing over a cable (you tap “Trust This Computer” and enter your passcode); an app on the phone can't start it, so the pairing file has to be made on a computer first. iOS 27 added on-device pairing under Developer Mode, which is what “Pair on This Device” uses.
 
-电脑只需要用一次。配对文件导入 iPadn 后会一直有效，只有修改锁屏密码、还原系统，或在电脑上取消信任后才需要重新生成。iOS 17.4 以下没有这套连接方式，无法使用原生安装。
+You only need the computer once. After the pairing file is imported, it keeps working until you change the passcode, restore the device or untrust the computer. Below iOS 17.4 the system has no such connection, so native install isn't available.
 </details>
 
 <details>
-<summary><b>原生安装提示无法连接本机安装服务？</b></summary>
+<summary><b>Native install says it can't reach the installation service?</b></summary>
 
-- 先在 LocalDevVPN 中点按连接，并保持 Wi-Fi 开启。
-- LocalDevVPN 与其他代理或 VPN 不能同时开启。Surge、Shadowrocket、Egern 等工具需要把 `10.7.0.1/32` 加入路由才可能代替 LocalDevVPN，这种用法尚未测试。
-- 提示配对文件失效时，重新配对一次（iOS 27 及更新版本可直接点「在本机配对」）。
+- Tap Connect in LocalDevVPN first, and keep Wi-Fi on.
+- LocalDevVPN can't run together with another proxy or VPN. Surge, Shadowrocket, Egern and similar tools would need `10.7.0.1/32` added to their routes to stand in for LocalDevVPN; this hasn't been tested.
+- If it says the pairing file is invalid, pair again (on iOS 27 or later, just tap “Pair on This Device”).
 </details>
 
 <details>
-<summary><b>在本机配对时看不到配对码，或「设置」里没有「与 iPadn 配对」？</b></summary>
+<summary><b>No pairing code, or no “Pair with iPadn” in Settings?</b></summary>
 
-- 本机配对需要 iOS / iPadOS 27 及更新版本，并且已开启「开发者模式」。
-- 点「在本机配对」后再去「设置」，配对期间 iPadn 会在后台保持运行；配对码显示在灵动岛、锁屏和通知中。请在「设置 › iPadn」中允许通知和「实时活动」。
-- 等待超过 5 分钟会自动停止，重新点「在本机配对」即可。
+- On-device pairing needs iOS / iPadOS 27 or later, with Developer Mode on.
+- Tap “Pair on This Device” first, then go to Settings; iPadn keeps running in the background while pairing. The code appears in the Dynamic Island, on the Lock Screen and in a notification. Allow notifications and Live Activities under Settings › iPadn.
+- Pairing stops after 5 minutes of waiting; tap “Pair on This Device” again.
 </details>
 
 <details>
-<summary><b>下载或获取应用时要求输入验证码，但没有收到？</b></summary>
+<summary><b>Downloading or getting an app asks for a verification code, but none arrives?</b></summary>
 
-- iPadn 会先替你向 Apple 请求验证码，验证码只发到登录了同一 Apple 账户的 iPhone、iPad 或 Mac，不发短信。设备上出现「Apple 账户登录请求」时点「允许」。
-- 没有出现时，可以在那台设备的「设置 › [你的姓名] › 登录与安全 › 获取验证码」中手动获取，同样可用。
-- 可以点「重新发送验证码」，频繁请求时 Apple 可能会暂时不发送。
-- 获取免费应用也要求验证，通常是 Apple 账户开启了免费下载需要密码。可以在登录了该账户的设备上打开「设置 › 媒体与购买项目 › 密码设置」关闭；开着「使用面容 ID 购买」时没有这个选项。
-- Apple 有时会根据风控要求重新验证，这由 Apple 决定，验证后下载会自动继续。
+- iPadn asks Apple to send the code for you. Codes only go to an iPhone, iPad or Mac signed in to the same Apple Account, never by text message. When “Apple Account Sign-In Requested” appears on that device, tap Allow.
+- If it doesn't appear, get a code on that device under Settings › [your name] › Sign-In & Security › Get Verification Code; it works the same.
+- You can tap “Resend Code”. Apple may stop sending for a while after many requests.
+- If getting free apps also asks for verification, the Apple Account usually requires a password for free downloads. On a device signed in to the account, open Settings › Media & Purchases › Password Settings and turn it off; the option isn't there when Face ID is used for purchases.
+- Apple sometimes asks for verification again based on its own risk checks. That's up to Apple; the download continues automatically after you verify.
 </details>
 
 <details>
-<summary><b>点「获取」后要转一会才开始下载？</b></summary>
+<summary><b>Tapping “Get” takes a while before the download starts?</b></summary>
 
-每次请求都要先在本机完成 Apple 要求的签名。刚打开 iPadn 或闲置超过 5 分钟后，签名组件需要重新加载几秒；从没下载过的应用还要先领取许可，多两次 Apple 请求。iPadn 打开应用详情页时会提前准备签名组件，下载操作也会排在后台任务前面。
+Each request first needs the signature Apple requires, made on your device. Right after opening iPadn, or after more than 5 minutes idle, the signing component takes a few seconds to load; apps you've never downloaded also need a license claimed first, which takes two more requests to Apple. iPadn prepares the signing component when you open an app page, and your downloads go ahead of background work.
 </details>
 
 <details>
-<summary><b>下载到 100% 后又从头开始？</b></summary>
+<summary><b>A download reaches 100% and then starts over?</b></summary>
 
-部分签名方式下，系统后台下载服务无法把文件存进 iPadn，只能改用应用内下载从头再下。iPadn 每次安装后第一次启动会先用一个很小的文件检测，检测到问题就直接改用应用内下载，不会再下两遍。应用内下载时请保持 iPadn 在前台，退到后台约 30 秒后会暂停。更换签名后可以在「设置 › 下载」点「重新尝试后台下载」。
+With some signing methods, the system's background download service can't save files into iPadn, so the download has to run again inside the app. On the first launch after each install, iPadn tests this with a tiny file and switches straight to in-app downloading if needed, so nothing downloads twice. Keep iPadn in the foreground during in-app downloads; they pause about 30 seconds after it goes to the background. After re-signing, tap “Try Background Downloads Again” under Settings › Downloads.
 </details>
 
 <details>
-<summary><b>已下架的应用怎么找？</b></summary>
+<summary><b>How do I find an app that was removed from the store?</b></summary>
 
-在搜索中输入它的 App ID。只要你的账号曾经获取过这个应用，就可以继续下载。下载过一次后，它的图标也会被记住。
+Search for its App ID. As long as your account acquired the app once, you can still download it, and its icon is remembered after the first download.
 </details>
 
 <details>
-<summary><b>下载卡住了怎么办？</b></summary>
+<summary><b>What if a download stalls?</b></summary>
 
-检查网络后暂停再继续。下载失败的任务可以直接点「重试」，不会重复添加。
+Check the connection, then pause and resume. A failed download can be retried directly and isn't added twice.
 </details>
 
 <details>
-<summary><b>可以下载 TestFlight 测试版吗？</b></summary>
+<summary><b>Can I download TestFlight builds?</b></summary>
 
-暂不支持。已有的 IPA 文件可以通过下载页右上角的「+」导入管理。
+Not currently. Existing IPA files can be imported with the “+” button on the Downloads page.
 </details>
 
 <details>
-<summary><b>多地区比价里只显示了中国区的内购？</b></summary>
+<summary><b>Why do regional prices show only China's in-app purchases?</b></summary>
 
-在中国大陆网络下，Apple 会把其他地区的 App Store 页面转到中国区，因此读不到外区的内购价格（应用本身的价格不受影响）。在代理工具中让 apps.apple.com 走代理后，下拉刷新即可。
+On mainland Chinese networks Apple redirects other regions' App Store pages to China, so their in-app prices can't be read (the app's own price is unaffected). Route apps.apple.com through your proxy, then pull to refresh.
 </details>
 
 <details>
-<summary><b>移除账号会删除已下载的应用吗？</b></summary>
+<summary><b>Does removing an account delete downloaded apps?</b></summary>
 
-不会。移除账号只清除该账号的登录信息和已购记录。
+No. Removing an account only clears that account's sign-in details and purchase records.
 </details>
 
-## 支持 iPadn
+## Support iPadn
 
 <div align="center">
 
 <sub>❤️ ❤️ ❤️</sub>
 
-iPadn 会一直**免费、开源、没有广告**。<br>
-如果它帮你省下了时间，或者你只是喜欢这个项目，欢迎请作者喝杯咖啡 ☕<br>
-你的鼓励是持续更新的动力。
+iPadn will always be **free, open source and ad-free**.<br>
+If it saves you time or you simply enjoy it, you're welcome to buy the author a coffee ☕<br>
+Your support keeps the updates coming.
 
-<a href="https://afdian.com/a/mengangs"><img src="https://img.shields.io/badge/%E7%88%B1%E5%8F%91%E7%94%B5-%E8%AF%B7%E4%BD%9C%E8%80%85%E5%96%9D%E6%9D%AF%E5%92%96%E5%95%A1-946ce6?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="爱发电"></a>
+<a href="https://afdian.com/a/mengangs"><img src="https://img.shields.io/badge/Afdian-Buy%20me%20a%20coffee-946ce6?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Afdian"></a>
 <img src="https://img.shields.io/badge/USDT-BEP20-26a17b?style=for-the-badge&logo=tether&logoColor=white" alt="USDT BEP20">
 
-| 爱发电（支付宝、微信） | USDT（BNB Smart Chain / BEP20） |
+| Afdian (Alipay, WeChat Pay) | USDT (BNB Smart Chain / BEP20) |
 | :---: | :---: |
-| [**afdian.com/a/mengangs**](https://afdian.com/a/mengangs)<br><sub>可按月赞助，也可一次性支持</sub> | <img src="docs/images/usdt-bep20.png" width="180" alt="USDT 收款二维码"><br><code>0x5f0cff7587b9fc305f9fa626135789bd5100818e</code> |
+| [**afdian.com/a/mengangs**](https://afdian.com/a/mengangs)<br><sub>Monthly or one-time</sub> | <img src="docs/images/usdt-bep20.png" width="180" alt="USDT QR code"><br><code>0x5f0cff7587b9fc305f9fa626135789bd5100818e</code> |
 
-<sub>转账 USDT 前请核对网络为 BEP20、地址完全一致，其他网络或币种转入可能无法找回。<br>在 iPadn「账号 › 设置 › 支持 iPadn」中也可以扫码或复制地址。<br>点个 Star、反馈问题或帮忙改进翻译，同样是很大的支持。</sub>
+<sub>Before sending USDT, check that the network is BEP20 and the address matches exactly; funds sent on another network or in another token may be lost.<br>You can also scan or copy the address in iPadn under Account › Settings › Support iPadn.<br>Starring the repo, reporting problems and improving translations help just as much.</sub>
 
 </div>
 
-## 参与贡献
+## Contributing
 
-- **翻译**：所有界面文字在 [`Localizable.xcstrings`](iPadn-iOS/iPadn/Resources/Localizable.xcstrings) 中，用 Xcode 打开即可逐条编辑。改进现有语言或新增语言都欢迎提交 Pull Request。
-- **反馈问题**：在 [Issues](https://github.com/mengangs/ipadn/issues) 中描述设备、系统版本和操作步骤；方便的话附上「账号 › 设置 › 导出诊断信息」生成的文件，其中不含账号名称和登录凭据。
-- **自行编译**：步骤见 [BUILDING.md](iPadn-iOS/BUILDING.md)。
+- **Translations:** every interface string lives in [`Localizable.xcstrings`](iPadn-iOS/iPadn/Resources/Localizable.xcstrings); open it in Xcode to edit entries one by one. Pull requests that improve a language or add a new one are welcome.
+- **Bug reports:** describe your device, system version and steps in [Issues](https://github.com/mengangs/ipadn/issues). If you can, attach the file from Account › Settings › Export diagnostics; it contains no account names or credentials.
+- **Building:** see [BUILDING.md](iPadn-iOS/BUILDING.md).
 
-## 致谢
+## Acknowledgements
 
-- [kylefmohr](https://github.com/kylefmohr) 贡献了英文翻译（[#35](https://github.com/mengangs/ipadn/pull/35)）。
-- 感谢所有提交问题和建议的用户，以及 iPadn 使用的开源项目，详见[第三方组件与许可](iPadn-iOS/THIRD_PARTY_NOTICES.md)。
+- [kylefmohr](https://github.com/kylefmohr) contributed the English translation ([#35](https://github.com/mengangs/ipadn/pull/35)).
+- Thanks to everyone who reported problems and suggested ideas, and to the open-source projects iPadn uses, listed in [Third-party components and licenses](iPadn-iOS/THIRD_PARTY_NOTICES.md).
 
-## 更多
+## More
 
-- [更新内容](RELEASE_NOTES.md)
-- [自行编译](iPadn-iOS/BUILDING.md)
-- [第三方组件与许可](iPadn-iOS/THIRD_PARTY_NOTICES.md)
+- [Release notes](RELEASE_NOTES.md)
+- [Building from source](iPadn-iOS/BUILDING.md)
+- [Third-party components and licenses](iPadn-iOS/THIRD_PARTY_NOTICES.md)
 
-## 许可证
+## License
 
-iPadn 以 [GPL-2.0-or-later](LICENSE) 发布：你可以自由使用、修改和再分发，分发修改版时需要同样开放源代码。
+iPadn is released under [GPL-2.0-or-later](LICENSE): you may use, modify and redistribute it, and modified versions must be released under the same license.
 
-<sub>iPadn 与 Apple Inc. 无关。请只下载你拥有合法许可的应用。</sub>
+<sub>iPadn is not affiliated with Apple Inc. Only download apps you are legally licensed to use.</sub>
