@@ -27,4 +27,4 @@ def main():
         temporary.write_bytes(data); os.replace(temporary, target)
     print('Verified', len(expected), 'local runtime resources; no upstream download required')
 
-if __name__ == '__main__': main()
+if __name__ == '__main__': main(
