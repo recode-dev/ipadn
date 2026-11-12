@@ -382,7 +382,8 @@ enum FairPlayDecryptor {
                                    with: try aesCBCDecrypt(key: key, iv: Array(record[16..<32]), data: cipher))
         }
         let clearCryptid = [0, 0, 0, 0] as [UInt8]
-        result.replaceSubrange(slice.cryptidOffset..<slice.cryptidOffset + 4, with: clearCryptid)
+        let cryptidInSlice = slice.cryptidOffset - slice.base
+        result.replaceSubrange(cryptidInSlice..<cryptidInSlice + 4, with: clearCryptid)
         if verify { try verifyDecrypted(result, slice: slice) }
         return (result, slice.pages)
     }
@@ -396,7 +397,8 @@ enum FairPlayDecryptor {
         guard decEntropy < 7.6 else {
             throw DecryptError.verifyFailed("post-decrypt entropy still \(String(format: "%.2f", decEntropy)) - wrong key or license")
         }
-        guard Array(result[slice.cryptidOffset..<slice.cryptidOffset + 4]) == [0, 0, 0, 0] else {
+        let cryptidStart = slice.cryptidOffset - slice.base
+        guard Array(result[cryptidStart..<cryptidStart + 4]) == [0, 0, 0, 0] else {
             throw DecryptError.verifyFailed("cryptid not cleared")
         }
     }

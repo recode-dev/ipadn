@@ -94,6 +94,12 @@ struct DecryptorView: View {
             FairPlayCredentialStore.remove()
             credential = nil
         }
+        .overlay {
+            if installPhase != nil {
+                ProgressView(phaseText).padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            }
+        }
     }
 
     // MARK: - Credential card
@@ -351,6 +357,16 @@ struct DecryptorView: View {
             } catch {
                 store.errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// Native-install progress shown while the DRM-free package is installed.
+    private var phaseText: String {
+        switch installPhase {
+        case .connecting: return AppText.text("正在连接…")
+        case .uploading(let fraction): return AppText.text("正在传输… \(Int(fraction * 100))")
+        case .installing(let fraction): return AppText.text("正在安装… \(Int(fraction * 100))")
+        case nil: return ""
         }
     }
 }
