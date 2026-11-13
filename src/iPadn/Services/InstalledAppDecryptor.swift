@@ -209,9 +209,12 @@ enum InstalledAppDecryptor {
     }
 
     private static func directoryExists(_ path: String) -> Bool {
-        var isDir = false
-        if WorseQueryAccess.statPath(path, isDirectory: &isDir, size: nil, modified: nil, symbolic: nil) {
-            return isDir
+        var isDir: ObjCBool = false
+        var size: UInt64 = 0
+        var mod: Int64 = 0
+        var sym: ObjCBool = false
+        if WorseQueryAccess.statPath(path, isDirectory: &isDir, size: &size, modified: &mod, symbolic: &sym) {
+            return isDir.boolValue
         }
         var flag: ObjCBool = false
         return FileManager.default.fileExists(atPath: path, isDirectory: &flag) && flag.boolValue
