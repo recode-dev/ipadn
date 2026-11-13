@@ -140,10 +140,10 @@ def parse_slices(data):
                         cs_size = le32(commands, scan + 12)
                         break
                     scan += scan_size
-                out.append(dict(fileOffset=off, size=size, cpuType=cpu_type, cpuSubtype=cpu_sub,
-                                cryptOff=crypt_off, cryptSize=crypt_size, cryptid=cryptid,
-                                cryptidFileOffset=off + header_size + pos + 16,
-                                csOff=cs_off, csSize=cs_size))
+                out.append({"fileOffset": off, "size": size, "cpuType": cpu_type, "cpuSubtype": cpu_sub,
+                                "cryptOff": crypt_off, "cryptSize": crypt_size, "cryptid": cryptid,
+                                "cryptidFileOffset": off + header_size + pos + 16,
+                                "csOff": cs_off, "csSize": cs_size})
             pos += cmd_size
     return out
 
@@ -156,10 +156,10 @@ IOS_PAGE = 16384
 # Tetherless DecryptHelper variant table [(1,0),(1,1),(2,0),(2,1)] mapped
 # through: mremap cryptid = (variant == 1 ? 2 : 1), prot = R | (variant == 2 ? X : 0)
 LADDER = [
-    dict(prot="R", cryptid=2, sig=False),
-    dict(prot="R", cryptid=2, sig=True),
-    dict(prot="RX", cryptid=1, sig=False),
-    dict(prot="RX", cryptid=1, sig=True),
+    {"prot": "R", "cryptid": 2, "sig": False},
+    {"prot": "R", "cryptid": 2, "sig": True},
+    {"prot": "RX", "cryptid": 1, "sig": False},
+    {"prot": "RX", "cryptid": 1, "sig": True},
 ]
 
 
@@ -316,7 +316,7 @@ def main():
 
     # 5. happy path with a licensed device: first attempt (cryptid2/R, no sig)
     #    fails EPERM (no blob yet), second (sig) succeeds
-    state = dict(has_blob=True, has_license=True)
+    state = {"has_blob": True, "has_license": True}
     state["kernel"] = kernel_model(state)
     calls, pages = model_decrypt(thin, state)
     check("licensed: decrypted pages accepted", pages is not None and not isinstance(pages, tuple),
@@ -325,14 +325,14 @@ def main():
           calls[0] == ("mremap", 2, "R", False), str(calls[:2]))
     if any(c[0] == "fcntl97" for c in calls):
         check("licensed: fcntl97 precedes the sig attempt",
-              [i for i, c in enumerate(calls) if c[0] == "fcntl97"][0]
-              < [i for i, c in enumerate(calls) if c[0] == "mremap" and c[3]][0], str(calls))
+              next(i for i, c in enumerate(calls) if c[0] == "fcntl97")
+              < next(i for i, c in enumerate(calls) if c[0] == "mremap" and c[3]), str(calls))
     else:
         check("licensed: blob already on vnode -> plain attempt wins without fcntl",
               calls[0] == ("mremap", 2, "R", False) and len(calls) == 1, str(calls))
 
     # 6. unsigned vnode model: EPERM until a sig variant registers the blob
-    state6 = dict(has_blob=False, has_license=True)
+    state6 = {"has_blob": False, "has_license": True}
     state6["kernel"] = kernel_model(state6)
     calls6, pages6 = model_decrypt(thin, state6)
     check("unsigned: ladder registers blob and succeeds on the sig variant",
@@ -343,7 +343,7 @@ def main():
           and kr_calls6[0] == calls6[0], str(calls6))
 
     # 7. no license at all: every attempt EPERM -> firstfail=1 reported
-    state7 = dict(has_blob=True, has_license=False)
+    state7 = {"has_blob": True, "has_license": False}
     state7["kernel"] = kernel_model(state7)
     calls7, res7 = model_decrypt(thin, state7)
     check("no-license: exhausted with error code 1",
@@ -352,16 +352,16 @@ def main():
           len([c for c in calls7 if c[0] == "mremap"]) == 4, str(calls7))
 
     # 8. kernel no-op (cryptid 0/0x10 "success") must not be accepted
-    state8 = dict(has_blob=True, has_license=True)
+    state8 = {"has_blob": True, "has_license": True}
     state8["kernel"] = lambda addr, size, cryptid, cpu, sub, rx: (
         (0, b"\x88" * size) if cryptid in (0, 0x10) else (1, None))
-    calls8, res8 = model_decrypt(thin, state8)
+    _calls8, res8 = model_decrypt(thin, state8)
     check("noop-kernel: no page pass-through accepted", res8 == ("error", 1), str(res8))
 
     # 9. misaligned encrypted range -> EINVAL without any mremap
     mis = bytearray(make_encrypted_binary())
     struct.pack_into("<I", mis, 32 + 8, 0x4004)  # cryptoff no longer page aligned
-    st9 = dict(has_blob=True, has_license=True)
+    st9 = {"has_blob": True, "has_license": True}
     st9["kernel"] = kernel_model(st9)
     calls9, res9 = model_decrypt(bytes(mis), st9)
     check("misaligned: pre-check answers EINVAL before any syscall",

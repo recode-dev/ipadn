@@ -7,6 +7,7 @@ import plistlib
 import sys
 import zipfile
 from pathlib import Path
+
 ALTERNATE_ICONS = ['AppIconAuto', 'AppIconFlat', 'AppIconLight', 'AppIconDark', 'AppIconFlatLight', 'AppIconFlatDark']
 
 ROOT = Path(__file__).resolve().parents[1]

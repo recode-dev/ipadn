@@ -16,13 +16,21 @@ import logging
 import shutil
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from ipa_audit import (AuditedIPA, ProbeError, inspect_ipa, installed_summary,
-                       redacted, sha256_file, validate_identity, validate_operation)
+from ipa_audit import (
+    AuditedIPA,
+    ProbeError,
+    inspect_ipa,
+    installed_summary,
+    redacted,
+    sha256_file,
+    validate_identity,
+    validate_operation,
+)
 
 PINNED_BACKEND = "11.50.3"
 ATTRIBUTES = ["CFBundleIdentifier", "CFBundleShortVersionString", "CFBundleVersion",
@@ -171,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     logging.disable(logging.CRITICAL)
     report: dict[str, Any] = {"schema": 1, "command": args.command,
-                              "started_at": datetime.now(timezone.utc).isoformat(), "success": False}
+                              "started_at": datetime.now(UTC).isoformat(), "success": False}
     code = 1
     try:
         destination = getattr(args, "report", None)
@@ -199,11 +207,11 @@ def main(argv: list[str] | None = None) -> int:
             report["error"]["system"] = error.details
         if isinstance(error, TimeoutError):
             report["error"]["completion"] = "unknown if already dispatched; never auto-retry"
-    report["finished_at"] = datetime.now(timezone.utc).isoformat()
+    report["finished_at"] = datetime.now(UTC).isoformat()
     output = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     destination = getattr(args, "report", None)
     if destination is None and args.command in ("lookup", "install", "upgrade"):
-        destination = REPORT_DIRECTORY / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-") + uuid4().hex + ".json")
+        destination = REPORT_DIRECTORY / (datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-") + uuid4().hex + ".json")
     if destination is not None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:

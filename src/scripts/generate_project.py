@@ -58,7 +58,7 @@ for path in sorted((ROOT / "iPadn/Resources/AlternateIcons").glob("*.png")):
     resources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
 app_files.append(add("InfoPlist", "PBXFileReference", lastKnownFileType="text.plist.xml", path="Info.plist", sourceTree="<group>"))
 package = add("ZIPFoundation", "XCRemoteSwiftPackageReference", repositoryURL="https://github.com/weichsel/ZIPFoundation.git",
-              requirement={"kind": "exactVersion", "version": "0.9.19"})
+              requirement={"kind": "exactVersion", "version": "0.9.20"})
 app_package = add("ZIPFoundation/App", "XCSwiftPackageProductDependency", package=package, productName="ZIPFoundation")
 app_framework = add("ZIPFoundation/AppBuild", "PBXBuildFile", productRef=app_package)
 app_group = add("AppGroup", "PBXGroup", children=app_files, path="iPadn", sourceTree="<group>")

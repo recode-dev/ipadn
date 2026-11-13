@@ -89,8 +89,9 @@ enum FairPlayKernelDecryptor {
                     // the downloaded SINF under exactly that name). When the
                     // package ships the license under another name, replicate
                     // it under the expected one so the lookup succeeds.
-                    let dir = plan.binary.path.split(separator: "/").dropLast().joined(separator: "/")
-                    if let exec = plan.binary.path.split(separator: "/").last, !exec.isEmpty {
+                    let pathParts = plan.binary.path.split(separator: "/")
+                    if let exec = pathParts.last.map(String.init), !exec.isEmpty {
+                        let dir = pathParts.dropLast().joined(separator: "/")
                         let expected = (dir.isEmpty ? "" : dir + "/") + "SC_Info/" + exec + ".sinf"
                         if expected != sinfPath, !staged.contains(expected) {
                             try stageData(sinf, path: expected, root: staging)
@@ -446,8 +447,10 @@ enum FairPlayKernelDecryptor {
         try data.write(to: url, options: .atomic)
     }
 
-    private static func stage(_ entry: Entry, archive: Archive, root: URL) throws -> URL {
-        let url = root.appendingPathComponent(entry.path)
+    // Shared streaming extraction used by staging and by the oversized-entry
+    // copy path: materializes one zip entry onto disk through a 1 MB window
+    // instead of buffering the whole file in memory.
+    private static func extractToFile(_ entry: Entry, archive: Archive, to url: URL) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         FileManager.default.createFile(atPath: url.path, contents: nil)
         let handle = try FileHandle(forWritingTo: url)
@@ -455,6 +458,11 @@ enum FairPlayKernelDecryptor {
         _ = try archive.extract(entry, bufferSize: 1 << 20, consumer: { chunk in
             try handle.write(contentsOf: chunk)
         })
+    }
+
+    private static func stage(_ entry: Entry, archive: Archive, root: URL) throws -> URL {
+        let url = root.appendingPathComponent(entry.path)
+        try extractToFile(entry, archive: archive, to: url)
         return url
     }
 
@@ -467,13 +475,7 @@ enum FairPlayKernelDecryptor {
         let scratch = LocalResources.support.appendingPathComponent("kernel-copy-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: scratch) }
         let file = scratch.appendingPathComponent(entry.path)
-        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        FileManager.default.createFile(atPath: file.path, contents: nil)
-        let handle = try FileHandle(forWritingTo: file)
-        defer { try? handle.close() }
-        _ = try archive.extract(entry, bufferSize: 1 << 20, consumer: { chunk in
-            try handle.write(contentsOf: chunk)
-        })
+        try extractToFile(entry, archive: archive, to: file)
         try output.addEntry(with: entry.path, relativeTo: scratch, compressionMethod: .deflate)
     }
 }

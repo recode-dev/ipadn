@@ -11,10 +11,23 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from ipa_audit import (ProbeError, inspect_ipa, installed_summary, redacted,
-                       sha256_file, validate_operation)
-from native_install_probe import (NativeInstallError, backend, execute, lookup,
-                                  main, parse_args, record_status)
+from ipa_audit import (
+    ProbeError,
+    inspect_ipa,
+    installed_summary,
+    redacted,
+    sha256_file,
+    validate_operation,
+)
+from native_install_probe import (
+    NativeInstallError,
+    backend,
+    execute,
+    lookup,
+    main,
+    parse_args,
+    record_status,
+)
 
 
 def make_ipa(folder, *, bundle="example.probe.app", build="20", multi=False,
@@ -135,7 +148,7 @@ class PackageAuditTests(unittest.TestCase):
             validate_operation(ipa, "Upgrade", ipa.bundle_id, dict(installed, IsPlaceholder=True))
 
     def test_installed_metadata_is_summarized_and_does_not_claim_store_recognition(self):
-        path, raw = make_ipa(self.folder.name)
+        _path, raw = make_ipa(self.folder.name)
         output = installed_summary({"CFBundleIdentifier": "example.probe.app", "iTunesMetadata": raw,
                                     "ApplicationDSID": "secret-id", "PairRecord": b"secret-pair"})
         encoded = json.dumps(output)
@@ -244,7 +257,9 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
 class BackendTests(unittest.TestCase):
     def test_installed_backend_api_without_device_access(self):
         try:
-            import pymobiledevice3
+            import importlib.util
+            if importlib.util.find_spec("pymobiledevice3") is None:
+                raise ImportError
         except ImportError:
             self.skipTest("optional backend not installed; offline checks still run")
         with patch("pymobiledevice3.lockdown.create_using_usbmux", side_effect=AssertionError("device access")):
@@ -254,7 +269,9 @@ class BackendTests(unittest.TestCase):
 
     def test_actual_backend_serializes_binary_client_options_on_the_wire(self):
         try:
-            from pymobiledevice3.services.installation_proxy import InstallationProxyService
+            from pymobiledevice3.services.installation_proxy import (
+                InstallationProxyService,
+            )
         except ImportError:
             self.skipTest("optional backend not installed")
 

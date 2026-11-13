@@ -1083,7 +1083,7 @@
 			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
 			requirement = {
 				kind = exactVersion;
-				version = 0.9.19;
+				version = 0.9.20;
 			};
 		};
 		0507EAB0D89D8F0B76FF0550 = {
