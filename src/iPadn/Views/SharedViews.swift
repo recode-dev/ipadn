@@ -132,7 +132,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let destinations: [(title: LocalizedStringKey, symbol: String)] = [("Search", "magnifyingglass"), ("Download", "arrow.down.circle.fill"), ("Purchased", "bag.fill"), ("Account", "person.crop.circle.fill"), ("Decryptor", "lock.fill")]
+    private let destinations: [(title: LocalizedStringKey, symbol: String)] = [("Search", "magnifyingglass"), ("Download", "arrow.down.circle.fill"), ("Purchased", "bag.fill"), ("Account", "person.crop.circle.fill"), ("Decryptor", "lock.fill"), ("File Browser", "folder")]
     var body: some View {
         Group {
             if sizeClass == .regular {
@@ -166,6 +166,7 @@ struct RootView: View {
                     NavigationStack { PurchasedView() }.tabItem { Label("Purchased", systemImage: "bag.fill") }.tag(2)
                     NavigationStack { AccountsView() }.tabItem { Label("Account", systemImage: "person.crop.circle.fill") }.tag(3)
                     NavigationStack { DecryptorView() }.tabItem { Label("Decryptor", systemImage: "lock.fill") }.tag(4)
+                    NavigationStack { FileBrowserView() }.tabItem { Label("File Browser", systemImage: "folder") }.tag(5)
                 }
                 .toolbarBackground(.visible, for: .tabBar)
                 .toolbarBackground(.ultraThinMaterial, for: .tabBar)
@@ -253,6 +254,7 @@ struct RootView: View {
         case 2: PurchasedView()
         case 3: AccountsView()
         case 4: DecryptorView()
+        case 5: FileBrowserView()
         default: SearchView()
         }
     }
