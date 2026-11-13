@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Verify and copy the runtime committed to this repository. No network access."""
 import hashlib
 import json
 import os

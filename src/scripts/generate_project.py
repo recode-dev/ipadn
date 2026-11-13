@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Generate a standard, shared-scheme Xcode project without requiring XcodeGen."""
 import argparse
 import hashlib
 import json
@@ -10,7 +9,7 @@ from xml.etree import ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 
-parser = argparse.ArgumentParser(description=__doc__)
+parser = argparse.ArgumentParser(description="Generate a standard, shared-scheme Xcode project without requiring XcodeGen.")
 parser.add_argument("--development-language", default="en",
                     help="Unused; the project language is always English.")
 OPTIONS = parser.parse_args()

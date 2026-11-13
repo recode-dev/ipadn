@@ -1,28 +1,4 @@
 #!/usr/bin/env python3
-"""Offline model of the FairPlay kernel decryptor (Swift 1:1 port).
-
-Mirrors src/iPadn/Services/FairPlayKernelDecryptor.swift and validates the
-ladder against a kernel model built from the actual Apple sources:
-
-- XNU bsd/kern/kern_mman.c mremap_encrypted() (xnu-10063 / 11215 / 12377):
-  cryptid switch accepts only 0 (no-op success), 1 (app), 2 (model),
-  0x10 (null); anything else -> EINVAL. user_addr must be page aligned ->
-  EINVAL. Failures of text_crypter_create (kIOReturnNotPrivileged) and of
-  vm_map_apple_protected are folded into EPERM.
-- XNU osfmk/vm/vm_map.c vm_map_apple_protected(): every cryptid except
-  CRYPTID_MODEL_ENCRYPTION (2) requires the map entry to carry
-  VM_PROT_EXECUTE -> KERN_INVALID_ARGUMENT -> EPERM. So PROT_READ + cryptid
-  1 can never succeed; cryptid 2 works with PROT_READ.
-- XNU bsd/kern/kern_descrip.c F_ADDFILESIGS_RETURN (=97): reads the blob
-  from the file at fs.fs_file_start + fs.fs_blob_start (vn_rdwr, UIO_READ)
-  and writes blob->csb_end_offset back over fs_file_start.
-- dyld-1245 Loader::mapSegments: registers the signature then calls
-  mremap_encrypted(loadAddress + cryptoff, cryptsize, 1, cputype, subtype).
-- TetherlessiOS DecryptHelper disassembly: variant table [(1,0),(1,1),
-  (2,0),(2,1)]; per variant mremap cryptid = (variant == 1 ? 2 : 1), mmap
-  prot = PROT_READ | (variant == 2 ? PROT_EXEC : 0); the signature
-  registration runs before the mremap whenever the variant asks for it.
-"""
 import hashlib
 import math
 import struct
@@ -40,7 +16,6 @@ def le32(b, o):
 
 
 def make_encrypted_binary(pages=3, cryptoff=0x4000, with_signature=True, cpu=0x0100000C, cpu_sub=0):
-    """Thin arm64 Mach-O with LC_ENCRYPTION_INFO_64 and high-entropy pages."""
     ncmds = 2
     header = bytearray(32)
     struct.pack_into("<I", header, 0, 0xFEEDFACF)
@@ -60,7 +35,6 @@ def make_encrypted_binary(pages=3, cryptoff=0x4000, with_signature=True, cpu=0x0
 
 
 def make_fat(slices):
-    # real FAT files align every slice start to the 16K iOS page
     off = 8 + 20 * len(slices)
     if off % 16384:
         off += 16384 - (off % 16384)
@@ -81,7 +55,6 @@ def make_fat(slices):
     return out
 
 
-# --- 1:1 port of FairPlayKernelDecryptor.parseSlices ---
 def parse_slices(data):
     total = len(data)
 
@@ -148,13 +121,10 @@ def parse_slices(data):
     return out
 
 
-# --- 1:1 port of the attempt ladder + entropy gate ---
 F_ADDFILESIGS_RETURN = 97
 MREMAP_SYSCALL = 489
 IOS_PAGE = 16384
 
-# Tetherless DecryptHelper variant table [(1,0),(1,1),(2,0),(2,1)] mapped
-# through: mremap cryptid = (variant == 1 ? 2 : 1), prot = R | (variant == 2 ? X : 0)
 LADDER = [
     {"prot": "R", "cryptid": 2, "sig": False},
     {"prot": "R", "cryptid": 2, "sig": True},
@@ -178,40 +148,22 @@ def entropy(buf):
 
 
 def fcntl_sig_payload(file_start, blob_offset, blob_size):
-    # struct the kernel copyin()s (kern_descrip.c): off_t fs_file_start,
-    # void* fs_blob_start (in-file offset for F_ADDFILESIGS*), size_t fs_blob_size.
-    # NOTE: on success the kernel copyout()s csb_end_offset over the first
-    # field, so the struct must not be reused afterwards.
     return struct.pack("<qqQ", file_start, blob_offset, blob_size)
 
 
 def kernel_model(state):
-    """Kernel model from the XNU sources.
-
-    state: dict with
-      has_blob: whether the vnode already carries a CS blob (fcntl done)
-      has_license: whether FairPlay accepts this app (sinf + keybag)
-      decrypt: callable(size, offset) -> pages
-    Returns (kr, pages) with kr following BSD syscall convention:
-    0 ok, 1 EPERM, 22 EINVAL, 45 EOPNOTSUPP? (ENOTSUP=45 on Darwin? 45 is
-    EOPNOTSUPP; ENOTSUP alias), matching mremap_encrypted's int return.
-    """
     def call(addr, size, cryptid, cputype, cpusub, prot_has_exec):
         if addr % IOS_PAGE:
-            return 22, None  # user_addr not page aligned (kern_mman.c)
+            return 22, None
         if cryptid == 0:
-            return 0, None  # CRYPTID_NO_ENCRYPTION: immediate no-op success
+            return 0, None
         if cryptid not in (1, 2, 0x10):
-            return 22, None  # default: EINVAL (kern_mman.c switch)
+            return 22, None
         if cryptid != 2 and not prot_has_exec:
-            # vm_map_apple_protected: VM_PROT_EXECUTE required for cryptid != 2
-            # -> KERN_INVALID_ARGUMENT -> folded into EPERM by mremap_encrypted
             return 1, None
         if cryptid == 0x10:
-            return 0, None  # com.apple.null: success, pages untouched
+            return 0, None
         if not state["has_blob"] and not state.get("ever_registered"):
-            # FairPlay user client refuses to create the crypter for an
-            # unsigned vnode -> kIOReturnNotPrivileged -> EPERM
             return 1, None
         if not state["has_license"]:
             return 1, None
@@ -220,8 +172,6 @@ def kernel_model(state):
     return call
 
 
-# Tetherless DecryptHelper verdict: entropy(dec) in (0, 7.5-ish), entropy(enc) > 7.9,
-# and code-words(dec) > code-words(enc) over the helper's exact marker set.
 CODE_WORDS = [0xD65F03C0, 0xD503237F, 0xD65F0FFF]
 
 
@@ -235,14 +185,12 @@ def arm64_code_words(buf):
 
 
 def model_decrypt(data, state, pagesize=IOS_PAGE):
-    """1:1 port of decryptSlice with the new ladder."""
     state.setdefault("decrypt", ok_decrypt)
     slices = parse_slices(data)
     assert slices, "no encrypted slices parsed"
     slice0 = next(s for s in slices if s["cryptid"] >= 1 and s["cryptSize"] > 0)
     calls = []
     state["ever_registered"] = False
-    # alignment pre-check (XNU: user_addr must be page aligned)
     if (slice0["fileOffset"] + slice0["cryptOff"]) % pagesize:
         return calls + [("precheck-einval",)], None
     firstfail = 0
@@ -279,7 +227,6 @@ def main():
     fat = make_fat([(make_encrypted_binary(cpu=0x0100000C, cpu_sub=0), 0x0100000C, 0),
                     (make_encrypted_binary(cpu=0x0100000C, cpu_sub=2), 0x0100000C, 2)])
 
-    # 1. parseSlices: thin
     s = parse_slices(thin)
     check("thin: one encrypted slice", len(s) == 1, str(len(s)))
     check("thin: cryptoff/cryptsize", s[0]["cryptOff"] == 0x4000 and s[0]["cryptSize"] == 3 * 4096)
@@ -288,18 +235,15 @@ def main():
     check("thin: signature parsed", (s[0]["csOff"], s[0]["csSize"]) == (0x7000, 0x800),
           str((s[0]["csOff"], s[0]["csSize"])))
 
-    # 2. parseSlices: FAT with two arm64 variants
     s2 = parse_slices(fat)
     check("fat: both slices found", len(s2) == 2, str(len(s2)))
     check("fat: cputype/subtype preserved", sorted(x["cpuSubtype"] for x in s2) == [0, 2])
     check("fat: cryptidFileOffset per slice", all(x["cryptidFileOffset"] == x["fileOffset"] + 48 for x in s2),
           str([x["cryptidFileOffset"] for x in s2]))
 
-    # 3. binary without LC_CODE_SIGNATURE -> cs fields zero
     s3 = parse_slices(make_encrypted_binary(with_signature=False))
     check("no-sig binary: cs parsed as 0", (s3[0]["csOff"], s3[0]["csSize"]) == (0, 0))
 
-    # 4. ladder shape: Tetherless parity
     check("ladder: order is Tetherless table",
           [(a["cryptid"], a["prot"], a["sig"]) for a in LADDER]
           == [(2, "R", False), (2, "R", True), (1, "RX", False), (1, "RX", True)],
@@ -310,8 +254,6 @@ def main():
     check("ladder: cryptid-2 attempts map R (EXEC rule skipped for MODEL_ENCRYPTION)",
           all(a["prot"] == "R" for a in LADDER if a["cryptid"] == 2))
 
-    # 5. happy path with a licensed device: first attempt (cryptid2/R, no sig)
-    #    fails EPERM (no blob yet), second (sig) succeeds
     state = {"has_blob": True, "has_license": True}
     state["kernel"] = kernel_model(state)
     calls, pages = model_decrypt(thin, state)
@@ -327,7 +269,6 @@ def main():
         check("licensed: blob already on vnode -> plain attempt wins without fcntl",
               calls[0] == ("mremap", 2, "R", False) and len(calls) == 1, str(calls))
 
-    # 6. unsigned vnode model: EPERM until a sig variant registers the blob
     state6 = {"has_blob": False, "has_license": True}
     state6["kernel"] = kernel_model(state6)
     calls6, pages6 = model_decrypt(thin, state6)
@@ -338,7 +279,6 @@ def main():
           kr_calls6 and kr_calls6[0] == ("mremap", 2, "R", False)
           and kr_calls6[0] == calls6[0], str(calls6))
 
-    # 7. no license at all: every attempt EPERM -> firstfail=1 reported
     state7 = {"has_blob": True, "has_license": False}
     state7["kernel"] = kernel_model(state7)
     calls7, res7 = model_decrypt(thin, state7)
@@ -347,29 +287,25 @@ def main():
     check("no-license: all four attempts really tried",
           len([c for c in calls7 if c[0] == "mremap"]) == 4, str(calls7))
 
-    # 8. kernel no-op (cryptid 0/0x10 "success") must not be accepted
     state8 = {"has_blob": True, "has_license": True}
     state8["kernel"] = lambda addr, size, cryptid, cpu, sub, rx: (
         (0, b"\x88" * size) if cryptid in (0, 0x10) else (1, None))
     _calls8, res8 = model_decrypt(thin, state8)
     check("noop-kernel: no page pass-through accepted", res8 == ("error", 1), str(res8))
 
-    # 9. misaligned encrypted range -> EINVAL without any mremap
     mis = bytearray(make_encrypted_binary())
-    struct.pack_into("<I", mis, 32 + 8, 0x4004)  # cryptoff no longer page aligned
+    struct.pack_into("<I", mis, 32 + 8, 0x4004)
     st9 = {"has_blob": True, "has_license": True}
     st9["kernel"] = kernel_model(st9)
     calls9, res9 = model_decrypt(bytes(mis), st9)
     check("misaligned: pre-check answers EINVAL before any syscall",
           res9 is None and calls9 and calls9[0][0] == "precheck-einval", str(calls9))
 
-    # 10. entropy gate sanity
     enc = make_encrypted_binary()[0x4000:0x4000 + 4096]
     check("entropy: encrypted page > 7.6", entropy(enc) > 7.6, str(entropy(enc)))
     dec = (b"\x1f\x20\x03\xd5" * 1024)[:4096]
     check("entropy: decrypted page < 7.6", entropy(dec) < 7.6, str(entropy(dec)))
 
-    # 11. fsignatures packing matches kern_descrip.c (fs_file_start + fs_blob_start)
     payload = fcntl_sig_payload(0, 0x7000, 0x800)
     check("fsignatures: 24-byte payload, offsets packed",
           len(payload) == 24 and struct.unpack_from("<q", payload, 0)[0] == 0
@@ -383,18 +319,12 @@ def main():
           struct.unpack_from("<q", payload2, 0)[0] + struct.unpack_from("<q", payload2, 8)[0]
           == fat_slice["fileOffset"] + fat_slice["csOff"])
 
-    # 12. constants and the dispatch rule they imply
-    # bsd/sys/mman.h of the current xnu main: CRYPTID_NO_ENCRYPTION 0,
-    # CRYPTID_APP_ENCRYPTION 1, CRYPTID_MODEL_ENCRYPTION 2.
     cryptid_none, cryptid_app, cryptid_model = 0, 1, 2
     check("constants: F_ADDFILESIGS_RETURN = 97 (bsd/sys/fcntl.h)", F_ADDFILESIGS_RETURN == 97)
     check("constants: syscall 489 = mremap_encrypted (syscalls.master, #if CONFIG_CODE_DECRYPTION)",
           MREMAP_SYSCALL == 489)
     check("constants: CRYPTID_NO_ENCRYPTION=0, APP=1, MODEL=2 (bsd/sys/mman.h)",
           (cryptid_none, cryptid_app, cryptid_model) == (0, 1, 2))
-    # kern_mman.c mremap_encrypted(): cryptid 0 answers 0 before any other
-    # check (empty load command), unknown cryptids answer EINVAL. Both are
-    # asserted against the kernel model built from the real source.
     st12 = {"has_blob": False, "has_license": False}
     st12["kernel"] = kernel_model(st12)
     kr_none, _ = st12["kernel"](0x4000, 0, cryptid_none, 0x0100000C, 0, False)

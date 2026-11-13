@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Independent native Install/Upgrade probe. No signing or uninstall operations.
-
-Offline commands use only the Python standard library. Device commands use the
-version pinned in requirements.txt and an already trusted, explicitly named USB
-device. This tool is deliberately not wired into iPadn's production installer.
-"""
 from __future__ import annotations
 
 import argparse
@@ -149,7 +143,7 @@ async def device_command(args: argparse.Namespace, report: dict[str, Any], ipa: 
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Independent native Install/Upgrade probe. No signing or uninstall operations.")
     commands = parser.add_subparsers(dest="command", required=True)
     offline = commands.add_parser("inspect", help="Read-only IPA/material inspection; no device access")
     offline.add_argument("ipa", type=Path)

@@ -46,7 +46,7 @@ enum AppErrorMessage {
         return AppText.text("Search isn't available right now. Try again later.")
     }
 }
- 
+
 enum AppPlatform: String, Codable, CaseIterable, Identifiable {
     case iOS = "itunes", iPadOS = "ipad", tvOS = "atv9", macOS = "mac"
     var id: String { rawValue }

@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""Writes altstore-source.json from the published GitHub releases.
-
-AltStore, SideStore, Feather and similar signing tools read this file to
-list iPadn and offer its updates. Run after a release is published:
-
-    python3 src/scripts/generate_altstore_source.py
-
-Uses GH_TOKEN or GITHUB_TOKEN when set (CI), else anonymous requests.
-"""
 import json
 import os
 import re
@@ -38,13 +29,11 @@ def fetch(url):
 
 
 def notes(body):
-    """Release notes without the build's verification line."""
     lines = [line for line in (body or "").replace("\r\n", "\n").split("\n") if not line.startswith("验证：")]
     return "\n".join(lines).strip()
 
 
 def version_entry(release):
-    """One source entry for a published release, or None when it has no package."""
     tag = release.get("tag_name", "")
     if release.get("draft") or release.get("prerelease") or not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
         return None

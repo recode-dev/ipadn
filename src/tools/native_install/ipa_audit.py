@@ -1,9 +1,3 @@
-"""Read-only IPA audit and InstallationProxy options for the installation experiment.
-
-Protocol references (not a re-signing or DRM implementation):
-https://github.com/libimobiledevice/ideviceinstaller/blob/master/src/ideviceinstaller.c
-https://github.com/jkcoxson/idevice/blob/master/idevice/src/utils/installation/mod.rs
-"""
 from __future__ import annotations
 
 import hashlib

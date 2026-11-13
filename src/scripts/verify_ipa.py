@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Verify the unsigned universal device IPA, including both icon idioms."""
 import hashlib
 import json
 import os

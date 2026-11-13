@@ -66,11 +66,6 @@ enum FairPlayDecryptor {
 
     static func entryMagic(_ entry: Entry, archive: Archive) -> [UInt8]? {
         guard entry.uncompressedSize >= 4 else { return nil }
-        // The zlib stream of a binary entry usually starts with a dynamic
-        // Huffman table that spans several compressed feeds, so the first
-        // decompressed chunk can be empty (ZIPFoundation calls the consumer
-        // once per feed with whatever output is available). Accumulate until
-        // four bytes are collected instead of trusting the first chunk only.
         var bytes: [UInt8] = []
         do {
             _ = try archive.extract(entry, bufferSize: 64, consumer: { chunk in
@@ -455,16 +450,9 @@ enum FairPlayDecryptor {
             do {
                 if (try encryptedSlice(in: Array(data))) != nil { encrypted = true }
             } catch DecryptError.notMachO {
-                // One unparseable entry must not flip the whole package into
-                // the clear path; skip it and keep judging the others.
                 continue
             }
         }
-        // A package where no binary could be identified must never be
-        // reported as a clear (cryptid=0) package: the caller would route it
-        // to the DRM-free path and surface "Not a valid Mach-O binary".
-        // Treat it as encrypted so the kernel decryptor runs and reports a
-        // precise diagnosis instead.
         if checked == 0 { encrypted = true }
         return (encrypted, checked)
     }
@@ -532,8 +520,6 @@ enum FairPlayDecryptor {
         var strippedAny = false
         try? FileManager.default.removeItem(at: destination)
         let output = try Archive(url: destination, accessMode: .create)
-        // Materialize once and probe every file entry at any depth, so the
-        // DRM-free path no longer depends on where the executable sits.
         let entries = Array(archive).filter { $0.type == .file && !$0.path.hasSuffix("/") }
         var binaryPaths = Set<String>()
         for entry in entries {
@@ -552,8 +538,6 @@ enum FairPlayDecryptor {
                 if let slice = try? encryptedSlice(in: Array(data)), slice != nil {
                     throw DecryptError.notEncrypted
                 }
-                // A binary whose slice layout cannot be parsed passes
-                // through untouched instead of failing the whole package.
             }
             try writeEntry(data, to: output, path: entry.path)
         }
@@ -570,14 +554,7 @@ enum FairPlayDecryptor {
         let licensePath: String?
     }
 
-    /// Resolve binaries the way TetherlessiOS does: each bundle names its
-    /// executable in its own Info.plist (CFBundleExecutable), so the Mach-O
-    /// file is located deterministically instead of being guessed from entry
-    /// probes. Magic probing stays only as a fallback for packages whose
-    /// plists are missing, and the final fallback probes every entry.
     static func archivePlan(_ archive: Archive) throws -> [BinaryPlan] {
-        // Materialize the entry list once and never interleave extraction
-        // with central-directory iteration.
         let entries = Array(archive).filter { $0.type == .file && !$0.path.hasSuffix("/") }
         let byPath = Dictionary(entries.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -588,14 +565,10 @@ enum FairPlayDecryptor {
             if !trustingPlist {
                 guard isMachOMagic(entryMagic(entry, archive: archive) ?? []) else { return }
             }
-            // Plist-trusted candidates are accepted unconditionally: the
-            // kernel decryptor parses the staged file and reports precisely
-            // if it really is not Mach-O.
             planned.insert(entry.path)
             binaries.append(entry)
         }
 
-        // TetherlessiOS method: Payload/Name.app/Info.plist -> CFBundleExecutable.
         for entry in entries {
             let parts = entry.path.split(separator: "/").map(String.init)
             guard parts.count >= 2, parts.last?.lowercased() == "info.plist" else { continue }
@@ -610,8 +583,6 @@ enum FairPlayDecryptor {
                     accept(binary, trustingPlist: true)
                 }
             }
-            // Convention fallback: the executable usually shares the bundle
-            // name (Payload/Foo.app -> Foo).
             let stem = bundleName.hasSuffix(".app") ? String(bundleName.dropLast(4)) : bundleName
             if !stem.isEmpty, stem != exec, !stem.contains("/") {
                 if let binary = byPath[dir + "/" + stem] {
@@ -620,17 +591,12 @@ enum FairPlayDecryptor {
             }
         }
 
-        // Second layer: probe files sitting directly in a bundle directory
-        // (main binaries, extensions, frameworks).
         if binaries.isEmpty {
             for entry in entries where bundleRootCandidate(entry.path) {
                 accept(entry, trustingPlist: false)
             }
         }
 
-        // Last resort: probe every remaining file at any depth, so a package
-        // with an unusual layout still decrypts instead of surfacing a
-        // misleading "not a Mach-O" alert.
         if binaries.isEmpty {
             for entry in entries {
                 accept(entry, trustingPlist: false)
