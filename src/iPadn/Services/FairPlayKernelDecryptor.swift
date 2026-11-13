@@ -170,7 +170,13 @@ enum FairPlayKernelDecryptor {
         let slices = try parseSlices(fd: fd)
         let encrypted = slices.filter { $0.cryptid >= 1 && $0.cryptSize > 0 }
         guard !encrypted.isEmpty else { throw FairPlayDecryptor.DecryptError.notEncrypted }
-        FileManager.default.createFile(atPath: destination.path, contents: nil)
+        try? FileManager.default.removeItem(at: destination)
+        do {
+            try FileManager.default.copyItem(at: source, to: destination)
+        } catch {
+            guard WorseQueryAccess.copyFile(source.path, to: destination.path) else { throw error }
+        }
+        _ = chmod(destination.path, 0o755)
         let outFd = open(destination.path, O_RDWR)
         guard outFd >= 0 else { throw KernelError.open(errno) }
         defer { close(outFd) }
