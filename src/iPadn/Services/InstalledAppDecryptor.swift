@@ -128,8 +128,8 @@ enum InstalledAppDecryptor {
         return unsafeBitCast(cls, to: UnsafeRawPointer?.self)
     }
 
-    private static func argumentString(_ value: String) -> UnsafeRawPointer? {
-        Unmanaged.passUnretained(value as NSString).toOpaque()
+    private static func argumentString(_ value: String) -> UnsafeRawPointer {
+        UnsafeRawPointer(Unmanaged.passUnretained(value as NSString).toOpaque())
     }
 
     private static func stringValue(_ pointer: UnsafeRawPointer?) -> String? {
@@ -205,9 +205,9 @@ enum InstalledAppDecryptor {
             return nil
         }
         let record = Unmanaged<AnyObject>.fromOpaque(recordPointer).takeRetainedValue()
-        let recordPointer = Unmanaged.passUnretained(record).toOpaque()
-        guard let path = urlValue(ipadnMsgSendID(recordPointer, NSSelectorFromString("valueForKey:"), argumentString("URL"))), !path.isEmpty else { return nil }
-        let executableURL = urlValue(ipadnMsgSendID(recordPointer, NSSelectorFromString("valueForKey:"), argumentString("executableURL")))
+        let recordReference = Unmanaged.passUnretained(record).toOpaque()
+        guard let path = urlValue(ipadnMsgSendID(recordReference, NSSelectorFromString("valueForKey:"), argumentString("URL"))), !path.isEmpty else { return nil }
+        let executableURL = urlValue(ipadnMsgSendID(recordReference, NSSelectorFromString("valueForKey:"), argumentString("executableURL")))
         var executable = executableURL.map { ($0 as NSString).lastPathComponent } ?? ""
         if executable.isEmpty { executable = executableFromInfoPlist(path: path) ?? "" }
         guard !executable.isEmpty else { return nil }
