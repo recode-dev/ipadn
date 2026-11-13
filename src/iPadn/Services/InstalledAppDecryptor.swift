@@ -61,15 +61,14 @@ enum InstalledAppDecryptor {
         try FileManager.default.createDirectory(at: outAppDir, withIntermediateDirectories: true)
 
         var licenseStage: URL?
-        if !bundle.realBundle {
-            guard let granted = WorseQueryAccess.grantedStageRoot() as String?, !granted.isEmpty else {
-                throw FairPlayKernelDecryptor.KernelError.mremap(12)
-            }
+        if let granted = WorseQueryAccess.grantedStageRoot() as String?, !granted.isEmpty {
             let stageRoot = (granted as NSString).appendingPathComponent("ipadn-decrypt-\(UUID().uuidString)")
-            guard WorseQueryAccess.createDirectory(stageRoot) else {
-                throw FairPlayKernelDecryptor.KernelError.mremap(12)
+            if WorseQueryAccess.createDirectory(stageRoot) {
+                licenseStage = URL(fileURLWithPath: stageRoot)
             }
-            licenseStage = URL(fileURLWithPath: stageRoot)
+        }
+        if licenseStage == nil, !bundle.realBundle {
+            throw FairPlayKernelDecryptor.KernelError.mremap(12)
         }
         if let licenseStage {
             defer { WorseQueryAccess.remove(licenseStage.path) }
@@ -101,7 +100,9 @@ enum InstalledAppDecryptor {
             let magic = fileMagic(at: element.path)
             if FairPlayDecryptor.isMachOMagic(magic) {
                 var decryptSource = element
-                if let licenseStage {
+                let hasLocalSCInfo = directoryExists((element.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info"))
+                let needsStaging = licenseStage != nil && (!bundle.realBundle || !hasLocalSCInfo)
+                if needsStaging, let licenseStage {
                     guard let staged = stageForDecryption(element, relative: relative, root: root, stage: licenseStage) else {
                         keptEncrypted.append(relative)
                         lastError = FairPlayKernelDecryptor.KernelError.mremap(12)
@@ -158,13 +159,17 @@ enum InstalledAppDecryptor {
         let parent = staged.deletingLastPathComponent()
         guard WorseQueryAccess.createDirectory(parent.path) else { return nil }
         guard WorseQueryAccess.copyFile(binary.path, to: staged.path) else { return nil }
-        let licenseSource = (binary.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info")
-        if directoryExists(licenseSource) {
-            let licenseTarget = parent.appendingPathComponent("SC_Info").path
-            WorseQueryAccess.createDirectory(licenseTarget)
-            for name in WorseQueryAccess.list(licenseSource) {
-                WorseQueryAccess.copyFile((licenseSource as NSString).appendingPathComponent(name),
-                                          to: (licenseTarget as NSString).appendingPathComponent(name))
+        let localLicense = (binary.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info")
+        let rootLicense = (root as NSString).appendingPathComponent("SC_Info")
+        let licenseTarget = parent.appendingPathComponent("SC_Info").path
+        WorseQueryAccess.createDirectory(licenseTarget)
+        let stageRootLicense = stage.appendingPathComponent("SC_Info").path
+        WorseQueryAccess.createDirectory(stageRootLicense)
+        for sourceDir in [rootLicense, localLicense] where directoryExists(sourceDir) {
+            for name in WorseQueryAccess.list(sourceDir) {
+                let srcFile = (sourceDir as NSString).appendingPathComponent(name)
+                WorseQueryAccess.copyFile(srcFile, to: (licenseTarget as NSString).appendingPathComponent(name))
+                WorseQueryAccess.copyFile(srcFile, to: (stageRootLicense as NSString).appendingPathComponent(name))
             }
         }
         return staged

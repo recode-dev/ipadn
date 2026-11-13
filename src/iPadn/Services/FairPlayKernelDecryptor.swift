@@ -115,6 +115,16 @@ enum FairPlayKernelDecryptor {
                 if let license = plan.license, !license.isEmpty, let licensePath = plan.licensePath {
                     try stageData(license, path: licensePath, root: staging)
                     staged.insert(licensePath)
+                    let pathParts = plan.binary.path.split(separator: "/")
+                    if let exec = pathParts.last.map(String.init), !exec.isEmpty {
+                        let dir = pathParts.dropLast().joined(separator: "/")
+                        let ext = (licensePath as NSString).pathExtension
+                        let expected = (dir.isEmpty ? "" : dir + "/") + "SC_Info/" + exec + (ext.isEmpty ? ".supf" : ".\(ext)")
+                        if expected != licensePath, !staged.contains(expected) {
+                            try stageData(license, path: expected, root: staging)
+                            staged.insert(expected)
+                        }
+                    }
                 }
                 var decryptSource = stagedBinary
                 if let grantedRoot {

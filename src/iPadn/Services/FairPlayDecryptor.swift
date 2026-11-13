@@ -605,6 +605,23 @@ enum FairPlayDecryptor {
             }
         }
 
+        let skipExtensions: Set<String> = [
+            "png", "jpg", "jpeg", "gif", "webp", "svg", "car", "plist", "nib",
+            "json", "strings", "storyboardc", "mp3", "wav", "m4a", "mp4", "mov",
+            "ttf", "otf", "html", "css", "js", "txt", "xml", "dat", "db", "sqlite"
+        ]
+        for entry in entries {
+            let path = entry.path
+            guard !planned.contains(path) else { continue }
+            let parts = path.split(separator: "/")
+            if parts.contains("Frameworks") || parts.contains("PlugIns") || path.hasSuffix(".dylib") {
+                let ext = (path as NSString).pathExtension.lowercased()
+                if !skipExtensions.contains(ext) {
+                    accept(entry, trustingPlist: false)
+                }
+            }
+        }
+
         if binaries.isEmpty {
             for entry in entries where bundleRootCandidate(entry.path) {
                 accept(entry, trustingPlist: false)
@@ -618,45 +635,101 @@ enum FairPlayDecryptor {
         }
 
         var plans: [BinaryPlan] = []
+        let allLicenseEntries = entries.filter { $0.path.contains("/SC_Info/") }
         for binary in binaries {
-            let stem = (binary.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
+            let filename = binary.path.split(separator: "/").last.map { String($0) } ?? ""
+            let stem = filename.lowercased()
             guard !stem.isEmpty else { continue }
-            let bundlePath = binary.path.split(separator: "/").dropLast().joined(separator: "/")
-            let prefix = bundlePath + "/SC_Info/"
-            let licenseEntries = entries.filter { $0.path.hasPrefix(prefix) }
+
+            let pathParts = binary.path.split(separator: "/").map(String.init)
+            let bundlePath = pathParts.dropLast().joined(separator: "/")
+            var appBundlePath: String?
+            if let appIndex = pathParts.firstIndex(where: { $0.hasSuffix(".app") }) {
+                appBundlePath = pathParts[0...appIndex].joined(separator: "/")
+            }
+
+            var searchPrefixes = [bundlePath + "/SC_Info/"]
+            if let appBundlePath, !searchPrefixes.contains(appBundlePath + "/SC_Info/") {
+                searchPrefixes.append(appBundlePath + "/SC_Info/")
+            }
+
+            var targetNames = [stem]
+            if pathParts.count >= 2 {
+                let parentDirName = pathParts[pathParts.count - 2].lowercased()
+                if parentDirName.hasSuffix(".framework") || parentDirName.hasSuffix(".appex") {
+                    let parentStem = (parentDirName as NSString).deletingPathExtension
+                    if !targetNames.contains(parentDirName) { targetNames.append(parentDirName) }
+                    if !targetNames.contains(parentStem) { targetNames.append(parentStem) }
+                }
+            }
+
             var sinf: Data?
             var license: Data?
             var sinfPath: String?
             var licensePath: String?
-            for entry in licenseEntries {
-                let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
-                if name == "\(stem).sinf" || name == "\(stem).v4.sinf" {
-                    sinf = try readEntry(entry, archive: archive)
-                    sinfPath = entry.path
-                } else if name == "\(stem).supf" || name == "\(stem).v5.supf"
-                            || name == "\(stem).supp" || name == "\(stem).v4.supp" {
-                    license = try readEntry(entry, archive: archive)
-                    licensePath = entry.path
+
+            func isSinfMatch(_ name: String, targets: [String]) -> Bool {
+                for target in targets {
+                    if name == "\(target).sinf" || name == "\(target).v4.sinf" { return true }
                 }
+                return false
             }
-            if sinf == nil || license == nil {
-                var fallbackSinf: Data?
-                var fallbackLicense: Data?
-                var fallbackSinfPath: String?
-                var fallbackLicensePath: String?
+
+            func isLicenseMatch(_ name: String, targets: [String]) -> Bool {
+                for target in targets {
+                    if name == "\(target).supf" || name == "\(target).v5.supf"
+                        || name == "\(target).supp" || name == "\(target).v4.supp" { return true }
+                }
+                return false
+            }
+
+            for prefix in searchPrefixes {
+                let licenseEntries = entries.filter { $0.path.hasPrefix(prefix) }
                 for entry in licenseEntries {
                     let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
-                    if name.hasSuffix(".sinf") || name.hasSuffix(".v4.sinf") {
-                        fallbackSinf = try readEntry(entry, archive: archive)
-                        fallbackSinfPath = entry.path
+                    if sinf == nil && isSinfMatch(name, targets: targetNames) {
+                        sinf = try readEntry(entry, archive: archive)
+                        sinfPath = entry.path
                     }
-                    if name.hasSuffix(".supf") || name.hasSuffix(".v5.supf") || name.hasSuffix(".supp") || name.hasSuffix(".v4.supp") {
-                        fallbackLicense = try readEntry(entry, archive: archive)
-                        fallbackLicensePath = entry.path
+                    if license == nil && isLicenseMatch(name, targets: targetNames) {
+                        license = try readEntry(entry, archive: archive)
+                        licensePath = entry.path
                     }
                 }
-                if sinf == nil { sinf = fallbackSinf; sinfPath = fallbackSinfPath }
-                if license == nil { license = fallbackLicense; licensePath = fallbackLicensePath }
+                if sinf != nil && license != nil { break }
+            }
+
+            if sinf == nil || license == nil {
+                for entry in allLicenseEntries {
+                    let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
+                    if sinf == nil && isSinfMatch(name, targets: targetNames) {
+                        sinf = try readEntry(entry, archive: archive)
+                        sinfPath = entry.path
+                    }
+                    if license == nil && isLicenseMatch(name, targets: targetNames) {
+                        license = try readEntry(entry, archive: archive)
+                        licensePath = entry.path
+                    }
+                }
+            }
+
+            if sinf == nil || license == nil {
+                for prefix in searchPrefixes {
+                    let licenseEntries = entries.filter { $0.path.hasPrefix(prefix) }
+                    for entry in licenseEntries {
+                        let name = (entry.path.split(separator: "/").last.map { String($0) } ?? "").lowercased()
+                        if sinf == nil && (name.hasSuffix(".sinf") || name.hasSuffix(".v4.sinf")) {
+                            sinf = try readEntry(entry, archive: archive)
+                            sinfPath = entry.path
+                        }
+                        if license == nil && (name.hasSuffix(".supf") || name.hasSuffix(".v5.supf")
+                                              || name.hasSuffix(".supp") || name.hasSuffix(".v4.supp")) {
+                            license = try readEntry(entry, archive: archive)
+                            licensePath = entry.path
+                        }
+                    }
+                    if sinf != nil && license != nil { break }
+                }
             }
             plans.append(BinaryPlan(binary: binary, sinf: sinf, license: license, sinfPath: sinfPath, licensePath: licensePath))
         }
