@@ -44,6 +44,15 @@ for path in sorted((ROOT / "iPadn").rglob("*.c")):
     reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="sourcecode.c.c", path=relative, sourceTree="<group>")
     app_files.append(reference)
     sources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
+for path in sorted((ROOT / "iPadn").rglob("*.m")):
+    relative = path.relative_to(ROOT / "iPadn").as_posix()
+    reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="sourcecode.c.objc", path=relative, sourceTree="<group>")
+    app_files.append(reference)
+    sources.append(add("Build/" + relative, "PBXBuildFile", fileRef=reference))
+for path in sorted((ROOT / "iPadn").rglob("*.h")):
+    relative = path.relative_to(ROOT / "iPadn").as_posix()
+    reference = add("File/" + relative, "PBXFileReference", lastKnownFileType="sourcecode.c.h", path=relative, sourceTree="<group>")
+    app_files.append(reference)
 resources = []
 for path, file_type in [("Resources/SAPRuntime", "folder"), ("Resources/Assets.xcassets", "folder.assetcatalog"), ("Resources/PrivacyInfo.xcprivacy", "text.xml"), ("Resources/app-name-directory.json", "text.json")]:
     reference = add("File/" + path, "PBXFileReference", lastKnownFileType=file_type, path=path, sourceTree="<group>")
@@ -79,7 +88,7 @@ project_configs = configs("Project", base, {"SWIFT_COMPILATION_MODE": "wholemodu
 app_settings = {"PRODUCT_BUNDLE_IDENTIFIER": "app.local.iPadn", "PRODUCT_NAME": "$(TARGET_NAME)", "CODE_SIGN_STYLE": "Automatic",
                 "DEVELOPMENT_TEAM": "", "TARGETED_DEVICE_FAMILY": "1,2", "INFOPLIST_FILE": "iPadn/Info.plist",
                 "GENERATE_INFOPLIST_FILE": "NO", "MARKETING_VERSION": "1.9.2", "CURRENT_PROJECT_VERSION": "27",
-                "SWIFT_EMIT_LOC_STRINGS": "YES",
+                "SWIFT_EMIT_LOC_STRINGS": "YES", "SWIFT_OBJC_BRIDGING_HEADER": "iPadn/iPadn-Bridging-Header.h",
                 "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
                 "ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS": "YES", "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
                 "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"],
