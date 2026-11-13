@@ -9,3 +9,5 @@
 /scripts/
 /iPadn-iOS/vendor/ZIPFoundation/
 /iPadn-iOS/scripts/.bni.sh
+__pycache__/
+*.pyc
