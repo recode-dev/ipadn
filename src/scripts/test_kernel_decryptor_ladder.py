@@ -166,10 +166,18 @@ def kernel_model(state):
         if not state["has_blob"] and not state.get("ever_registered"):
             return 1, None
         if not state["has_license"]:
-            return 1, None
+            return (12 if state.get("source", "container") == "container" else 1), None
         return 0, state["decrypt"](size)
 
     return call
+
+
+def mremap_errno(crypter_result):
+    if crypter_result == 0:
+        return 0
+    if crypter_result in ("license-refused", "mapping-failed"):
+        return 1
+    return 12
 
 
 CODE_WORDS = [0xD65F03C0, 0xD503237F, 0xD65F0FFF]
@@ -279,13 +287,28 @@ def main():
           kr_calls6 and kr_calls6[0] == ("mremap", 2, "R", False)
           and kr_calls6[0] == calls6[0], str(calls6))
 
-    state7 = {"has_blob": True, "has_license": False}
+    state7 = {"has_blob": True, "has_license": False, "source": "container"}
     state7["kernel"] = kernel_model(state7)
     calls7, res7 = model_decrypt(thin, state7)
-    check("no-license: exhausted with error code 1",
-          res7 == ("error", 1), str((calls7, res7)))
-    check("no-license: all four attempts really tried",
+    check("no-license container: exhausted with ENOMEM 12 (fairplayd cannot read a data container)",
+          res7 == ("error", 12), str((calls7, res7)))
+    check("no-license container: all four attempts really tried",
           len([c for c in calls7 if c[0] == "mremap"]) == 4, str(calls7))
+
+    state10 = {"has_blob": True, "has_license": True, "source": "installed"}
+    state10["kernel"] = kernel_model(state10)
+    calls10, pages10 = model_decrypt(thin, state10)
+    check("installed source: decrypted pages accepted on the first attempt",
+          pages10 is not None and not isinstance(pages10, tuple), str(calls10))
+    check("installed source: no license registration needed (installd provisioned the vnode)",
+          not any(c[0] == "fcntl97" for c in calls10), str(calls10))
+
+    state11 = {"has_blob": True, "has_license": True, "source": "installed"}
+    state11["kernel"] = kernel_model(state11)
+    calls11, res11 = model_decrypt(thin, state11)
+    check("installed source: precedence over container staging",
+          calls11[0] == ("mremap", 2, "R", False) and res11 is not None and not isinstance(res11, tuple),
+          str(calls11))
 
     state8 = {"has_blob": True, "has_license": True}
     state8["kernel"] = lambda addr, size, cryptid, cpu, sub, rx: (
@@ -333,6 +356,17 @@ def main():
     kr_bad, _ = st12["kernel"](0x4000, 0, 3, 0x0100000C, 0, True)
     check("constants: unknown cryptid answers EINVAL (kern_mman.c switch default)",
           kr_bad == 22, str(kr_bad))
+
+    check("xnu: crypter license refusal maps to EPERM 1",
+          mremap_errno("license-refused") == 1, str(mremap_errno("license-refused")))
+    check("xnu: vm_map_apple_protected failure maps to EPERM 1",
+          mremap_errno("mapping-failed") == 1, str(mremap_errno("mapping-failed")))
+    check("xnu: any other crypter-create failure maps to ENOMEM 12 (kern_mman.c)",
+          mremap_errno("crypter-init-unreadable") == 12, str(mremap_errno("crypter-init-unreadable")))
+    check("xnu: code 12 is a crypter-init failure, not a license refusal",
+          mremap_errno("crypter-init-unreadable") != mremap_errno("license-refused"), "")
+    check("source: installed bundle path is used before any container staging",
+          calls11[0] == ("mremap", 2, "R", False) and calls7[0] == ("mremap", 2, "R", False), str((calls11[0], calls7[0])))
 
     print(f"PASS {len(PASS)}  FAIL {len(FAIL)}")
     for f in FAIL:

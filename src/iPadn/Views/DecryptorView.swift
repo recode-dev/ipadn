@@ -100,7 +100,7 @@ struct DecryptorView: View {
         } header: {
             Text("Installed apps") + Text(verbatim: " · \(shown.count)")
         } footer: {
-            Text("Tap Decrypt and iPadn fetches the app’s encrypted package with the current download account (reusing the local copy when present), decrypts it right on the phone with the system FairPlay kernel and saves the DRM-free package. No computer is ever involved. Only for apps you are licensed to use.")
+            Text("Tap Decrypt and iPadn decrypts the installed app right on the phone with the system FairPlay kernel, reading the binary and its SC_Info license from the install location the system itself provisioned. If the installed copy can't be located, the encrypted package is fetched with the current download account instead. No computer is ever involved. Only for apps you are licensed to use.")
         }
     }
 
@@ -189,6 +189,10 @@ struct DecryptorView: View {
         busy.insert(bundleID)
         defer { busy.remove(bundleID) }
         do {
+            if let bundle = InstalledAppDecryptor.resolve(bundleID: bundleID) {
+                try await decryptInstalledApp(app, bundle: bundle, bundleID: bundleID)
+                return
+            }
             guard apple.active != nil else { throw ToolError.message(AppText.text("Sign in with an Apple account first to fetch the app’s encrypted package")) }
             let url = try await resolvePackage(app, bundleID: bundleID)
             rowStatus[bundleID] = AppText.text("Checking package encryption…")
@@ -225,6 +229,30 @@ struct DecryptorView: View {
         } catch {
             rowStatus[bundleID] = nil
             store.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func decryptInstalledApp(_ app: NativeInstaller.InstalledApp, bundle: InstalledAppDecryptor.InstalledBundle, bundleID: String) async throws {
+        rowStatus[bundleID] = AppText.text("Decrypting the installed app with the FairPlay kernel…")
+        let listing = app.storeItemID.flatMap { listings[$0] }
+        let name = listing?.name ?? app.name ?? app.bundleID ?? "App"
+        let version = listing?.version ?? app.version ?? ""
+        var outputName = "\(PackageService.safeName(name))-\(PackageService.safeName(version.isEmpty ? "1.0" : version))-DRM-free.ipa"
+        if LocalResources.packageURL(outputName) != nil {
+            outputName = "\(PackageService.safeName(name))-\(UUID().uuidString.prefix(6))-DRM-free.ipa"
+        }
+        let destination = LocalResources.packages.appendingPathComponent(outputName)
+        try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
+        let result = try InstalledAppDecryptor.decryptInstalled(at: bundle, destination: destination)
+        let pages = result.binaries.reduce(0) { $0 + $1.pages }
+        encryptedFlag[bundleID] = false
+        rowStatus[bundleID] = nil
+        UX.feedback()
+        if result.encryptedSkipped.isEmpty {
+            store.infoMessage = AppText.text("Decrypted (\(pages) pages): \(outputName)")
+            pendingInstall = PendingInstall(url: destination, bundleID: app.bundleID ?? "", name: name)
+        } else {
+            store.infoMessage = AppText.text("Decrypted (\(pages) pages): \(outputName). Kept encrypted because FairPlay refused their license: \(result.encryptedSkipped.joined(separator: ", "))")
         }
     }
 

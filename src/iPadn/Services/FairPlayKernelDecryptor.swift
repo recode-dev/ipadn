@@ -26,7 +26,17 @@ enum FairPlayKernelDecryptor {
             switch self {
             case .open(let code): return AppText.text("Could not open the staged binary (errno \(code))")
             case .mmap(let code): return AppText.text("Could not map the binary for the kernel decryptor (errno \(code))")
-            case .mremap(let code): return AppText.text("The kernel refused FairPlay decryption (code \(code)). Sign the Apple ID that owns this app in to the App Store on this iPhone once (Settings, then Media & Purchases), then retry. iOS 17.4 or newer is required.")
+            case .mremap(let code):
+                switch code {
+                case 1:
+                    return AppText.text("FairPlay refused the license for this app (code 1). Sign the Apple ID that owns this app in to the App Store on this iPhone (Settings, then Media & Purchases), then retry.")
+                case 12:
+                    return AppText.text("FairPlay could not initialize decryption for this binary (code 12). The system FairPlay daemon cannot read licenses out of app data containers, so a downloaded package can only be decrypted once the app is installed from the App Store on this iPhone. Install the app, then decrypt again.")
+                case 45:
+                    return AppText.text("This iOS build exposes no FairPlay decryptor (code 45). iOS 17.4 or newer is required.")
+                default:
+                    return AppText.text("The kernel refused FairPlay decryption (code \(code)). Sign the Apple ID that owns this app in to the App Store on this iPhone once (Settings, then Media & Purchases), then retry. iOS 17.4 or newer is required.")
+                }
             case .missingSinf(let name): return AppText.text("The package has no SC_Info license for \(name) (missing SINF file). Download the app again from the App Store so its decryption license is included, then retry.")
             case .pageRead(let kr, let page): return AppText.text("FairPlay page \(page) could not be read decrypted (code \(kr)). The App Store account signed in on this device may not own this app.")
             case .write(let code): return AppText.text("Writing the decrypted binary failed (errno \(code))")
