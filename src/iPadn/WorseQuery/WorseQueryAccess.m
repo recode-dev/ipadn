@@ -488,7 +488,7 @@ static void wq_forget(NSString *key) {
     NSData *data = [self read:metadata limit:1 << 20];
     if (!data) return nil;
     id plist = [NSPropertyListSerialization propertyListWithData:data options:0 format:nil error:nil];
-    if (![plist isKindOfClass NSDictionary.class]) return nil;
+    if (![plist isKindOfClass:[NSDictionary class]]) return nil;
     NSString *identifier = ((NSDictionary *)plist)[@"MCMMetadataIdentifier"];
     if (![identifier isKindOfClass:NSString.class]) return nil;
     return identifier;
