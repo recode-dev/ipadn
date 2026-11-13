@@ -74,15 +74,33 @@ enum FairPlayKernelDecryptor {
 
         var reports: [FairPlayDecryptor.BinaryReport] = []
         var handled = Set<String>()
+        var staged = Set<String>()
         var lastError: Error?
         for plan in plans {
             do {
                 let stagedBinary = try stage(plan.binary, archive: archive, root: staging)
+                staged.insert(plan.binary.path)
                 if let sinf = plan.sinf, let sinfPath = plan.sinfPath {
                     try stageData(sinf, path: sinfPath, root: staging)
+                    staged.insert(sinfPath)
+                    // AppStoreSinfInjector parity: the kernel-side FairPlay
+                    // stack resolves the license next to the executable as
+                    // SC_Info/<CFBundleExecutable>.sinf (Tetherless writes
+                    // the downloaded SINF under exactly that name). When the
+                    // package ships the license under another name, replicate
+                    // it under the expected one so the lookup succeeds.
+                    let dir = plan.binary.path.split(separator: "/").dropLast().joined(separator: "/")
+                    if let exec = plan.binary.path.split(separator: "/").last, !exec.isEmpty {
+                        let expected = (dir.isEmpty ? "" : dir + "/") + "SC_Info/" + exec + ".sinf"
+                        if expected != sinfPath, !staged.contains(expected) {
+                            try stageData(sinf, path: expected, root: staging)
+                            staged.insert(expected)
+                        }
+                    }
                 }
                 if let license = plan.license, let licensePath = plan.licensePath {
                     try stageData(license, path: licensePath, root: staging)
+                    staged.insert(licensePath)
                 }
                 let decryptedFile = decryptedRoot.appendingPathComponent(plan.binary.path)
                 try FileManager.default.createDirectory(at: decryptedFile.deletingLastPathComponent(), withIntermediateDirectories: true)
