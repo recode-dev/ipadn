@@ -114,7 +114,6 @@ static int64_t wq_query_token(NSString *group, NSString *target, BOOL altFlags) 
     setClass(query, 7);
     xpc_object_t identifier = xpc_string_create(group.UTF8String);
     setGroups(query, identifier);
-    xpc_release(identifier);
     setPart(query, 3);
     setFlags(query, altFlags ? 0x0000000800000000ULL : 0x0000008000000000ULL);
     void *single = result(query);
@@ -489,8 +488,8 @@ static void wq_forget(NSString *key) {
     NSData *data = [self read:metadata limit:1 << 20];
     if (!data) return nil;
     id plist = [NSPropertyListSerialization propertyListWithData:data options:0 format:nil error:nil];
-    if (!plist) return nil;
-    NSString *identifier = [plist isKindOfClass NSDictionary.class] ? plist[@"MCMMetadataIdentifier"] : nil;
+    if (![plist isKindOfClass NSDictionary.class]) return nil;
+    NSString *identifier = ((NSDictionary *)plist)[@"MCMMetadataIdentifier"];
     if (![identifier isKindOfClass:NSString.class]) return nil;
     return identifier;
 }
