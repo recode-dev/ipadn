@@ -101,7 +101,8 @@ enum InstalledAppDecryptor {
             if FairPlayDecryptor.isMachOMagic(magic) {
                 var decryptSource = element
                 let hasLocalSCInfo = directoryExists((element.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info"))
-                let needsStaging = licenseStage != nil && (!bundle.realBundle || !hasLocalSCInfo)
+                let isNested = relative.contains("/")
+                let needsStaging = licenseStage != nil && (!bundle.realBundle || isNested || !hasLocalSCInfo)
                 if needsStaging, let licenseStage {
                     guard let staged = stageForDecryption(element, relative: relative, root: root, stage: licenseStage) else {
                         keptEncrypted.append(relative)
@@ -159,23 +160,59 @@ enum InstalledAppDecryptor {
         let parent = staged.deletingLastPathComponent()
         guard WorseQueryAccess.createDirectory(parent.path) else { return nil }
         guard WorseQueryAccess.copyFile(binary.path, to: staged.path) else { return nil }
+
         let localLicense = (binary.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info")
         let rootLicense = (root as NSString).appendingPathComponent("SC_Info")
+
         let licenseTarget = parent.appendingPathComponent("SC_Info").path
         WorseQueryAccess.createDirectory(licenseTarget)
+
         let stageRootLicense = stage.appendingPathComponent("SC_Info").path
         WorseQueryAccess.createDirectory(stageRootLicense)
-        for sourceDir in [rootLicense, localLicense] where directoryExists(sourceDir) {
-            for name in WorseQueryAccess.list(sourceDir) {
+
+        let filename = binary.lastPathComponent
+        let stem = (filename as NSString).deletingPathExtension.lowercased()
+
+        for sourceDir in [rootLicense, localLicense] {
+            let names = WorseQueryAccess.list(sourceDir)
+            for name in names {
                 let srcFile = (sourceDir as NSString).appendingPathComponent(name)
                 WorseQueryAccess.copyFile(srcFile, to: (licenseTarget as NSString).appendingPathComponent(name))
                 WorseQueryAccess.copyFile(srcFile, to: (stageRootLicense as NSString).appendingPathComponent(name))
             }
         }
+
+        let targetFiles = WorseQueryAccess.list(licenseTarget)
+        let hasExactSinf = targetFiles.contains { $0.lowercased() == "\(stem).sinf" || $0.lowercased() == "\(filename).sinf" }
+        let hasExactSupf = targetFiles.contains { $0.lowercased().hasPrefix(stem) && ($0.hasSuffix(".supf") || $0.hasSuffix(".supp")) }
+
+        if !hasExactSinf {
+            if let existingSinf = targetFiles.first(where: { $0.hasSuffix(".sinf") }) {
+                let src = (licenseTarget as NSString).appendingPathComponent(existingSinf)
+                let dst = (licenseTarget as NSString).appendingPathComponent("\(stem).sinf")
+                WorseQueryAccess.copyFile(src, to: dst)
+                WorseQueryAccess.copyFile(src, to: (stageRootLicense as NSString).appendingPathComponent("\(stem).sinf"))
+            }
+        }
+        if !hasExactSupf {
+            if let existingSupf = targetFiles.first(where: { $0.hasSuffix(".supf") || $0.hasSuffix(".supp") }) {
+                let ext = (existingSupf as NSString).pathExtension
+                let dstName = "\(stem).\(ext)"
+                let src = (licenseTarget as NSString).appendingPathComponent(existingSupf)
+                let dst = (licenseTarget as NSString).appendingPathComponent(dstName)
+                WorseQueryAccess.copyFile(src, to: dst)
+                WorseQueryAccess.copyFile(src, to: (stageRootLicense as NSString).appendingPathComponent(dstName))
+            }
+        }
+
         return staged
     }
 
     private static func directoryExists(_ path: String) -> Bool {
+        var isDir = false
+        if WorseQueryAccess.statPath(path, isDirectory: &isDir, size: nil, modified: nil, symbolic: nil) {
+            return isDir
+        }
         var flag: ObjCBool = false
         return FileManager.default.fileExists(atPath: path, isDirectory: &flag) && flag.boolValue
     }

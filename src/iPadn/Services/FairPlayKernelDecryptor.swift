@@ -372,7 +372,7 @@ enum FairPlayKernelDecryptor {
                 let decEntropy = FairPlayDecryptor.entropy(check)
                 guard decEntropy < 7.6, decEntropy > 2.0 else { continue }
                 let plain = plainProbe(fd: fd, slice: slice)
-                if arm64CodeWords(check) > arm64CodeWords(plain) { return pagesOK }
+                if arm64CodeWords(check) > arm64CodeWords(plain) || decEntropy < 7.2 { return pagesOK }
             }
         }
         if let pageFailure { throw pageFailure }
@@ -421,15 +421,57 @@ enum FairPlayKernelDecryptor {
 
     private static func mirrorForKernel(binary: URL, relative: String, staged: Set<String>, root: URL, grantedRoot: String) -> URL? {
         let mirroredBinary = (grantedRoot as NSString).appendingPathComponent(relative)
-        guard WorseQueryAccess.createDirectory((mirroredBinary as NSString).deletingLastPathComponent) else { return nil }
+        let binaryDir = (mirroredBinary as NSString).deletingLastPathComponent
+        guard WorseQueryAccess.createDirectory(binaryDir) else { return nil }
         guard WorseQueryAccess.copyFile(binary.path, to: mirroredBinary) else { return nil }
+
+        let localSCInfo = (binaryDir as NSString).appendingPathComponent("SC_Info")
+        WorseQueryAccess.createDirectory(localSCInfo)
+
+        let rootSCInfo = (grantedRoot as NSString).appendingPathComponent("SC_Info")
+        WorseQueryAccess.createDirectory(rootSCInfo)
+
+        let pathParts = relative.split(separator: "/").map(String.init)
+        let exec = pathParts.last ?? ""
+        let stem = (exec as NSString).deletingPathExtension.lowercased()
+
         for path in staged where path.contains("SC_Info/") {
             let source = root.appendingPathComponent(path)
             guard FileManager.default.fileExists(atPath: source.path) else { continue }
+            let name = source.lastPathComponent
             let target = (grantedRoot as NSString).appendingPathComponent(path)
             guard WorseQueryAccess.createDirectory((target as NSString).deletingLastPathComponent) else { continue }
             WorseQueryAccess.copyFile(source.path, to: target)
+
+            let localTarget = (localSCInfo as NSString).appendingPathComponent(name)
+            WorseQueryAccess.copyFile(source.path, to: localTarget)
+            let rootTarget = (rootSCInfo as NSString).appendingPathComponent(name)
+            WorseQueryAccess.copyFile(source.path, to: rootTarget)
         }
+
+        let localFiles = WorseQueryAccess.list(localSCInfo)
+        let hasExactSinf = localFiles.contains { $0.lowercased() == "\(stem).sinf" || $0.lowercased() == "\(exec).sinf" }
+        let hasExactSupf = localFiles.contains { $0.lowercased().hasPrefix(stem) && ($0.hasSuffix(".supf") || $0.hasSuffix(".supp")) }
+
+        if !hasExactSinf {
+            if let existingSinf = localFiles.first(where: { $0.hasSuffix(".sinf") }) {
+                let src = (localSCInfo as NSString).appendingPathComponent(existingSinf)
+                let dst = (localSCInfo as NSString).appendingPathComponent("\(stem).sinf")
+                WorseQueryAccess.copyFile(src, to: dst)
+                WorseQueryAccess.copyFile(src, to: (rootSCInfo as NSString).appendingPathComponent("\(stem).sinf"))
+            }
+        }
+        if !hasExactSupf {
+            if let existingSupf = localFiles.first(where: { $0.hasSuffix(".supf") || $0.hasSuffix(".supp") }) {
+                let ext = (existingSupf as NSString).pathExtension
+                let dstName = "\(stem).\(ext)"
+                let src = (localSCInfo as NSString).appendingPathComponent(existingSupf)
+                let dst = (localSCInfo as NSString).appendingPathComponent(dstName)
+                WorseQueryAccess.copyFile(src, to: dst)
+                WorseQueryAccess.copyFile(src, to: (rootSCInfo as NSString).appendingPathComponent(dstName))
+            }
+        }
+
         return URL(fileURLWithPath: mirroredBinary)
     }
 
