@@ -214,8 +214,12 @@ struct DecryptorView: View {
             encryptedFlag[bundleID] = false
             rowStatus[bundleID] = nil
             UX.feedback()
-            store.infoMessage = AppText.text("Decrypted (\(pages) pages): \(outputName)")
-            pendingInstall = PendingInstall(url: destination, bundleID: app.bundleID ?? "", name: name)
+            if result.encryptedSkipped.isEmpty {
+                store.infoMessage = AppText.text("Decrypted (\(pages) pages): \(outputName)")
+                pendingInstall = PendingInstall(url: destination, bundleID: app.bundleID ?? "", name: name)
+            } else {
+                store.infoMessage = AppText.text("Decrypted (\(pages) pages): \(outputName). Kept encrypted because the package carries no license for them: \(result.encryptedSkipped.joined(separator: ", "))")
+            }
         } catch is CancellationError {
             rowStatus[bundleID] = nil
         } catch {
@@ -243,7 +247,8 @@ struct DecryptorView: View {
 
     private func resolvePackage(_ app: NativeInstaller.InstalledApp, bundleID: String) async throws -> URL {
         if let job = store.downloads.jobs.first(where: { $0.status == .completed && $0.rawFormat == nil && $0.app.bundleID == bundleID }),
-           let filename = job.localFilename, let url = LocalResources.packageURL(filename) {
+           let filename = job.localFilename, let url = LocalResources.packageURL(filename),
+           PackageService.hasUsableLicense(url) {
             return url
         }
         guard let storeItemID = app.storeItemID, UInt64(storeItemID).map({ $0 > 0 }) == true else {

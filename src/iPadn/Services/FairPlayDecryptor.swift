@@ -438,6 +438,7 @@ enum FairPlayDecryptor {
         let destination: URL
         let binaries: [BinaryReport]
         var stripped: Bool = false
+        var encryptedSkipped: [String] = []
         var pages: Int { binaries.reduce(0) { $0 + $1.pages } }
     }
 
@@ -479,6 +480,8 @@ enum FairPlayDecryptor {
 
         var reports: [BinaryReport] = []
         var handled = Set<String>()
+        var lastError: Error?
+        var keptEncrypted: [String] = []
         let outputURL = destination
         try? FileManager.default.removeItem(at: outputURL)
         let output = try Archive(url: outputURL, accessMode: .create)
@@ -492,14 +495,22 @@ enum FairPlayDecryptor {
             } catch DecryptError.badHeader {
                 continue
             }
-            guard let sinf = plan.sinf, let license = plan.license else {
-                throw DecryptError.badSinf("\(plan.binary.path) is missing SINF/SUPF license files")
+            let name = plan.binary.path.split(separator: "/").last.map(String.init) ?? plan.binary.path
+            guard let sinf = plan.sinf, !sinf.isEmpty, let license = plan.license, !license.isEmpty else {
+                if lastError == nil { lastError = DecryptError.badSinf("\(plan.binary.path) is missing SINF/SUPF license files") }
+                keptEncrypted.append(name)
+                continue
             }
-            let (decrypted, pages) = try decryptBinary(Array(binaryData), sinf: Array(sinf), license: Array(license),
-                                                       credential: credentialBytes, verify: true)
-            try writeEntry(Data(decrypted), to: output, path: plan.binary.path)
-            handled.insert(plan.binary.path)
-            reports.append(BinaryReport(path: plan.binary.path, pages: pages))
+            do {
+                let (decrypted, pages) = try decryptBinary(Array(binaryData), sinf: Array(sinf), license: Array(license),
+                                                           credential: credentialBytes, verify: true)
+                try writeEntry(Data(decrypted), to: output, path: plan.binary.path)
+                handled.insert(plan.binary.path)
+                reports.append(BinaryReport(path: plan.binary.path, pages: pages))
+            } catch {
+                lastError = error
+                keptEncrypted.append(name)
+            }
         }
 
         for entry in archive where !handled.contains(entry.path) {
@@ -507,8 +518,11 @@ enum FairPlayDecryptor {
             let data = try readEntry(entry, archive: archive, limit: maxBinaryBytes)
             try writeEntry(data, to: output, path: entry.path)
         }
-        guard !reports.isEmpty else { throw DecryptError.notEncrypted }
-        return IpaResult(destination: destination, binaries: reports)
+        guard !reports.isEmpty else {
+            if let lastError { throw lastError }
+            throw DecryptError.notEncrypted
+        }
+        return IpaResult(destination: destination, binaries: reports, encryptedSkipped: keptEncrypted)
     }
 
     static func clearIPA(at url: URL, destination: URL) throws -> IpaResult {

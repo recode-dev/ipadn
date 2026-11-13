@@ -192,6 +192,17 @@ enum PackageService {
             parts.allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
+    static func hasUsableLicense(_ url: URL) -> Bool {
+        guard let archive = try? Archive(url: url, accessMode: .read) else { return false }
+        for entry in archive {
+            guard entry.type == .file, entry.uncompressedSize > 0 else { continue }
+            let lower = entry.path.lowercased()
+            guard lower.hasSuffix(".sinf"), lower.contains("/sc_info/") || lower.hasPrefix("sc_info/") else { continue }
+            return true
+        }
+        return false
+    }
+
     static func safeName(_ name: String) -> String {
         let invalid = CharacterSet(charactersIn: "/\\:?%*|\"<>\n\r\t").union(.controlCharacters)
         let value = name.components(separatedBy: invalid).joined(separator: "_").trimmingCharacters(in: .whitespacesAndNewlines)

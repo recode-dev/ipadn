@@ -76,11 +76,15 @@ enum FairPlayKernelDecryptor {
         var handled = Set<String>()
         var staged = Set<String>()
         var lastError: Error?
+        var firstMremapError: KernelError?
+        var licenseMissing: [String] = []
+        var keptEncrypted: [String] = []
         for plan in plans {
+            let name = plan.binary.path.split(separator: "/").last.map(String.init) ?? plan.binary.path
             do {
                 let stagedBinary = try stage(plan.binary, archive: archive, root: staging)
                 staged.insert(plan.binary.path)
-                if let sinf = plan.sinf, let sinfPath = plan.sinfPath {
+                if let sinf = plan.sinf, !sinf.isEmpty, let sinfPath = plan.sinfPath {
                     try stageData(sinf, path: sinfPath, root: staging)
                     staged.insert(sinfPath)
                     let pathParts = plan.binary.path.split(separator: "/")
@@ -93,7 +97,7 @@ enum FairPlayKernelDecryptor {
                         }
                     }
                 }
-                if let license = plan.license, let licensePath = plan.licensePath {
+                if let license = plan.license, !license.isEmpty, let licensePath = plan.licensePath {
                     try stageData(license, path: licensePath, root: staging)
                     staged.insert(licensePath)
                 }
@@ -107,16 +111,22 @@ enum FairPlayKernelDecryptor {
             } catch FairPlayDecryptor.DecryptError.notMachO {
                 continue
             } catch let error as KernelError {
-                if case .mremap = error, plan.sinf == nil {
-                    let name = plan.binary.path.split(separator: "/").last.map(String.init) ?? plan.binary.path
-                    throw KernelError.missingSinf(name)
+                if case .mremap = error {
+                    if firstMremapError == nil { firstMremapError = error }
+                    if plan.sinf.map({ $0.isEmpty }) ?? true { licenseMissing.append(name) }
                 }
+                keptEncrypted.append(name)
                 lastError = error
             } catch {
+                keptEncrypted.append(name)
                 lastError = error
             }
         }
         guard !reports.isEmpty else {
+            if !licenseMissing.isEmpty, licenseMissing.count == keptEncrypted.count {
+                throw KernelError.missingSinf(licenseMissing[0])
+            }
+            if let firstMremapError { throw firstMremapError }
             if let lastError { throw lastError }
             throw FairPlayDecryptor.DecryptError.notEncrypted
         }
@@ -129,7 +139,8 @@ enum FairPlayKernelDecryptor {
         for report in reports {
             try output.addEntry(with: report.path, relativeTo: decryptedRoot, compressionMethod: .deflate)
         }
-        return FairPlayDecryptor.IpaResult(destination: destination, binaries: reports, stripped: true)
+        return FairPlayDecryptor.IpaResult(destination: destination, binaries: reports, stripped: true,
+                                           encryptedSkipped: keptEncrypted)
     }
 
     static func decryptBinaryFile(at source: URL, destination: URL) throws -> Int {
