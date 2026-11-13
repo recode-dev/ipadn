@@ -7,6 +7,9 @@ import ZIPFoundation
 private func ipadnRawMremapEncrypted(_ addr: UnsafeMutableRawPointer?, _ length: Int, _ prot: Int32,
                                      _ cpuType: UInt32, _ cpuSubtype: UInt32) -> Int32
 
+@_silgen_name("ipadn_addfilesigs")
+private func ipadnAddFileSigs(_ fd: Int32, _ fileStart: Int64, _ blobOffset: Int64, _ blobSize: UInt64) -> Int32
+
 enum FairPlayKernelDecryptor {
 
     enum KernelError: LocalizedError {
@@ -17,12 +20,14 @@ enum FairPlayKernelDecryptor {
         case write(Int32)
         case truncated(String)
         case entropy
+        case missingSinf(String)
 
         var errorDescription: String? {
             switch self {
             case .open(let code): return AppText.text("Could not open the staged binary (errno \(code))")
             case .mmap(let code): return AppText.text("Could not map the binary for the kernel decryptor (errno \(code))")
             case .mremap(let code): return AppText.text("The kernel refused FairPlay decryption (code \(code)). Sign the Apple ID that owns this app in to the App Store on this iPhone once (Settings, then Media & Purchases), then retry. iOS 17.4 or newer is required.")
+            case .missingSinf(let name): return AppText.text("The package has no SC_Info license for \(name) (missing SINF file). Download the app again from the App Store so its decryption license is included, then retry.")
             case .pageRead(let kr, let page): return AppText.text("FairPlay page \(page) could not be read decrypted (code \(kr)). The App Store account signed in on this device may not own this app.")
             case .write(let code): return AppText.text("Writing the decrypted binary failed (errno \(code))")
             case .truncated(let why): return AppText.text("Mach-O structure problem: \(why)")
@@ -41,6 +46,8 @@ enum FairPlayKernelDecryptor {
         let cryptSize: Int
         let cryptid: Int
         let cryptidFileOffset: Int
+        let csOff: Int
+        let csSize: Int
     }
 
     private static var symbol: UnsafeMutableRawPointer? = {
@@ -86,6 +93,16 @@ enum FairPlayKernelDecryptor {
                 continue
             } catch FairPlayDecryptor.DecryptError.notMachO {
                 continue
+            } catch let error as KernelError {
+                // A kernel refusal on a package whose SC_Info license never
+                // made it into the IPA has exactly one fix: re-download the
+                // app so the SINF is included. Report that instead of the
+                // generic kernel message.
+                if case .mremap = error, plan.sinf == nil {
+                    let name = plan.binary.path.split(separator: "/").last.map(String.init) ?? plan.binary.path
+                    throw KernelError.missingSinf(name)
+                }
+                lastError = error
             } catch {
                 lastError = error
             }
@@ -201,9 +218,27 @@ enum FairPlayKernelDecryptor {
                     let cryptOff = Int(le32(commands, pos + 8))
                     let cryptSize = Int(le32(commands, pos + 12))
                     let cryptid = Int(le32(commands, pos + 16))
+                    // LC_CODE_SIGNATURE (0x1D) carries the CMS blob the kernel
+                    // must validate before FairPlay decryption is allowed;
+                    // dyld registers it via fcntl(F_ADDFILESIGS_RETURN).
+                    var csOff = 0
+                    var csSize = 0
+                    var scan = 0
+                    while scan + 8 <= sizeofcmds {
+                        let scanCmd = le32(commands, scan)
+                        let scanSize = Int(le32(commands, scan + 4))
+                        guard scanSize >= 8, scan + scanSize <= sizeofcmds else { break }
+                        if scanCmd == 0x1D, scanSize >= 12 {
+                            csOff = Int(le32(commands, scan + 8))
+                            csSize = Int(le32(commands, scan + 12))
+                            break
+                        }
+                        scan += scanSize
+                    }
                     out.append(SliceInfo(fileOffset: candidate.offset, size: candidate.size, cpuType: cpuType, cpuSubtype: cpuSubtype,
                                          is64: is64, cryptOff: cryptOff, cryptSize: cryptSize, cryptid: cryptid,
-                                         cryptidFileOffset: Int(candidate.offset) + headerSize + pos + 16))
+                                         cryptidFileOffset: Int(candidate.offset) + headerSize + pos + 16,
+                                         csOff: csOff, csSize: csSize))
                 }
                 pos += cmdSize
             }
@@ -214,31 +249,50 @@ enum FairPlayKernelDecryptor {
     private static func decryptSlice(fd: Int32, slice: SliceInfo, outFd: Int32) throws -> Int {
         let pagesize = Int(sysconf(Int32(_SC_PAGESIZE)))
         // Map the whole file from offset 0 so no slice offset can break
-        // mmap's page-alignment requirement.
-        let span = Int(slice.fileOffset) + slice.cryptOff + slice.cryptSize
+        // mmap's page-alignment requirement, and keep one spare page of
+        // head-room the way the TetherlessiOS helper does.
+        let span = Int(slice.fileOffset) + slice.cryptOff + slice.cryptSize + pagesize
         let mapLen = ((span + pagesize - 1) / pagesize) * pagesize
-        // Mirror the TetherlessiOS helper call site exactly: the third
-        // mremap_encrypted argument is the FairPlay cryptid (1 = app
-        // encryption, 2 = model encryption), not a memory protection.
-        // XNU rejects any other value with EINVAL. Executable slices are
-        // mapped PROT_READ|PROT_EXEC and decrypted with cryptid 1; data
-        // slices are mapped PROT_READ and decrypted with cryptid 2.
-        let variants: [(mmapProt: Int32, cryptid: UInt32)] = [
-            (PROT_READ | PROT_EXEC, 1),
-            (PROT_READ, 2),
-            (PROT_READ, 1),
-            (PROT_READ | PROT_EXEC, 2),
+        // The kernel (XNU bsd/kern/kern_mman.c, mremap_encrypted) looks up the
+        // vnode behind the address, asks FairPlay for a decrypter and refuses
+        // with EPERM when the vnode carries no validated code signature.
+        // dyld therefore registers the LC_CODE_SIGNATURE blob first
+        // (ImageLoaderMachO::loadCodeSignature, fcntl F_ADDFILESIGS_RETURN)
+        // and only then calls mremap_encrypted(base + cryptoff, cryptsize,
+        // cryptid, cputype, cpusubtype). The TetherlessiOS helper replicates
+        // exactly that sequence, trying the plain and the signature-registered
+        // variant of each protection/cryptid combination; we mirror the whole
+        // ladder and verify the pages actually decrypted before accepting.
+        struct Attempt {
+            let prot: Int32
+            let cryptid: Int32
+            let registerSignature: Bool
+        }
+        let attempts: [Attempt] = [
+            Attempt(prot: PROT_READ, cryptid: 1, registerSignature: true),
+            Attempt(prot: PROT_READ, cryptid: 3, registerSignature: true),
+            Attempt(prot: PROT_READ, cryptid: 1, registerSignature: false),
+            Attempt(prot: PROT_READ, cryptid: 3, registerSignature: false),
+            Attempt(prot: PROT_READ | PROT_EXEC, cryptid: 1, registerSignature: true),
+            Attempt(prot: PROT_READ | PROT_EXEC, cryptid: 3, registerSignature: true),
         ]
         var mremapError: Int32 = 0
         var pageFailure: KernelError?
-        for variant in variants {
-            let mapping = mmap(nil, mapLen, variant.mmapProt, MAP_PRIVATE, fd, 0)
+        for attempt in attempts {
+            if attempt.registerSignature, slice.csSize > 0 {
+                // dyld parity: attach the CMS blob (fs_file_start = slice
+                // offset in a FAT, fs_blob_start = LC_CODE_SIGNATURE dataoff,
+                // fs_blob_size = datasize) so FairPlay trusts this vnode.
+                _ = ipadnAddFileSigs(fd, Int64(slice.fileOffset), Int64(slice.csOff), UInt64(slice.csSize))
+            }
+            let mapping = mmap(nil, mapLen, attempt.prot, MAP_PRIVATE, fd, 0)
             guard let base = mapping, base != UnsafeMutableRawPointer(bitPattern: UInt.max) else {
                 continue
             }
             defer { munmap(base, mapLen) }
             let target = base.advanced(by: Int(slice.fileOffset) + slice.cryptOff)
-            let kr = callMremapEncrypt(target, slice.cryptSize, Int32(variant.cryptid), slice.cpuType, slice.cpuSubtype)
+            errno = 0
+            let kr = callMremapEncrypt(target, slice.cryptSize, attempt.cryptid, slice.cpuType, slice.cpuSubtype)
             guard kr == 0 else {
                 mremapError = kr == -1 ? errno : kr
                 continue
