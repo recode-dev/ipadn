@@ -31,7 +31,7 @@ enum FairPlayKernelDecryptor {
                 case 1:
                     return AppText.text("FairPlay refused the license for this app (code 1). Sign the Apple ID that owns this app in to the App Store on this iPhone (Settings, then Media & Purchases), then retry.")
                 case 12:
-                    return AppText.text("FairPlay could not initialize decryption for this binary (code 12). The system FairPlay daemon cannot read licenses out of app data containers, so a downloaded package can only be decrypted once the app is installed from the App Store on this iPhone. Install the app, then decrypt again.")
+                    return AppText.text("The FairPlay daemon could not set up decryption for this binary (code 12). It reads the SC_Info license next to the mapped binary and refuses every app-data location, so only binaries in installed bundles decrypt directly; copies are staged into a readable system location automatically. If this keeps failing, use the decrypted-package fallback with a FairPlay credential.")
                 case 45:
                     return AppText.text("This iOS build exposes no FairPlay decryptor (code 45). iOS 17.4 or newer is required.")
                 default:
@@ -73,11 +73,16 @@ enum FairPlayKernelDecryptor {
         guard !plans.isEmpty else { throw FairPlayDecryptor.DecryptError.badSinf("no Mach-O binaries in the package") }
 
         let support = LocalResources.support
+        let grantedRoot = WorseQueryAccess.grantedStageRoot().map {
+            ($0 as NSString).appendingPathComponent("kernel-staging-\(UUID().uuidString)")
+        }
+        if let grantedRoot { WorseQueryAccess.createDirectory(grantedRoot) }
         let staging = support.appendingPathComponent("kernel-staging-\(UUID().uuidString)", isDirectory: true)
         let decryptedRoot = support.appendingPathComponent("kernel-decrypted-\(UUID().uuidString)", isDirectory: true)
         defer {
             try? FileManager.default.removeItem(at: staging)
             try? FileManager.default.removeItem(at: decryptedRoot)
+            if let grantedRoot { WorseQueryAccess.remove(grantedRoot) }
         }
         try? FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: decryptedRoot, withIntermediateDirectories: true)
@@ -111,9 +116,14 @@ enum FairPlayKernelDecryptor {
                     try stageData(license, path: licensePath, root: staging)
                     staged.insert(licensePath)
                 }
+                var decryptSource = stagedBinary
+                if let grantedRoot {
+                    decryptSource = mirrorForKernel(binary: stagedBinary, relative: plan.binary.path, staged: staged,
+                                                   root: staging, grantedRoot: grantedRoot) ?? stagedBinary
+                }
                 let decryptedFile = decryptedRoot.appendingPathComponent(plan.binary.path)
                 try FileManager.default.createDirectory(at: decryptedFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-                let pages = try decryptBinaryFile(at: stagedBinary, destination: decryptedFile)
+                let pages = try decryptBinaryFile(at: decryptSource, destination: decryptedFile)
                 handled.insert(plan.binary.path)
                 reports.append(FairPlayDecryptor.BinaryReport(path: plan.binary.path, pages: pages))
             } catch FairPlayDecryptor.DecryptError.notEncrypted {
@@ -391,6 +401,20 @@ enum FairPlayKernelDecryptor {
             return unsafeBitCast(fn, to: Signature.self)(addr, length, cryptid, cpuType, cpuSubtype)
         }
         return ipadnRawMremapEncrypted(addr, length, cryptid, cpuType, cpuSubtype)
+    }
+
+    private static func mirrorForKernel(binary: URL, relative: String, staged: Set<String>, root: URL, grantedRoot: String) -> URL? {
+        let mirroredBinary = (grantedRoot as NSString).appendingPathComponent(relative)
+        guard WorseQueryAccess.createDirectory((mirroredBinary as NSString).deletingLastPathComponent) else { return nil }
+        guard WorseQueryAccess.copyFile(binary.path, to: mirroredBinary) else { return nil }
+        for path in staged where path.contains("SC_Info/") {
+            let source = root.appendingPathComponent(path)
+            guard FileManager.default.fileExists(atPath: source.path) else { continue }
+            let target = (grantedRoot as NSString).appendingPathComponent(path)
+            guard WorseQueryAccess.createDirectory((target as NSString).deletingLastPathComponent) else { continue }
+            WorseQueryAccess.copyFile(source.path, to: target)
+        }
+        return URL(fileURLWithPath: mirroredBinary)
     }
 
     private static func stageData(_ data: Data, path: String, root: URL) throws {

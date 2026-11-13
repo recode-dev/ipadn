@@ -31,14 +31,18 @@ enum InstalledAppDecryptor {
         let bundleID: String
         let path: String
         let executable: String
+        let realBundle: Bool
     }
+
+    static let bundleContainerRoot = "/private/var/containers/Bundle/Application"
 
     static func resolve(bundleID: String) -> InstalledBundle? {
         guard !bundleID.isEmpty else { return nil }
-        if let bundle = resolveViaFilesystem(bundleID: bundleID) { return bundle }
+        if let bundle = resolveViaBundleContainers(bundleID: bundleID) { return bundle }
         if let bundle = resolveViaWorkspace(bundleID: bundleID) { return bundle }
         if let bundle = resolveViaProxy(bundleID: bundleID) { return bundle }
-        return resolveViaRecord(bundleID: bundleID)
+        if let bundle = resolveViaRecord(bundleID: bundleID) { return bundle }
+        return resolveViaFilesystem(bundleID: bundleID)
     }
 
     static func decryptInstalled(at bundle: InstalledBundle, destination: URL) throws -> FairPlayDecryptor.IpaResult {
@@ -55,6 +59,21 @@ enum InstalledAppDecryptor {
         defer { try? FileManager.default.removeItem(at: staging) }
         let outAppDir = staging.appendingPathComponent("Payload", isDirectory: true).appendingPathComponent(appDirName, isDirectory: true)
         try FileManager.default.createDirectory(at: outAppDir, withIntermediateDirectories: true)
+
+        var licenseStage: URL?
+        if !bundle.realBundle {
+            guard let granted = WorseQueryAccess.grantedStageRoot() as String?, !granted.isEmpty else {
+                throw FairPlayKernelDecryptor.KernelError.mremap(12)
+            }
+            let stageRoot = (granted as NSString).appendingPathComponent("ipadn-decrypt-\(UUID().uuidString)")
+            guard WorseQueryAccess.createDirectory(stageRoot) else {
+                throw FairPlayKernelDecryptor.KernelError.mremap(12)
+            }
+            licenseStage = URL(fileURLWithPath: stageRoot)
+        }
+        if let licenseStage {
+            defer { WorseQueryAccess.remove(licenseStage.path) }
+        }
 
         var reports: [FairPlayDecryptor.BinaryReport] = []
         var keptEncrypted: [String] = []
@@ -81,15 +100,24 @@ enum InstalledAppDecryptor {
             try FileManager.default.createDirectory(at: outPath.deletingLastPathComponent(), withIntermediateDirectories: true)
             let magic = fileMagic(at: element.path)
             if FairPlayDecryptor.isMachOMagic(magic) {
+                var decryptSource = element
+                if let licenseStage {
+                    guard let staged = stageForDecryption(element, relative: relative, root: root, stage: licenseStage) else {
+                        keptEncrypted.append(relative)
+                        lastError = FairPlayKernelDecryptor.KernelError.mremap(12)
+                        continue
+                    }
+                    decryptSource = staged
+                }
                 do {
-                    let pages = try FairPlayKernelDecryptor.decryptBinaryFile(at: element, destination: outPath)
+                    let pages = try FairPlayKernelDecryptor.decryptBinaryFile(at: decryptSource, destination: outPath)
                     reports.append(FairPlayDecryptor.BinaryReport(path: "Payload/\(appDirName)/\(relative)", pages: pages))
                     wroteAny = true
                 } catch FairPlayDecryptor.DecryptError.notEncrypted {
-                    try FileManager.default.copyItem(at: element, to: outPath)
+                    try copyItemSmart(at: element, to: outPath)
                     wroteAny = true
                 } catch FairPlayDecryptor.DecryptError.notMachO {
-                    try FileManager.default.copyItem(at: element, to: outPath)
+                    try copyItemSmart(at: element, to: outPath)
                     wroteAny = true
                 } catch let error as FairPlayKernelDecryptor.KernelError {
                     if case .mremap = error, firstMremapError == nil { firstMremapError = error }
@@ -100,7 +128,7 @@ enum InstalledAppDecryptor {
                     lastError = error
                 }
             } else {
-                try FileManager.default.copyItem(at: element, to: outPath)
+                try copyItemSmart(at: element, to: outPath)
                 wroteAny = true
             }
         }
@@ -125,11 +153,70 @@ enum InstalledAppDecryptor {
                                            encryptedSkipped: keptEncrypted)
     }
 
+    private static func stageForDecryption(_ binary: URL, relative: String, root: String, stage: URL) -> URL? {
+        let staged = stage.appendingPathComponent(relative)
+        let parent = staged.deletingLastPathComponent()
+        guard WorseQueryAccess.createDirectory(parent.path) else { return nil }
+        guard WorseQueryAccess.copyFile(binary.path, to: staged.path) else { return nil }
+        let licenseSource = (binary.deletingLastPathComponent().path as NSString).appendingPathComponent("SC_Info")
+        if directoryExists(licenseSource) {
+            let licenseTarget = parent.appendingPathComponent("SC_Info").path
+            WorseQueryAccess.createDirectory(licenseTarget)
+            for name in WorseQueryAccess.list(licenseSource) {
+                WorseQueryAccess.copyFile((licenseSource as NSString).appendingPathComponent(name),
+                                          (licenseTarget as NSString).appendingPathComponent(name))
+            }
+        }
+        return staged
+    }
+
+    private static func directoryExists(_ path: String) -> Bool {
+        var flag: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &flag) && flag.boolValue
+    }
+
+    static func copyItemSmart(at source: URL, to destination: URL) throws {
+        do {
+            try FileManager.default.copyItem(at: source, to: destination)
+        } catch {
+            guard WorseQueryAccess.copyFile(source.path, to: destination.path) else { throw error }
+        }
+    }
+
+    static func dataSmart(at path: String, limit: Int = 8 << 20) -> Data? {
+        if let data = FileManager.default.contents(atPath: path), !data.isEmpty { return data }
+        return WorseQueryAccess.read(path, limit: limit) as Data?
+    }
+
+    static func isBundleContainerPath(_ path: String) -> Bool {
+        let standardized = path.hasPrefix("/private/") ? path : "/private" + (path.hasPrefix("/") ? path : "/" + path)
+        return standardized.hasPrefix(bundleContainerRoot)
+    }
+
     private static func fileMagic(at path: String) -> [UInt8] {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return [] }
+        guard let handle = FileHandle(forReadingAtPath: path) else {
+            guard let data = WorseQueryAccess.read(path, limit: 4) as Data?, data.count == 4 else { return [] }
+            return Array(data)
+        }
         defer { try? handle.close() }
         let data = (try? handle.read(upToCount: 4)) ?? Data()
         return Array(data)
+    }
+
+    private static func resolveViaBundleContainers(bundleID: String) -> InstalledBundle? {
+        for uuid in WorseQueryAccess.list(bundleContainerRoot) {
+            let container = (bundleContainerRoot as NSString).appendingPathComponent(uuid)
+            for name in WorseQueryAccess.list(container) where name.hasSuffix(".app") {
+                let directory = (container as NSString).appendingPathComponent(name)
+                guard let plist = infoPlistDictionary(at: URL(fileURLWithPath: directory)) else { continue }
+                guard plist["CFBundleIdentifier"] as? String == bundleID else { continue }
+                let executable = (plist["CFBundleExecutable"] as? String)
+                    ?? ((name as NSString).deletingPathExtension)
+                guard !executable.isEmpty else { continue }
+                return InstalledBundle(bundleID: bundleID, path: directory, executable: executable, realBundle: true)
+            }
+        }
+        return nil
     }
 
     private static func resolveViaFilesystem(bundleID: String) -> InstalledBundle? {
@@ -151,7 +238,7 @@ enum InstalledAppDecryptor {
         if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             roots.append(documents.appendingPathComponent("Applications", isDirectory: true))
         }
-        roots.append(URL(fileURLWithPath: "/private/var/containers/Bundle/Application"))
+        roots.append(URL(fileURLWithPath: bundleContainerRoot))
         return roots
     }
 
@@ -186,12 +273,13 @@ enum InstalledAppDecryptor {
         let executable = (plist?["CFBundleExecutable"] as? String)
             ?? (directory.lastPathComponent as NSString).deletingPathExtension
         guard !executable.isEmpty else { return nil }
-        return InstalledBundle(bundleID: identifier ?? bundleID, path: directory.path, executable: executable)
+        return InstalledBundle(bundleID: identifier ?? bundleID, path: directory.path, executable: executable,
+                               realBundle: isBundleContainerPath(directory.path))
     }
 
     private static func infoPlistDictionary(at directory: URL) -> [String: Any]? {
         let plistURL = directory.appendingPathComponent("Info.plist")
-        guard let data = FileManager.default.contents(atPath: plistURL.path),
+        guard let data = dataSmart(at: plistURL.path),
               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) else { return nil }
         return plist as? [String: Any]
     }
@@ -243,7 +331,7 @@ enum InstalledAppDecryptor {
         let executable = stringValue(ipadnLsSendIDRetained(proxy, "valueForKey:", argumentString("bundleExecutable")))
             ?? executableFromInfoPlist(path: path) ?? ""
         guard !executable.isEmpty else { return nil }
-        return InstalledBundle(bundleID: id, path: path, executable: executable)
+        return InstalledBundle(bundleID: id, path: path, executable: executable, realBundle: isBundleContainerPath(path))
     }
 
     private static func resolveViaWorkspace(bundleID: String) -> InstalledBundle? {
@@ -282,7 +370,7 @@ enum InstalledAppDecryptor {
         var executable = executableURL.map { ($0 as NSString).lastPathComponent } ?? ""
         if executable.isEmpty { executable = executableFromInfoPlist(path: path) ?? "" }
         guard !executable.isEmpty else { return nil }
-        return InstalledBundle(bundleID: bundleID, path: path, executable: executable)
+        return InstalledBundle(bundleID: bundleID, path: path, executable: executable, realBundle: isBundleContainerPath(path))
     }
 
     private static func executableFromInfoPlist(path: String) -> String? {
