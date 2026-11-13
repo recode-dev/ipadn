@@ -273,7 +273,6 @@ enum InstalledAppDecryptor {
         let identifier = argumentString(bundleID)
         guard let recordPointer = ipadnLsSendRecordInit(allocated, "initWithBundleIdentifier:allowPlaceholder:error:",
                                                         identifier, 0, &failure) else {
-            ipadnLsRelease(allocated)
             return nil
         }
         let record = Unmanaged<AnyObject>.fromOpaque(recordPointer).takeRetainedValue()

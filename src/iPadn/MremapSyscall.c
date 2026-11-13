@@ -42,10 +42,24 @@ int ipadn_addfilesigs(int fd, long long file_start, long long blob_offset, unsig
 
 static __thread sigjmp_buf ipadn_guard_env;
 static __thread volatile sig_atomic_t ipadn_guard_armed = 0;
-static pthread_mutex_t ipadn_guard_install_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ipadn_guard_mutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int ipadn_guard_installed = 0;
+static volatile int ipadn_objc_fns_resolved = 0;
 static struct sigaction ipadn_guard_prev_segv;
 static struct sigaction ipadn_guard_prev_bus;
+
+static void *(*ipadn_guard_send)(void *, void *) = NULL;
+static void *(*ipadn_guard_send3)(void *, void *, void *) = NULL;
+static void *(*ipadn_guard_send5)(void *, void *, void *, long, void **) = NULL;
+static void *(*ipadn_guard_selreg)(const char *) = NULL;
+static void *(*ipadn_guard_retainar)(void *) = NULL;
+static void *(*ipadn_guard_retain)(void *) = NULL;
+static void (*ipadn_guard_release)(void *) = NULL;
+static void *(*ipadn_guard_get_class)(const char *) = NULL;
+static int (*ipadn_guard_object_is_class)(void *) = NULL;
+static void *(*ipadn_guard_object_get_class)(void *) = NULL;
+static void *(*ipadn_guard_class_get_instance_method)(void *, void *) = NULL;
+static void *(*ipadn_guard_class_get_class_method)(void *, void *) = NULL;
 
 static void *ipadn_symbol(const char *name) {
     return dlsym(RTLD_DEFAULT, name);
@@ -94,7 +108,7 @@ static void ipadn_guard_dispatch(int sig, siginfo_t *info, void *uap) {
 }
 
 static void ipadn_guard_install(void) {
-    pthread_mutex_lock(&ipadn_guard_install_mutex);
+    pthread_mutex_lock(&ipadn_guard_mutex);
     if (!ipadn_guard_installed) {
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
@@ -105,18 +119,52 @@ static void ipadn_guard_install(void) {
         sigaction(SIGBUS, &sa, &ipadn_guard_prev_bus);
         ipadn_guard_installed = 1;
     }
-    pthread_mutex_unlock(&ipadn_guard_install_mutex);
+    pthread_mutex_unlock(&ipadn_guard_mutex);
+}
+
+static void ipadn_guard_resolve_symbols(void) {
+    if (ipadn_objc_fns_resolved) return;
+    pthread_mutex_lock(&ipadn_guard_mutex);
+    if (!ipadn_objc_fns_resolved) {
+        ipadn_guard_send = (void *(*)(void *, void *))ipadn_symbol("objc_msgSend");
+        ipadn_guard_send3 = (void *(*)(void *, void *, void *))ipadn_symbol("objc_msgSend");
+        ipadn_guard_send5 = (void *(*)(void *, void *, void *, long, void **))ipadn_symbol("objc_msgSend");
+        ipadn_guard_selreg = (void *(*)(const char *))ipadn_symbol("sel_registerName");
+        ipadn_guard_retainar = (void *(*)(void *))ipadn_symbol("objc_retainAutoreleasedReturnValue");
+        ipadn_guard_retain = (void *(*)(void *))ipadn_symbol("objc_retain");
+        ipadn_guard_release = (void (*)(void *))ipadn_symbol("objc_release");
+        ipadn_guard_get_class = (void *(*)(const char *))ipadn_symbol("objc_getClass");
+        ipadn_guard_object_is_class = (int (*)(void *))ipadn_symbol("object_isClass");
+        ipadn_guard_object_get_class = (void *(*)(void *))ipadn_symbol("object_getClass");
+        ipadn_guard_class_get_instance_method = (void *(*)(void *, void *))ipadn_symbol("class_getInstanceMethod");
+        ipadn_guard_class_get_class_method = (void *(*)(void *, void *))ipadn_symbol("class_getClassMethod");
+        ipadn_objc_fns_resolved = 1;
+    }
+    pthread_mutex_unlock(&ipadn_guard_mutex);
+}
+
+static int ipadn_responds_to(void *receiver, void *selector) {
+    if (!receiver || !selector) return 0;
+    ipadn_guard_resolve_symbols();
+    if (!ipadn_guard_object_is_class || !ipadn_guard_object_get_class ||
+        !ipadn_guard_class_get_instance_method || !ipadn_guard_class_get_class_method) return 1;
+    if (ipadn_guard_object_is_class(receiver)) {
+        return ipadn_guard_class_get_class_method(receiver, selector) != NULL;
+    }
+    void *cls = ipadn_guard_object_get_class(receiver);
+    if (!cls) return 0;
+    return ipadn_guard_class_get_instance_method(cls, selector) != NULL;
 }
 
 void *ipadn_ls_class(const char *class_name) {
     if (!class_name) return NULL;
     ipadn_guard_install();
-    void *(*get_class)(const char *) = (void *(*)(const char *))ipadn_symbol("objc_getClass");
-    if (!get_class) return NULL;
-    void *cls = get_class(class_name);
+    ipadn_guard_resolve_symbols();
+    if (!ipadn_guard_get_class) return NULL;
+    void *cls = ipadn_guard_get_class(class_name);
     if (!cls) {
         void *handle = dlopen("/System/Library/PrivateFrameworks/MobileCoreServices.framework/MobileCoreServices", RTLD_LAZY);
-        if (handle) cls = get_class(class_name);
+        if (handle) cls = ipadn_guard_get_class(class_name);
     }
     if (!cls || !ipadn_readable(cls, sizeof(unsigned long))) return NULL;
     unsigned long isa = 0;
@@ -127,27 +175,6 @@ void *ipadn_ls_class(const char *class_name) {
     return cls;
 }
 
-static void *(*ipadn_guard_send)(void *, void *) = NULL;
-static void *(*ipadn_guard_send3)(void *, void *, void *) = NULL;
-static void *(*ipadn_guard_send5)(void *, void *, void *, long, void **) = NULL;
-static void *(*ipadn_guard_selreg)(const char *) = NULL;
-static void *(*ipadn_guard_retainar)(void *) = NULL;
-static volatile int ipadn_guard_symbols_resolved = 0;
-
-static void ipadn_guard_resolve_symbols(void) {
-    if (ipadn_guard_symbols_resolved) return;
-    pthread_mutex_lock(&ipadn_guard_install_mutex);
-    if (!ipadn_guard_symbols_resolved) {
-        ipadn_guard_send = (void *(*)(void *, void *))ipadn_symbol("objc_msgSend");
-        ipadn_guard_send3 = (void *(*)(void *, void *, void *))ipadn_symbol("objc_msgSend");
-        ipadn_guard_send5 = (void *(*)(void *, void *, void *, long, void **))ipadn_symbol("objc_msgSend");
-        ipadn_guard_selreg = (void *(*)(const char *))ipadn_symbol("sel_registerName");
-        ipadn_guard_retainar = (void *(*)(void *))ipadn_symbol("objc_retainAutoreleasedReturnValue");
-        ipadn_guard_symbols_resolved = 1;
-    }
-    pthread_mutex_unlock(&ipadn_guard_install_mutex);
-}
-
 void *ipadn_ls_send_plain(void *receiver, const char *selector_name) {
     if (!receiver || !selector_name || !ipadn_valid_receiver(receiver)) return NULL;
     ipadn_guard_install();
@@ -155,6 +182,7 @@ void *ipadn_ls_send_plain(void *receiver, const char *selector_name) {
     if (!ipadn_guard_send || !ipadn_guard_selreg) return NULL;
     void *selector = ipadn_guard_selreg(selector_name);
     if (!selector) return NULL;
+    if (!ipadn_responds_to(receiver, selector)) return NULL;
     if (sigsetjmp(ipadn_guard_env, 1) != 0) return NULL;
     ipadn_guard_armed = 1;
     void *result = ipadn_guard_send(receiver, selector);
@@ -169,6 +197,7 @@ void *ipadn_ls_send_plain_retained(void *receiver, const char *selector_name) {
     if (!ipadn_guard_send || !ipadn_guard_selreg || !ipadn_guard_retainar) return NULL;
     void *selector = ipadn_guard_selreg(selector_name);
     if (!selector) return NULL;
+    if (!ipadn_responds_to(receiver, selector)) return NULL;
     if (sigsetjmp(ipadn_guard_env, 1) != 0) return NULL;
     ipadn_guard_armed = 1;
     void *result = ipadn_guard_send(receiver, selector);
@@ -188,6 +217,7 @@ void *ipadn_ls_send_id_retained(void *receiver, const char *selector_name, void 
     if (!ipadn_guard_send3 || !ipadn_guard_selreg || !ipadn_guard_retainar) return NULL;
     void *selector = ipadn_guard_selreg(selector_name);
     if (!selector) return NULL;
+    if (!ipadn_responds_to(receiver, selector)) return NULL;
     if (sigsetjmp(ipadn_guard_env, 1) != 0) return NULL;
     ipadn_guard_armed = 1;
     void *result = ipadn_guard_send3(receiver, selector, argument);
@@ -207,6 +237,7 @@ void *ipadn_ls_send_record_init(void *receiver, const char *selector_name, void 
     if (!ipadn_guard_send5 || !ipadn_guard_selreg) return NULL;
     void *selector = ipadn_guard_selreg(selector_name);
     if (!selector) return NULL;
+    if (!ipadn_responds_to(receiver, selector)) return NULL;
     if (sigsetjmp(ipadn_guard_env, 1) != 0) return NULL;
     ipadn_guard_armed = 1;
     void *result = ipadn_guard_send5(receiver, selector, argument, (long)flag, error);
@@ -217,25 +248,45 @@ void *ipadn_ls_send_record_init(void *receiver, const char *selector_name, void 
 int ipadn_ls_is_array(void *value) {
     if (!value || !ipadn_valid_receiver(value)) return 0;
     ipadn_guard_install();
-    const char *(*class_name)(void *) = (const char *(*)(void *))ipadn_symbol("object_getClassName");
-    if (!class_name) return 0;
+    ipadn_guard_resolve_symbols();
+    if (ipadn_guard_send3 && ipadn_guard_selreg && ipadn_guard_get_class) {
+        void *selector = ipadn_guard_selreg("isKindOfClass:");
+        void *array_cls = ipadn_guard_get_class("NSArray");
+        if (selector && array_cls) {
+            if (sigsetjmp(ipadn_guard_env, 1) != 0) return 0;
+            ipadn_guard_armed = 1;
+            void *result = ipadn_guard_send3(value, selector, array_cls);
+            ipadn_guard_armed = 0;
+            return result != NULL;
+        }
+    }
     if (sigsetjmp(ipadn_guard_env, 1) != 0) return 0;
     ipadn_guard_armed = 1;
-    const char *name = class_name(value);
+    const char *(*class_name)(void *) = (const char *(*)(void *))ipadn_symbol("object_getClassName");
+    const char *name = class_name ? class_name(value) : NULL;
     ipadn_guard_armed = 0;
     return name && strstr(name, "Array") != NULL;
 }
 
 void *ipadn_ls_retain(void *value) {
     if (!value) return NULL;
-    void *(*retain)(void *) = (void *(*)(void *))ipadn_symbol("objc_retain");
-    if (!retain) return NULL;
-    return retain(value);
+    ipadn_guard_install();
+    ipadn_guard_resolve_symbols();
+    if (!ipadn_guard_retain) return NULL;
+    if (sigsetjmp(ipadn_guard_env, 1) != 0) return NULL;
+    ipadn_guard_armed = 1;
+    void *result = ipadn_guard_retain(value);
+    ipadn_guard_armed = 0;
+    return result;
 }
 
 void ipadn_ls_release(void *value) {
     if (!value) return;
-    void (*release)(void *) = (void (*)(void *))ipadn_symbol("objc_release");
-    if (!release) return;
-    release(value);
+    ipadn_guard_install();
+    ipadn_guard_resolve_symbols();
+    if (!ipadn_guard_release) return;
+    if (sigsetjmp(ipadn_guard_env, 1) != 0) return;
+    ipadn_guard_armed = 1;
+    ipadn_guard_release(value);
+    ipadn_guard_armed = 0;
 }
