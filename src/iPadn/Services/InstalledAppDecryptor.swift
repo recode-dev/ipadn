@@ -1,21 +1,22 @@
 import Foundation
 import ZIPFoundation
 
-@_silgen_name("objc_msgSend")
-private func ipadnMsgSendID(_ receiver: UnsafeRawPointer?, _ op: Selector, _ argument: UnsafeRawPointer?) -> UnsafeRawPointer?
-
-@_silgen_name("objc_msgSend")
-private func ipadnMsgSendPlain(_ receiver: UnsafeRawPointer?, _ op: Selector) -> UnsafeRawPointer?
-
-@_silgen_name("objc_msgSend")
-private func ipadnMsgSendRecordInit(_ receiver: UnsafeRawPointer?, _ op: Selector, _ bundleID: NSString, _ allowPlaceholder: Bool,
-                                    _ error: UnsafeMutablePointer<Unmanaged<NSError>?>?) -> UnsafeRawPointer?
-
 @_silgen_name("objc_retainAutoreleasedReturnValue")
 private func ipadnRetainAutoreleased(_ value: UnsafeRawPointer?) -> UnsafeRawPointer?
 
 @_silgen_name("objc_release")
 private func ipadnRelease(_ value: UnsafeRawPointer?)
+
+typealias IpadnSendPlain = @convention(c) (UnsafeRawPointer?, Selector) -> UnsafeRawPointer?
+typealias IpadnSendID = @convention(c) (UnsafeRawPointer?, Selector, UnsafeRawPointer?) -> UnsafeRawPointer?
+typealias IpadnSendRecordInit = @convention(c) (UnsafeRawPointer?, Selector, NSString, Bool,
+                                                UnsafeMutablePointer<Unmanaged<NSError>?>?) -> UnsafeRawPointer?
+
+private let ipadnObjcSendPointer: UnsafeMutableRawPointer? = dlsym(UnsafeMutableRawPointer(bitPattern: UInt(bitPattern: -2)), "objc_msgSend")
+
+private let ipadnSendPlain: IpadnSendPlain? = ipadnObjcSendPointer.map { unsafeBitCast($0, to: IpadnSendPlain.self) }
+private let ipadnSendID: IpadnSendID? = ipadnObjcSendPointer.map { unsafeBitCast($0, to: IpadnSendID.self) }
+private let ipadnSendRecordInit: IpadnSendRecordInit? = ipadnObjcSendPointer.map { unsafeBitCast($0, to: IpadnSendRecordInit.self) }
 
 enum InstalledAppDecryptor {
 
@@ -147,13 +148,13 @@ enum InstalledAppDecryptor {
 
     private static func workspacePointer() -> UnsafeRawPointer? {
         guard let cls = classPointer("LSApplicationWorkspace") else { return nil }
-        return ipadnMsgSendPlain(cls, NSSelectorFromString("defaultWorkspace"))
+        return ipadnSendPlain?(cls, NSSelectorFromString("defaultWorkspace"))
     }
 
     private static func proxyPointers(from workspace: UnsafeRawPointer?) -> [UnsafeRawPointer?] {
         guard let workspace else { return [] }
         for selector in ["allInstalledApplications", "allApplications"] {
-            guard let autoreleased = ipadnMsgSendPlain(workspace, NSSelectorFromString(selector)) else { continue }
+            guard let autoreleased = ipadnSendPlain?(workspace, NSSelectorFromString(selector)) else { continue }
             guard let retained = ipadnRetainAutoreleased(autoreleased) else { continue }
             let array = Unmanaged<NSArray>.fromOpaque(retained).takeRetainedValue()
             var proxies: [UnsafeRawPointer?] = []
@@ -168,9 +169,9 @@ enum InstalledAppDecryptor {
 
     private static func bundle(fromProxy proxy: UnsafeRawPointer?, fallbackID: String) -> InstalledBundle? {
         guard let proxy else { return nil }
-        let id = stringValue(ipadnMsgSendID(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleIdentifier"))) ?? fallbackID
-        guard let path = urlValue(ipadnMsgSendID(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleURL"))), !path.isEmpty else { return nil }
-        let executable = stringValue(ipadnMsgSendID(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleExecutable")))
+        let id = stringValue(ipadnSendID?(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleIdentifier"))) ?? fallbackID
+        guard let path = urlValue(ipadnSendID?(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleURL"))), !path.isEmpty else { return nil }
+        let executable = stringValue(ipadnSendID?(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleExecutable")))
             ?? executableFromInfoPlist(path: path) ?? ""
         guard !executable.isEmpty else { return nil }
         return InstalledBundle(bundleID: id, path: path, executable: executable)
@@ -178,7 +179,7 @@ enum InstalledAppDecryptor {
 
     private static func resolveViaWorkspace(bundleID: String) -> InstalledBundle? {
         for proxy in proxyPointers(from: workspacePointer()) {
-            let id = stringValue(ipadnMsgSendID(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleIdentifier")))
+            let id = stringValue(ipadnSendID?(proxy, NSSelectorFromString("valueForKey:"), argumentString("bundleIdentifier")))
             guard id == bundleID else { continue }
             if let bundle = bundle(fromProxy: proxy, fallbackID: bundleID) { return bundle }
         }
@@ -187,7 +188,7 @@ enum InstalledAppDecryptor {
 
     private static func resolveViaProxy(bundleID: String) -> InstalledBundle? {
         guard let cls = classPointer("LSApplicationProxy") else { return nil }
-        let autoreleased = ipadnMsgSendID(cls, NSSelectorFromString("applicationProxyForIdentifier:"), argumentString(bundleID))
+        let autoreleased = ipadnSendID?(cls, NSSelectorFromString("applicationProxyForIdentifier:"), argumentString(bundleID))
         guard let retained = autoreleased.flatMap({ ipadnRetainAutoreleased($0) }) else { return nil }
         let proxy = Unmanaged<AnyObject>.fromOpaque(retained).takeRetainedValue()
         let proxyPointer = Unmanaged.passUnretained(proxy).toOpaque()
@@ -196,18 +197,18 @@ enum InstalledAppDecryptor {
 
     private static func resolveViaRecord(bundleID: String) -> InstalledBundle? {
         guard let cls = classPointer("LSApplicationRecord") else { return nil }
-        guard let allocated = ipadnMsgSendPlain(cls, NSSelectorFromString("alloc")) else { return nil }
+        guard let allocated = ipadnSendPlain?(cls, NSSelectorFromString("alloc")) else { return nil }
         var failure: Unmanaged<NSError>? = nil
         let identifier = bundleID as NSString
-        guard let recordPointer = ipadnMsgSendRecordInit(allocated, NSSelectorFromString("initWithBundleIdentifier:allowPlaceholder:error:"),
-                                                         identifier, false, &failure) else {
+        guard let recordPointer = ipadnSendRecordInit?(allocated, NSSelectorFromString("initWithBundleIdentifier:allowPlaceholder:error:"),
+                                                       identifier, false, &failure) else {
             ipadnRelease(allocated)
             return nil
         }
         let record = Unmanaged<AnyObject>.fromOpaque(recordPointer).takeRetainedValue()
         let recordReference = Unmanaged.passUnretained(record).toOpaque()
-        guard let path = urlValue(ipadnMsgSendID(recordReference, NSSelectorFromString("valueForKey:"), argumentString("URL"))), !path.isEmpty else { return nil }
-        let executableURL = urlValue(ipadnMsgSendID(recordReference, NSSelectorFromString("valueForKey:"), argumentString("executableURL")))
+        guard let path = urlValue(ipadnSendID?(recordReference, NSSelectorFromString("valueForKey:"), argumentString("URL"))), !path.isEmpty else { return nil }
+        let executableURL = urlValue(ipadnSendID?(recordReference, NSSelectorFromString("valueForKey:"), argumentString("executableURL")))
         var executable = executableURL.map { ($0 as NSString).lastPathComponent } ?? ""
         if executable.isEmpty { executable = executableFromInfoPlist(path: path) ?? "" }
         guard !executable.isEmpty else { return nil }
