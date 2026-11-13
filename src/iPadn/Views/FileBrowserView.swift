@@ -17,7 +17,7 @@ struct FileBrowserView: View {
     @State private var deleteTarget: Entry?
     @State private var generation = 0
 
-    struct Area: Identifiable, Hashable {
+    struct Area: Identifiable {
         let id: String
         let title: LocalizedStringKey
         let symbol: String
@@ -143,7 +143,7 @@ struct FileBrowserView: View {
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: candidate.symbol)
-                            .foregroundStyle(Color(UX.tint))
+                            .foregroundStyle(UX.tint)
                             .frame(width: 26)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(candidate.title).foregroundStyle(.primary)
@@ -188,7 +188,7 @@ struct FileBrowserView: View {
     @ViewBuilder private func row(_ entry: Entry) -> some View {
         HStack(spacing: 12) {
             Image(systemName: entry.directory ? "folder.fill" : (entry.symbolic ? "link" : "doc"))
-                .foregroundStyle(entry.directory ? Color(UX.tint) : Color.secondary)
+                .foregroundStyle(entry.directory ? UX.tint : Color.secondary)
                 .frame(width: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).lineLimit(2)

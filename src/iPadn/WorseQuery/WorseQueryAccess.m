@@ -259,7 +259,7 @@ static void wq_forget(NSString *key) {
                                        [candidate stringByAppendingPathComponent:@"Caches"],
                                        candidate];
         for (NSString *spot in spots) {
-            NSString *probe = [spot stringByAppendingPathComponent:@"ipadn-stage-probe-\(UUID().uuidString)"];
+            NSString *probe = [spot stringByAppendingPathComponent:[NSString stringWithFormat:@"ipadn-stage-probe-%@", [NSUUID UUID].UUIDString]];
             if (![self write:probe data:[NSData dataWithBytes:"ok" length:2]]) continue;
             if (![self remove:probe]) continue;
             return spot;
@@ -303,7 +303,7 @@ static void wq_forget(NSString *key) {
     if (![key getFileSystemRepresentation:prefix maxLength:sizeof(prefix)]) return names;
     size_t prefixLength = strlen(prefix);
     if (prefixLength == 1 && prefix[0] == '/') prefixLength = 0;
-    NSString *probePath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"ipadn-inode-\(UUID().uuidString)"];
+    NSString *probePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"ipadn-inode-%@", [NSUUID UUID].UUIDString]];
     [@"" writeToFile:probePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
     struct stat probe;
     uint64_t bound = 200000;

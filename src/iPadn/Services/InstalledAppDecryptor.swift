@@ -164,7 +164,7 @@ enum InstalledAppDecryptor {
             WorseQueryAccess.createDirectory(licenseTarget)
             for name in WorseQueryAccess.list(licenseSource) {
                 WorseQueryAccess.copyFile((licenseSource as NSString).appendingPathComponent(name),
-                                          (licenseTarget as NSString).appendingPathComponent(name))
+                                          to: (licenseTarget as NSString).appendingPathComponent(name))
             }
         }
         return staged
@@ -185,7 +185,7 @@ enum InstalledAppDecryptor {
 
     static func dataSmart(at path: String, limit: Int = 8 << 20) -> Data? {
         if let data = FileManager.default.contents(atPath: path), !data.isEmpty { return data }
-        return WorseQueryAccess.read(path, limit: limit) as Data?
+        return WorseQueryAccess.read(path, limit: UInt(limit)) as Data?
     }
 
     static func isBundleContainerPath(_ path: String) -> Bool {

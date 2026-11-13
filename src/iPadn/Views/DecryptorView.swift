@@ -233,7 +233,8 @@ struct DecryptorView: View {
         }
         let destination = LocalResources.packages.appendingPathComponent(outputName)
         try? FileManager.default.createDirectory(at: LocalResources.packages, withIntermediateDirectories: true)
-        let credential = FairPlayCredentialStore.load() ?? await FairPlayCredentialStore.fetchFromEndpoint()
+        var credential = FairPlayCredentialStore.load()
+        if credential == nil { credential = await FairPlayCredentialStore.fetchFromEndpoint() }
         let result = try FairPlayDecryptor.decryptIPA(at: url, credential: credential, destination: destination)
         let pages = result.binaries.reduce(0) { $0 + $1.pages }
         encryptedFlag[bundleID] = false
