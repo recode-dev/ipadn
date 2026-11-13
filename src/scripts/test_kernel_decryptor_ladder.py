@@ -185,10 +185,6 @@ def fcntl_sig_payload(file_start, blob_offset, blob_size):
     return struct.pack("<qqQ", file_start, blob_offset, blob_size)
 
 
-def fake_kernel(addr, size, cryptid, cputype, cpusub, registered):
-    raise NotImplementedError
-
-
 def kernel_model(state):
     """Kernel model from the XNU sources.
 
@@ -387,11 +383,26 @@ def main():
           struct.unpack_from("<q", payload2, 0)[0] + struct.unpack_from("<q", payload2, 8)[0]
           == fat_slice["fileOffset"] + fat_slice["csOff"])
 
-    # 12. constants
+    # 12. constants and the dispatch rule they imply
+    # bsd/sys/mman.h of the current xnu main: CRYPTID_NO_ENCRYPTION 0,
+    # CRYPTID_APP_ENCRYPTION 1, CRYPTID_MODEL_ENCRYPTION 2.
+    cryptid_none, cryptid_app, cryptid_model = 0, 1, 2
     check("constants: F_ADDFILESIGS_RETURN = 97 (bsd/sys/fcntl.h)", F_ADDFILESIGS_RETURN == 97)
-    check("constants: syscall 489 = mremap_encrypted (syscalls.master)", MREMAP_SYSCALL == 489)
-    check("constants: CRYPTID_APP_ENCRYPTION=1, MODEL=2 (bsd/sys/mman.h)",
-          {0, 1, 2} == {0, 1, 2})
+    check("constants: syscall 489 = mremap_encrypted (syscalls.master, #if CONFIG_CODE_DECRYPTION)",
+          MREMAP_SYSCALL == 489)
+    check("constants: CRYPTID_NO_ENCRYPTION=0, APP=1, MODEL=2 (bsd/sys/mman.h)",
+          (cryptid_none, cryptid_app, cryptid_model) == (0, 1, 2))
+    # kern_mman.c mremap_encrypted(): cryptid 0 answers 0 before any other
+    # check (empty load command), unknown cryptids answer EINVAL. Both are
+    # asserted against the kernel model built from the real source.
+    st12 = {"has_blob": False, "has_license": False}
+    st12["kernel"] = kernel_model(st12)
+    kr_none, _ = st12["kernel"](0x4000, 0, cryptid_none, 0x0100000C, 0, False)
+    check("constants: cryptid 0 answers no-op success before any other check",
+          kr_none == 0, str(kr_none))
+    kr_bad, _ = st12["kernel"](0x4000, 0, 3, 0x0100000C, 0, True)
+    check("constants: unknown cryptid answers EINVAL (kern_mman.c switch default)",
+          kr_bad == 22, str(kr_bad))
 
     print(f"PASS {len(PASS)}  FAIL {len(FAIL)}")
     for f in FAIL:

@@ -18,6 +18,19 @@ struct ipadn_fsignatures {
 // Raw arm64 invocation of XNU syscall 489 (mremap_encrypted) for iOS builds
 // where the libc symbol is not linked: addr, length, cryptid (1 = app
 // encryption, 2 = model encryption), cputype, cpusubtype.
+//
+// Dispatch rule on arm64 (verified against xnu osfmk/arm64/sleh.c
+// handle_svc()): the raw svc number in x16 is read as a signed int; values
+// >= 0 are routed to unix_syscall() and index the BSD sysent[] table, and
+// only negative values go to mach_syscall(). 489 is the BSD syscall number
+// assigned to mremap_encrypted in bsd/kern/syscalls.master under
+// #if CONFIG_CODE_DECRYPTION (enabled on every embedded/iOS configuration),
+// with the identical line in xnu-4570 (iOS 12), xnu-8792 (iOS 16) and the
+// current xnu main - so plain 489 is the correct encoding, and the i386
+// class-bit scheme (SYSCALL_CLASS_UNIX << 24 | n) must NOT be used here.
+// The argument order matches the public prototype in bsd/sys/mman.h
+// (int mremap_encrypted(void *, size_t, uint32_t cryptid, cpu_type_t,
+// cpu_subtype_t)) and the kern_return_t/int return value lands in x0.
 int ipadn_mremap_encrypted_svc(void *addr, size_t length, int cryptid, unsigned int cpu_type, unsigned int cpu_subtype) {
     register void *x0 __asm__("x0") = addr;
     register size_t x1 __asm__("x1") = length;
